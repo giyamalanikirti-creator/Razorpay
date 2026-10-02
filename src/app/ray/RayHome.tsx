@@ -14,9 +14,9 @@ import {
   SuggestionChip,
   UserBubble,
 } from "@/components/ray/RayParts";
-import { acme, acmeCalc, summary } from "@/lib/data";
+import { acme, acmeCalc } from "@/lib/data";
 import { formatINR, formatINRCompact } from "@/lib/format";
-import { useStore, type AppState, type ChatMessage } from "@/lib/store";
+import { useStore, useSummary, type AppState, type ChatMessage } from "@/lib/store";
 
 const CHIPS = ["Transactions", "Settlements", "Growing my business", "Account related"];
 
@@ -126,25 +126,30 @@ export function RayHome() {
 
 function RayAnswer({ message, onAsk }: { message: ChatMessage; onAsk: (q: string) => void }) {
   const { state } = useStore();
+  const summary = useSummary();
 
   if (message.kind === "usageleak-summary") {
     return (
       <RayResponse>
         <p>
-          Yes. UsageLeak found <strong className="font-semibold">₹1.84 lakh</strong> of potential unbilled revenue across {summary.accountsAffected} accounts.
+          Yes. UsageLeak found <strong className="font-semibold">{formatINRCompact(summary.potentialLeakage).replace("L", " lakh")}</strong> of potential unbilled revenue across {summary.accountsAffected} accounts.
         </p>
-        <p>{formatINR(summary.highConfidenceLeakage)} is high-confidence and can be reviewed now.</p>
+        {summary.highConfidenceLeakage > 0 ? (
+          <p>{formatINR(summary.highConfidenceLeakage)} is high-confidence and can be reviewed now.</p>
+        ) : (
+          <p>All high-confidence findings have been reviewed.</p>
+        )}
         <p>
-          The largest recurring mismatch is {acme.customer}, where {acmeCalc.qualifyingSeats} qualifying seats are active but only {acme.currentBilledSeats} are
+          The largest high-confidence recurring mismatch is {acme.customer}, where {acmeCalc.qualifyingSeats} qualifying seats are active but only {acme.currentBilledSeats} are
           currently billed.
           {state.executed && <span className="text-ink-2"> You've already approved a correction for Acme.</span>}
         </p>
         <AgentActionCard eyebrow="UsageLeak — Revenue assurance" title="Unbilled revenue · September 2026" meta="Contract · CRM · Product usage · Razorpay Billing">
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <KV label="Potential leakage" value={formatINR(summary.potentialLeakage)} />
-            <KV label="High-confidence" value={formatINR(summary.highConfidenceLeakage)} accent />
+            <KV label="High-confidence, awaiting review" value={formatINR(summary.highConfidenceLeakage)} accent />
             <KV label="Accounts affected" value={summary.accountsAffected} />
-            <KV label="Largest recurring mismatch" value={`${acme.customer} — ${formatINR(acmeCalc.leakage)}/month`} />
+            <KV label="Top high-confidence recurring mismatch" value={`${acme.customer} — ${formatINR(acmeCalc.leakage)}/month`} />
           </div>
           <p className="mt-4 text-xs text-ink-3">AI interprets commercial terms. Razorpay validates the calculation before any action.</p>
         </AgentActionCard>

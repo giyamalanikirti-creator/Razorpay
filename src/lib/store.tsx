@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { acme, acmeCalc, connectors as seedConnectors, seedAudit, type AuditEntry, type Connector, type OpportunityStatus } from "./data";
+import { acme, acmeCalc, connectors as seedConnectors, opportunities, seedAudit, summarize, type AuditEntry, type Connector, type Opportunity, type OpportunityStatus } from "./data";
 
 export type EffectiveOption = "next" | "following";
 
@@ -123,6 +123,20 @@ export function useStore(): Store {
   const ctx = useContext(StoreContext);
   if (!ctx) throw new Error("useStore must be used inside StoreProvider");
   return ctx;
+}
+
+/** Opportunity rows with Acme's live status applied. */
+export function useOpportunities(): Opportunity[] {
+  const { state } = useStore();
+  return useMemo(() => opportunities.map((o) => (o.id === "acme" ? { ...o, status: state.acmeStatus } : o)), [state.acmeStatus]);
+}
+
+/** Headline metrics, recomputed from the rows and what the merchant has approved. */
+export function useSummary() {
+  const rows = useOpportunities();
+  const { state } = useStore();
+  const acmeInvoiced = state.acmeStatus === "Corrected" ? (state.executed?.invoiceAmount ?? 0) : 0;
+  return useMemo(() => summarize(rows, acmeInvoiced), [rows, acmeInvoiced]);
 }
 
 /** Validation for merchant edits on the corrective action. */

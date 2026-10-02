@@ -100,14 +100,14 @@ export const opportunities: Opportunity[] = [
     id: "nova-ai",
     customer: "Nova AI",
     issue: "API overage not invoiced",
-    leakage: 42000,
+    leakage: 54000,
     recurring: false,
     confidence: 96,
     confidenceLabel: "High",
     status: "Needs review",
     plan: "Usage-based · 10M API calls included",
     summary:
-      "11.05M API calls metered in September against a 10M allowance. Overage of 1.05M calls at ₹0.04/call was not added to the September invoice.",
+      "11.35M API calls metered in September against a 10M allowance. The overage of 1.35M calls at ₹0.04/call (₹54,000) was not added to the September invoice.",
     sources: ["Contract", "Product usage", "Razorpay Invoice"],
   },
   {
@@ -155,7 +155,7 @@ export const opportunities: Opportunity[] = [
     id: "zephyr",
     customer: "Zephyr Labs",
     issue: "Minimum commit shortfall",
-    leakage: 87000,
+    leakage: 75000,
     recurring: false,
     confidence: 41,
     confidenceLabel: "Low",
@@ -167,14 +167,32 @@ export const opportunities: Opportunity[] = [
   },
 ];
 
-export const summary = {
-  potentialLeakage: 184000,
-  validatedLeakage: 122000,
-  correctedBilling: 86500,
-  highConfidenceLeakage: 61500,
-  accountsAffected: 6,
-  falsePositiveRate: 3.2,
-};
+/**
+ * Every headline number is derived from the opportunity rows so the
+ * dashboard, RAY and the table always agree.
+ *
+ * - potentialLeakage: everything detected this billing cycle
+ * - validatedLeakage: High-confidence findings (evidence confirmed), excluding ones the merchant rejected
+ * - highConfidenceLeakage: High-confidence findings still awaiting review
+ * - correctedBilling: amounts converted into billing after merchant approval
+ */
+export function summarize(rows: Opportunity[], acmeInvoiced = 0) {
+  const total = (xs: Opportunity[]) => xs.reduce((acc, o) => acc + o.leakage, 0);
+  const rejected = (o: Opportunity) => o.status === "Exception" || o.status === "Dismissed";
+  return {
+    potentialLeakage: total(rows),
+    validatedLeakage: total(rows.filter((o) => o.confidenceLabel === "High" && !rejected(o))),
+    highConfidenceLeakage: total(rows.filter((o) => o.confidenceLabel === "High" && o.status === "Needs review")),
+    correctedBilling: total(rows.filter((o) => o.status === "Corrected" && o.id !== "acme")) + acmeInvoiced,
+    accountsAffected: rows.length,
+    falsePositiveRate: 3.2, // last 90 days: rejected findings ÷ findings surfaced
+  };
+}
+
+export type Summary = ReturnType<typeof summarize>;
+
+/** Summary before the merchant has acted on anything. */
+export const summary = summarize(opportunities);
 
 /* ---------------- RAY home cards ---------------- */
 

@@ -10,9 +10,9 @@ import { ConfidenceBadge, StatusBadge } from "@/components/global/Badge";
 import { Modal } from "@/components/global/Modal";
 import { UsageLeakMark } from "@/components/global/Brand";
 import { UsageLeakBadge } from "@/components/usageleak/UsageLeakParts";
-import { opportunities, summary, type Confidence, type Opportunity } from "@/lib/data";
+import { opportunities, type Confidence, type Opportunity } from "@/lib/data";
 import { formatINR, formatINRCompact } from "@/lib/format";
-import { useStore } from "@/lib/store";
+import { useOpportunities, useStore, useSummary } from "@/lib/store";
 
 const FILTERS: ("All confidence" | Confidence)[] = ["All confidence", "High", "Medium", "Low"];
 
@@ -23,16 +23,16 @@ export function Overview() {
   const [query, setQuery] = useState("");
   const [peek, setPeek] = useState<Opportunity | null>(null);
 
+  const allRows = useOpportunities();
+  const summary = useSummary();
   const rows = useMemo(
     () =>
-      opportunities
-        .map((o) => (o.id === "acme" ? { ...o, status: state.acmeStatus } : o))
+      allRows
         .filter((o) => conf === "All confidence" || o.confidenceLabel === conf)
         .filter((o) => o.customer.toLowerCase().includes(query.trim().toLowerCase())),
-    [conf, query, state.acmeStatus],
+    [allRows, conf, query],
   );
 
-  const corrected = summary.correctedBilling + (state.executed?.invoiceAmount ?? 0);
 
   const open = (o: Opportunity) => (o.id === "acme" ? router.push("/agents/usage-leak/acme") : setPeek(o));
 
@@ -83,8 +83,8 @@ export function Overview() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Potential leakage" value={formatINRCompact(summary.potentialLeakage)} hint={`this billing cycle · ${summary.accountsAffected} accounts`} />
-        <MetricCard label="Validated leakage" value={formatINRCompact(summary.validatedLeakage)} hint="this billing cycle · evidence confirmed" />
-        <MetricCard label="Corrected billing" value={formatINRCompact(corrected)} hint="this billing cycle · approved by you" />
+        <MetricCard label="Validated leakage" value={formatINRCompact(summary.validatedLeakage)} hint="this billing cycle · high-confidence findings" />
+        <MetricCard label="Corrected billing" value={formatINRCompact(summary.correctedBilling)} hint="this billing cycle · approved by you" />
         <MetricCard label="False-positive rate" value={`${summary.falsePositiveRate}%`} hint="last 90 days · findings you rejected" />
       </div>
 

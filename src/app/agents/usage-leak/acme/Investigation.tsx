@@ -184,7 +184,7 @@ export function Investigation() {
               step={3}
               title="Current Razorpay billing"
               source={
-                <SourceBadge icon={<span className="flex h-3 w-3 items-center justify-center rounded-sm bg-nav"><RazorpayGlyph size={6} /></span>}>
+                <SourceBadge icon={<RazorpayGlyph size={12} onDark={false} />}>
                   Subscription {acme.subscriptionId}
                 </SourceBadge>
               }

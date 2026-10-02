@@ -2,27 +2,40 @@
 
 import Link from "next/link";
 import { ArrowRight, ArrowUp, Plus } from "lucide-react";
-import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { RayMark, UsageLeakMark } from "@/components/global/Brand";
 import { Sparkline } from "@/components/global/Sparkline";
-import { rayInsights, summary } from "@/lib/data";
+import { rayInsights } from "@/lib/data";
+import { useSummary } from "@/lib/store";
 import { formatINR, formatINRCompact } from "@/lib/format";
 
 export const DEMO_PROMPT = "Did I miss any revenue this month?";
 
-// Fixed to match the demo script; RAY normally greets by local time of day.
-export function greeting() {
-  return "Good afternoon";
+export function greeting(now = new Date()) {
+  const h = now.getHours();
+  return h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
+/** Greeting in the viewer's local time. Computed after mount so the static HTML never shows the build server's time. */
+function useGreeting() {
+  const [text, setText] = useState<string | null>(null);
+  useEffect(() => {
+    setText(greeting());
+    const id = setInterval(() => setText(greeting()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return text;
 }
 
 /* ---------------- Hero ---------------- */
 
 export function RayHero({ name }: { name?: string }) {
+  const hello = useGreeting();
   return (
     <div className="text-center">
-      <p className="text-[15px] text-ink-2">
-        {greeting()}
-        {name ? `, ${name}` : ""}
+      <p className={`min-h-[22px] text-[15px] text-ink-2 transition-opacity duration-200 ${hello ? "opacity-100" : "opacity-0"}`}>
+        {hello ?? "\u00a0"}
+        {hello && name ? `, ${name}` : ""}
       </p>
       <h1 className="mt-2 flex items-center justify-center gap-3 text-[30px] font-semibold tracking-[-0.015em] text-ink">
         <RayMark size={30} />
@@ -175,6 +188,7 @@ export function RayInsightCard({
 }
 
 export function RayInsightRow({ onPaymentsClick }: { onPaymentsClick: (q: string) => void }) {
+  const summary = useSummary();
   return (
     <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
       <RayInsightCard title="Payment success" footer="Payment health" onClick={() => onPaymentsClick("How is my payment health?")}>
@@ -198,10 +212,14 @@ export function RayInsightRow({ onPaymentsClick }: { onPaymentsClick: (q: string
         <p className="mt-1.5 text-[28px] font-semibold tracking-[-0.01em] text-ink">{formatINRCompact(summary.potentialLeakage)}</p>
         <p className="text-[13px] text-ink-2">potential unbilled revenue found</p>
         <p className="mt-0.5 text-xs text-ink-3">Across {summary.accountsAffected} customer accounts</p>
-        <p className="mt-2.5 inline-flex items-center gap-1.5 rounded bg-ok-bg px-2 py-1 text-xs font-medium text-ok">
-          <span className="h-1.5 w-1.5 rounded-full bg-ok" />
-          {formatINR(summary.highConfidenceLeakage)} is high-confidence
-        </p>
+        {summary.highConfidenceLeakage > 0 ? (
+          <p className="mt-2.5 inline-flex items-center gap-1.5 rounded bg-ok-bg px-2 py-1 text-xs font-medium text-ok">
+            <span className="h-1.5 w-1.5 rounded-full bg-ok" />
+            {formatINR(summary.highConfidenceLeakage)} is high-confidence
+          </p>
+        ) : (
+          <p className="mt-2.5 inline-flex items-center gap-1.5 rounded bg-page px-2 py-1 text-xs font-medium text-ink-2">All high-confidence findings reviewed</p>
+        )}
       </RayInsightCard>
 
       <RayInsightCard title="Collected payments" footer="See payments" onClick={() => onPaymentsClick("Show today's collected payments")}>

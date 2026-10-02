@@ -1,38 +1,54 @@
-/** Approximation of the Razorpay wordmark for prototype use. */
-export function RazorpayLogo({ className = "" }: { className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-[3px] ${className}`} aria-label="Razorpay">
-      <svg width="20" height="24" viewBox="0 0 20 24" aria-hidden>
-        <path d="M8.2 6.6 6.9 11.3l7.5-4.9L9.5 24h4.9L20 0z" fill="#3395FF" />
-        <path d="M2.9 16.5 0 24h4.9l5.3-17.6z" fill="#fff" />
-      </svg>
-      <span className="text-[25px] font-bold italic leading-none tracking-[-0.02em] text-white">Razorpay</span>
-    </span>
-  );
-}
+/*
+ * Razorpay mark: official geometry from Razorpay's brand assets
+ * (razorpay.com/newsroom/brand-assets, as distributed by simple-icons, CC0).
+ * The larger stroke is Razorpay Blue; the smaller one is navy on light
+ * surfaces and white on the black dashboard nav.
+ */
+const MARK_MAIN = "M22.436 0l-11.91 7.773-1.174 4.276 6.625-4.297L11.65 24h4.391l6.395-24z";
+const MARK_TAIL = "M14.26 10.098L3.389 17.166 1.564 24h9.008l3.688-13.902z";
 
-export function RazorpayGlyph({ size = 18 }: { size?: number }) {
+export function RazorpayGlyph({ size = 18, onDark = true }: { size?: number; onDark?: boolean }) {
   return (
-    <svg width={size} height={size * 1.2} viewBox="0 0 20 24" aria-hidden>
-      <path d="M8.2 6.6 6.9 11.3l7.5-4.9L9.5 24h4.9L20 0z" fill="#3395FF" />
-      <path d="M2.9 16.5 0 24h4.9l5.3-17.6z" fill="#fff" />
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+      <path d={MARK_MAIN} fill="#3395FF" />
+      <path d={MARK_TAIL} fill={onDark ? "#FFFFFF" : "#072654"} />
     </svg>
   );
 }
 
-/** RAY four-petal mark, as seen on the RAY AI surfaces. */
-export function RayMark({ size = 18, className = "" }: { size?: number; className?: string }) {
+/**
+ * Razorpay logo for the dark nav: official mark + wordmark.
+ * If you have the official wordmark SVG (razorpay.com/newsroom/brand-assets),
+ * drop it in public/brand/razorpay-logo-white.svg and set USE_OFFICIAL_LOGO_FILE.
+ */
+const USE_OFFICIAL_LOGO_FILE = false;
+
+export function RazorpayLogo({ className = "" }: { className?: string }) {
+  if (USE_OFFICIAL_LOGO_FILE) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src="/brand/razorpay-logo-white.svg" alt="Razorpay" className={`h-[26px] w-auto ${className}`} />;
+  }
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
-      <g fill="#1DB57A">
-        <path d="M12 1.5c2.2 0 4 1.8 4 4v2.6c0 .9-.7 1.6-1.6 1.6H9.6C8.7 9.7 8 9 8 8.1V5.5c0-2.2 1.8-4 4-4z" />
-        <path d="M12 22.5c-2.2 0-4-1.8-4-4v-2.6c0-.9.7-1.6 1.6-1.6h4.8c.9 0 1.6.7 1.6 1.6v2.6c0 2.2-1.8 4-4 4z" />
-      </g>
-      <g fill="#27C98A">
-        <path d="M1.5 12c0-2.2 1.8-4 4-4h2.6c.9 0 1.6.7 1.6 1.6v4.8c0 .9-.7 1.6-1.6 1.6H5.5c-2.2 0-4-1.8-4-4z" />
-        <path d="M22.5 12c0 2.2-1.8 4-4 4h-2.6c-.9 0-1.6-.7-1.6-1.6V9.6c0-.9.7-1.6 1.6-1.6h2.6c2.2 0 4 1.8 4 4z" />
-      </g>
-      <circle cx="12" cy="12" r="1.6" fill="#fff" />
+    <span className={`inline-flex items-end gap-[2px] ${className}`} aria-label="Razorpay" role="img">
+      <RazorpayGlyph size={24} />
+      <span className="text-[25px] font-extrabold italic leading-[0.95] tracking-[-0.035em] text-white" aria-hidden>
+        Razorpay
+      </span>
+    </span>
+  );
+}
+
+/**
+ * RAY mark: path from Razorpay's Blade design system (@razorpay/blade, RayIcon),
+ * filled with the RAY green used across the RAY AI surfaces.
+ */
+const RAY_PATH =
+  "M3 3H7.5H9.74999L12 12L14.25 3H16.5H21V7.5V9.75L12 12L21 14.25V16.5V21H16.5H14.25L12 12L9.74999 21H7.5H3V16.5V14.25L12 12L3 9.75V7.5V3Z";
+
+export function RayMark({ size = 18, className = "", color = "#1DB57A" }: { size?: number; className?: string; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d={RAY_PATH} fill={color} />
     </svg>
   );
 }
