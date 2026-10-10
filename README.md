@@ -14,17 +14,19 @@ This repository contains a clickable product prototype of RAY Credit as an agent
 
 > Concept prototype built on synthetic data (Agarwal Distributors, Ludhiana). It is not a live Razorpay product and does not connect to any real account, bank or WhatsApp number.
 
+**What actually works:** a deterministic, explainable credit policy engine that evaluates all 642 synthetic buyers; an event-driven repayment ledger that re-runs the policy when payments, failures, promises or disputes are recorded; merchant controls enforced at send time; per-buyer network consent; and a secure `/api/parse-promise` endpoint that uses an LLM to read Hinglish buyer replies when an API key is configured. Everything else (ERP, bank feed, WhatsApp, mandates, the cross-distributor network) is simulated and labelled. Full details: [`docs/TECHNICAL.md`](docs/TECHNICAL.md).
+
 ## Why the network matters
 
 A distributor's ledger only sees how a buyer pays *them*. With consent, RAY also learns how that buyer repays other distributors on Razorpay:
 
 | Case | What RAY sees | What changes |
 |---|---|---|
-| **Earlier warning** (Gupta Traders) | Slowed with 7 other distributors in July, while your ledger showed it in September | Limit lowered to ₹60,000 about 5 weeks earlier |
-| **Hidden risk** (Chawla Enterprises) | On time with you, slipping with 4 other distributors | Moved to Watch before the next eNACH debit |
-| **Day-one credit** (New Life Stores) | No history with you, pays 7 distributors in 18 days | ₹1.5L starting limit instead of ₹50,000 |
+| **Earlier warning** (Gupta Traders) | Slowed with 7 other distributors in July, while your ledger showed it in September | Your data: ₹75,000 · 21 days. With consented network evidence that agrees: ₹60,000 · 14 days (rule: −20%, one step shorter terms) |
+| **Hidden risk** (Chawla Enterprises) | On time with you, slipping with 4 other distributors | Reliable on your data; Watch with the network, limit held (rule: uncorroborated network evidence) |
+| **Day-one credit** (New Life Stores) | No history with you, pays 7 distributors in about 18 days | ₹50,000 starter without consent; ₹1,50,000 · 21 days once the buyer consents |
 
-Signals are consented and aggregated. No other distributor is ever named.
+All three come out of the same reusable policy (`lib/policy.js`), not per-buyer rules. Turn the network off, or revoke a buyer's consent, and every screen recalculates. Signals are consented, aggregated and synthetic. No other distributor is ever named. Production use would need participation, consent, privacy and legal review, potentially including credit-information regulation.
 
 ## The credit lifecycle
 
@@ -33,13 +35,13 @@ Request credit → Assess → Approve limit & terms → Set repayment method →
 → Collect → Recover if needed → Reconcile → Learn → Next credit decision
 ```
 
-- **Assess:** explainable signals (repayment across the network, payment behaviour, relationship, collection reliability, exposure, seasonal context). No opaque score.
+- **Assess:** an illustrative, rule-based policy (RAY-TC-0.4) scores payment behaviour, orders and exposure, promise reliability, collection reliability, identity and consented network evidence. Every recommendation opens a "How RAY reached this recommendation" panel with each signal, its source, the rule and its effect. Not a validated credit score.
 - **Approve:** the merchant approves every limit and terms change.
 - **Set repayment method:** UPI Autopay, eNACH mandate or manual payment links, authorised by the buyer. RAY never debits beyond the mandate.
 - **Collect:** pre-due reminders, then collection on the due date, matched automatically.
 - **Recover:** a failed debit starts a staged plan with partial-payment links. Buyers are never marked as defaulted automatically.
 - **Reconcile:** confirm payment first, chase second. RAY checks Razorpay payments, the connected bank account (RazorpayX Connected Banking+), unmatched credits and salesperson collections before any reminder.
-- **Learn:** collection outcomes update the next recommendation (for example ₹60,000 → ₹40,000 after repeated Autopay failures, or ₹60,000 → ₹80,000 after six on-time repayments).
+- **Learn:** outcomes are recorded as events, update the buyer's signals and re-run the same policy. Example: after a failed Autopay, a ₹5,000 partial payment and a missed promise, Gupta Traders moves Watch → Risky and ₹60,000 → ₹40,000 on 7-day terms; a "What changed since the last decision?" card shows the evidence and rule, and nothing changes until the merchant approves. Six on-time Autopay collections trigger an increase proposal for Sethi Mart (₹60,000 → ₹80,000). No model is trained.
 
 ## One payment journey, both sides
 
@@ -60,10 +62,18 @@ All payments in the prototype are simulated and labelled as such. No money moves
 - RAY never messages buyers about credit decisions and never pauses supply on its own
 - RAY reads only forwarded messages or a connected WhatsApp Business inbox, never personal chats
 - Trade credit stays separate from lending; any financing comes from a regulated lending partner
+- Controls are enforced at the moment of sending, not just when a list is drawn: Do not contact, weekly reminder limit, quiet hours (IST), allowed channels, a stale ledger and pending payment reviews all block or queue a message, with the reason shown
+
+## AI: one capability, honestly scoped
+
+The LLM is used for one job: reading unstructured buyer replies such as *"Aadha abhi bhej raha hoon, baaki Monday pakka"* and returning structured JSON (intent, amounts, dates, conditionality, evidence). Deterministic checks then remove any amount or date the message does not support, resolve relative dates from the message date (IST), route disputes and payment claims separately, and block confirmation of ambiguous promises. The merchant always reviews, can edit, and confirms before anything is saved. When no API key is configured the app says so and uses a clearly labelled **rule-based demo parser (not AI)**. Credit limits are never set by the LLM.
 
 ## Running it
 
-No install needed. Open `index.html` in a browser, or visit the deployed link.
+No install needed. Open `index.html` in a browser, or visit the deployed link. On Vercel with `OPENAI_API_KEY` set, the interpreter runs on the live model.
+
+**Two guided demos** (press `Shift` + `D`): **Try RAY Credit: Core Journey** (8 steps: signal → intelligence → recommendation → approval → action → outcome → updated decision) and **Explore all features** (25 steps). Navigating a step never approves, sends or records money on its own; steps that need earlier state offer a labelled "Load scenario" button.
+
 
 **Presenter controls**
 
@@ -81,41 +91,49 @@ The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **R
 ```
 .
 ├── index.html                  # built, self-contained prototype (what gets deployed)
+├── api/
+│   └── parse-promise.js        # Vercel function: LLM interpretation + deterministic checks
+├── lib/                        # pure logic shared by the browser, the API and the tests
+│   ├── policy.js               # deriveBuyerSignals() + evaluateCredit(): the credit policy engine
+│   ├── events.js               # applyRepaymentEvent(): event model and invoice ledger
+│   ├── guards.js               # sendGate(): DNC, weekly limit, quiet hours, channels, stale data
+│   ├── promise-rules.js        # schema, prompt, validation, labelled rule-based fallback
+│   ├── dataset.js              # seeded synthetic portfolio: 642 buyers, 1,184 open invoices
+│   └── dates.js                # IST calendar helpers
+├── src/
+│   ├── template.html · styles.css · assets/
+│   └── modules/                # screens (core, engine bridge, explain, workspace, ...)
+├── tests/
+│   ├── engine.test.js · interpreter.test.js · api.test.js   # node --test
+│   ├── ui_smoke.py             # Playwright browser checks
+│   └── eval/                   # 40 labelled Hinglish messages + RESULTS.md
 ├── scripts/
-│   ├── build.py                # bundles src/ into index.html
-│   └── smoke_test.py           # runs every demo step in a headless browser
-└── src/
-    ├── template.html           # page shell
-    ├── styles.css              # Razorpay / Blade-style design tokens and components
-    ├── assets/                 # logo and mark (inlined at build time)
-    └── modules/
-        ├── core.js             # icons, formatting, synthetic data, state, hash router
-        ├── identity.js         # GSTIN and business identity
-        ├── dashboard.js        # Razorpay dashboard pages, Agent Studio
-        ├── agent-studio.js     # RAY Credit agent page and install flow
-        ├── workspace.js        # workspace tabs: actions, activity, controls
-        ├── credit-intelligence.js  # overview, credit portfolio, buyer profiles
-        ├── actions.js          # approvals, limits, reminders
-        ├── bank-feed.js        # bank account via RazorpayX Connected Banking
-        ├── whatsapp-and-ray-ai.js  # RAY on WhatsApp, Ray AI answers
-        ├── credit-requests.js  # incoming buyer credit requests
-        ├── reconciliation.js   # review payment flow
-        ├── collections.js      # repayment setup, mandates, recovery, learning
-        ├── network.js          # Razorpay network signal
-        ├── kirana-payment-link.js  # retailer-side payment link and payment plans
-        ├── mobile.js           # RAY Credit for Mobile
-        └── demo.js             # guided demo story
+│   ├── build.py                # bundles lib/ + src/ into index.html
+│   ├── eval_interpreter.js     # interpreter evaluation
+│   └── smoke_test.py           # runs every demo step
+└── docs/TECHNICAL.md           # architecture, policy rules, mock manifest, tests, limitations
 ```
 
 Plain JavaScript with string templates and a hash router. No framework and no runtime dependencies.
 
-## Building
+## Building and testing
 
 ```bash
 python3 scripts/build.py        # writes index.html
-python3 scripts/smoke_test.py   # optional: needs `pip install playwright`
+npm test                        # 37 unit + API tests (Node 18+)
+python3 tests/ui_smoke.py       # 20 browser checks (pip install playwright)
+npm run eval                    # interpreter evaluation; live model only with an API key
 ```
 
 ## Deploying
 
-The repo deploys as a static site. On Vercel: **Add New → Project → Import** this repository, set **Framework Preset** to **Other**, leave build settings empty, and deploy. Every push to `main` redeploys automatically.
+Static `index.html` at the root plus one serverless function in `api/`. On Vercel no framework preset or build command is needed; every push to `main` redeploys.
+
+Environment variables (Vercel → Settings → Environment Variables):
+
+| Variable | Needed for | Default |
+|---|---|---|
+| `OPENAI_API_KEY` | live AI interpretation | none (app falls back to the labelled rule-based parser) |
+| `OPENAI_MODEL` | choosing the model | `gpt-4o-mini` |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_PROVIDER` | optional alternative provider | |
+| `AI_TIMEOUT_MS` | provider timeout | `12000` |

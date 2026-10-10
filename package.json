@@ -1,0 +1,13 @@
+{
+  "name": "ray-credit",
+  "version": "2.0.0",
+  "private": true,
+  "description": "RAY Credit: network-powered credit intelligence for B2B distributors (concept prototype for Razorpay Agent Studio)",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "bundle": "python3 scripts/build.py",
+    "test": "node --test tests/*.test.js",
+    "test:ui": "python3 tests/ui_smoke.py",
+    "eval": "node scripts/eval_interpreter.js"
+  }
+}
