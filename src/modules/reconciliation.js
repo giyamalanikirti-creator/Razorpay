@@ -1,12 +1,7 @@
 /* ================= RECONCILIATION · REVIEW PAYMENT (confirm payment first, chase second) ================= */
-const PAYREV = {
-  verma:{inv:'INV-24655', amt:26500, due:'5 Oct 2026', dueTxt:'Due today', note:'We found an unmatched ₹26,500 Razorpay credit from yesterday that may be this payment.', possible:{amt:26500, t:'Yesterday, 6:10 PM', from:'UPI · Razorpay Smart Collect', ref:'pay_Q8f2Kx91LmZ4'}, cands:[]},
-  lifeline:{inv:'INV-24702', amt:31200, due:'28 Sep 2026', dueTxt:'7 days overdue', note:'We haven’t found a confirmed payment for this invoice yet.', cands:[{amt:31200,t:'Yesterday, 4:32 PM',from:'LIFELINE MART',ref:'NEFT/HDFC81732',conf:'High'},{amt:31000,t:'Yesterday, 1:14 PM',from:'LIFELINE & CO',ref:'UPI/40918276',conf:'Low'}]},
-  goyal:{inv:'INV-24611', amt:24100, due:'30 Sep 2026', dueTxt:'5 days overdue', note:'We haven’t found a confirmed payment for this invoice yet.', cands:[]},
-  citycare:{inv:'INV-24733', amt:42000, due:'2 Oct 2026', dueTxt:'3 days overdue', note:'Rakesh Sharma recorded a ₹42,000 cheque collection on 3 Oct. It has not appeared in your bank account yet.', sp:{amt:42000, t:'3 Oct · 5:40 PM', from:'Cheque #004512 · recorded by Rakesh Sharma', ref:'Not yet seen in the bank'}, cands:[]},
-};
+const PAYREV = {};
 const prS = id => (S.pr[id]=S.pr[id]||{st:null,check:null});
-const prPending = id => !!PAYREV[id] && !prS(id).st && !(id==='verma'&&S.vermaMatched);
+const prPending = id => !!PAYREV[id] && PAYREV[id].open!==false && !prS(id).st && !(id==='verma'&&S.vermaMatched);
 const PR_ST = {received:'Received · merchant confirmed', matched:'Matched from bank feed', rzp:'Matched to Razorpay payment', scheduled:'Follow-up scheduled', sent:'Reminder sent'};
 const prMob = () => !!(document.getElementById('mob-root')&&document.getElementById('mob-root').innerHTML);
 const prWho = () => M.owner+' · '+(prMob()?'RAY Credit for Mobile':'Dashboard');

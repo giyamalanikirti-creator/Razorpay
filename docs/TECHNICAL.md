@@ -34,7 +34,12 @@ The front end is still one self-contained `index.html` (vanilla JS, string templ
 | Event model and ledger | `lib/events.js` | Working logic |
 | Send-time controls | `lib/guards.js` | Working logic |
 | Interpreter checks + fallback parser | `lib/promise-rules.js` | Working logic (fallback is rule-based, not AI) |
-| LLM endpoint | `api/parse-promise.js` | Working when an API key is configured |
+| LLM endpoint (self-hosted) | `api/parse-promise.js` | Working when an API key is configured |
+| Claude in the page | `src/modules/engine.js` (`claudeSample`) | Working when the page is opened in Claude (artifact `sample` capability); rule-based fallback otherwise |
+| Daily chase plan | `src/modules/core.js` (`planItem`, `syncChase`) | Working logic, rebuilt on every ledger change |
+| Ask RAY (open questions) | `src/modules/whatsapp-and-ray-ai.js` (`askRay`) | Working with Claude; read-only page tools; amounts checked against data |
+| Computed collection lists | `src/modules/collections.js` (`syncLists`) | Working logic over ledger events, mandates and payment signals |
+| Checks, learning loop, How it works | `src/modules/workspace.js` (`runChecks`, `policyProposal`, `vHow`) | Working logic; outcome history is synthetic |
 | Synthetic portfolio | `lib/dataset.js` | Synthetic data, seeded |
 | Engine bridge (single source of truth) | `src/modules/engine.js` | Working logic |
 | Explanations, outcomes, interpreter UI, disclosures | `src/modules/explain.js` | Working logic |
@@ -66,9 +71,9 @@ The same manifest is visible in the app: **Concept prototype ⓘ** in the surfac
 
 ## 3. Where the LLM is used, and where it is not
 
-* **LLM:** only to read unstructured buyer messages (`/api/parse-promise`). It returns structured JSON; it never sets a limit, a band or a balance.
+* **LLM (Claude in the page, or `/api/parse-promise` when self-hosted):** reads unstructured buyer replies into structured JSON, drafts reminder messages, and answers open questions in Ask RAY from read-only page data. Drafts must contain the exact amount, no link, no threats and no mention of other distributors; Ask RAY answers flag any rupee amount not found in the data; reply readings are checked against the message. It never sets a limit, a band, a balance or a policy, and never sends anything.
 * **Rule-based:** every credit recommendation, band, limit, term, explanation, early warning, portfolio figure, control and feedback-loop update.
-* **No model training.** Outcomes update the buyer's derived signals and the same policy re-runs. The UI calls this "outcome-informed recommendations".
+* **No model training.** Outcomes update the buyer's derived signals and the same policy re-runs. Separately, RAY compares on-time payment by follow-up timing and suggests a follow-up policy change only when another timing does at least 8 points better on 30+ reminders; the owner approves it, it is versioned, and it can be undone. Credit policy weights are never changed this way. The outcome history behind the suggestion is synthetic in this prototype.
 
 ## 4. Model provider and endpoint
 

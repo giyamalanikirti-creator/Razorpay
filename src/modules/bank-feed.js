@@ -184,10 +184,10 @@ function preSendChecks(){
   return `<div class="row gap16 wrap" style="padding:12px 16px;border:1px solid var(--border);border-radius:10px;background:#fff;margin-top:12px"><span class="xs muted" style="font-weight:600;text-transform:uppercase;letter-spacing:.04em">Before any reminder, RAY checks</span>
    ${it(true,'Razorpay payments','')}
    ${b.st==='on'?it(true,'Bank account','· ICICI ••4821'):`<span class="row gap6 small"><span class="faint">${I('minus',14,2.4)}</span><span style="font-weight:500;color:var(--strong)">Bank account</span><a class="small" onclick="A.bankStart()">Connect</a></span>`}
-   ${it(held?'warn':true,'Unidentified credits',held?`· ${held} reminder paused`:'· none')}
+   ${it(held?'warn':true,'Unidentified credits',held?`· ${held} reminder${held===1?'':'s'} paused`:'· none')}
    ${it(true,'Salesperson collections','')}</div>`;
 }
-A.sendAnyway=(id)=>{const ch=chem(id), c=CHASE.find(x=>x.id===id);
+A.sendAnyway=(id)=>{const ch=chem(id), c=chaseOf(id);
   modal({title:`Send reminder anyway to ${ch.name}?`,body:`<p style="color:var(--strong)">RAY found an unmatched ₹26,500 payment from yesterday that may already cover this.</p><p class="muted mt8">If it’s theirs, you’ll be chasing a buyer who has already paid. Review the payment first if you can.</p>`,actions:[{label:'Cancel'},{label:'Review payment',fn:()=>{closeModal();goSec('raahi/actions','grp-check')}},{label:'Send reminder anyway',cls:'btn-d',id:'send-anyway',fn:()=>{closeModal();S.chase[id].st='sent';S.chase[id].at=nowT();log({ic:'send',ti:`Reminder sent anyway to ${ch.name}`,de:`Override · unmatched ₹26,500 credit still unreviewed · ${inr(c.amt)}`,src:['conv'],who:'Approved by '+M.owner+' · Dashboard',chem:ch.name});rr();toast('Reminder sent · override logged')}}]});};
 
 /* ---------- Connect bank account: choose account → verify OTP → authorise → sync (Razorpay-native) ---------- */

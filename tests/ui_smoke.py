@@ -89,6 +89,9 @@ async def main():
         for r in routes:
             await ev(f"S.installed=true;go('{r}')"); await page.wait_for_timeout(150)
         check("All routes render without errors", not errors, "; ".join(errors[:3]))
+        check("Daily plan is computed for every buyer", await ev("S.planScan") == 642)
+        check("Built-in Checks page: every check passes", await ev("runChecks().flatMap(g=>g.cases).every(c=>c.pass)"))
+        check("Ask RAY falls back honestly without Claude", (await ev("askRay('which buyers are risky?','ray').then(r=>!!r.fallback)")) is True)
 
         # demos
         for lst, name in (("core", "CORE"), ("all", "STEPS")):

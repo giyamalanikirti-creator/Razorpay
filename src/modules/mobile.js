@@ -82,12 +82,12 @@ function rcHdr(sub){
   return `<div class="mob-hdr" style="border-bottom:0"><button class="mob-ic" onclick="${back}">${I('arrowL',20,2)}</button><div class="grow"><div class="mob-t">RAY Credit</div><div class="xs muted">${sub||'In Razorpay · '+M.name}</div></div><span class="mob-ray">${clover(13)} RAY</span></div>
    <div class="rc-tabs">${tabs.map(([k,l])=>`<button class="${m.scr===k?'on':''}" onclick="A.mobGo('${k}')">${l}${k==='actions'&&n?`<i>${n}</i>`:''}</button>`).join('')}</div>`;
 }
-const mobActionCount = () => CREQ.filter(r=>!S.req[r.id]).length + Object.keys(FAILS).filter(failOpen).length + ['verma','lifeline','goyal','citycare'].filter(prPending).length;
+const mobActionCount = () => CREQ.filter(r=>!S.req[r.id]).length + Object.keys(FAILS).filter(failOpen).length + Object.keys(PAYREV).filter(prPending).length;
 const mrowT = (fn,title,sub,right='') => `<button class="mrow" onclick="${fn}"><div class="grow" style="text-align:left;min-width:0"><div class="mrow-t">${title}</div><div class="mrow-s">${sub}</div></div>${right}${I('right',16,2)}</button>`;
 function subHdr(title,back){ return `<div class="mob-hdr"><button class="mob-ic" onclick="A.mobGo('${back}')">${I('arrowL',20,2)}</button><div class="grow"><div class="mob-t">${title}</div><div class="xs muted">RAY Credit</div></div><span class="mob-ray">${clover(13)} RAY</span></div>`; }
 const mobBand = b => `<span class="mb ${b==='Watch'?'mb-a':b==='Risky'?'mb-r':b==='Reliable'?'mb-g':'mb-n'}">${b.toUpperCase()}</span>`;
 function mobHome(){
-  const pr=['verma','lifeline','goyal','citycare'].filter(prPending);
+  const pr=Object.keys(PAYREV).filter(prPending);
   return `${rcHdr()}<div class="mob-body">
    <div class="mstats mc" style="margin-top:0"><div><b>${lakhs(pfStats().outstanding)}</b><span>Outstanding</span></div><div><b>${lakhs(pfStats().dueThisWeek)}</b><span>Due this week</span></div><div><b>87%</b><span>Collection rate</span></div></div>
    <div class="mc"><div class="row between"><b class="mc-t">Credit requests</b><span class="xs muted">${reqOpen()} need a decision</span></div>
@@ -135,7 +135,7 @@ function mobBuyer(id){
    ${netMobile(id)}
    <div class="mc mt8"><b class="mc-t">Why</b>${why.map(s=>`<div class="mline"><span>${s[0]}</span><b>${s[1]}</b></div>`).join('')}</div>
    <div class="mc mt8"><div class="row between"><b class="mc-t">Repayment</b>${methodChip(id)}</div>${FAILS[id]?`<div class="mline"><span>${FAILS[id].inv} · ${inr(FAILS[id].amt)}</span><b style="color:var(--r)">${failOpen(id)?'Debit failed':'Recovering'}</b></div>`:''}${PLAN[id]?`<div class="mline"><span>${PLAN[id].inv} · ${inr(PLAN[id].amt)}</span><b>Due ${PLAN[id].d} Oct</b></div>${planSteps(id).map(x=>`<div class="mline"><span class="xs">${dayLbl(x[0])} · ${x[1]}</span><b class="xs" style="font-weight:500">${x[3]?x[3].replace(/<[^>]+>/g,'').trim():''}</b></div>`).join('')}`:''}${FAILS[id]?`<button class="mbtn ${failOpen(id)?'p':''} sm mt8" onclick="A.mobGo('recover','${id}')">${failOpen(id)?'Start recovery':'View recovery'}</button>`:''}</div>
-   <div class="col gap8 mt12">${rq&&!S.req[id]?`<button class="mbtn p" onclick="A.mobGo('request','${id}')">Review credit request</button>`:''}${id==='gupta'&&S.gupta.rec==='open'?`<button class="mbtn ${recChanged('gupta')?'p':''}" onclick="A.approveGupta()">Set future limit to ${inr(S.gupta.limitRec)}</button>`:''}${S.chase[id]&&S.chase[id].st==='draft'?`<button class="mbtn ${rq&&!S.req[id]?'':'p'}" onclick="A.mobSheet('follow:${id}')">${ctaLabel(CHASE.find(x=>x.id===id))}</button>`:''}<button class="mbtn g" onclick="A.closeMobile();go('raahi/buyer/${id}')">Open full profile on desktop</button></div>
+   <div class="col gap8 mt12">${rq&&!S.req[id]?`<button class="mbtn p" onclick="A.mobGo('request','${id}')">Review credit request</button>`:''}${id==='gupta'&&S.gupta.rec==='open'?`<button class="mbtn ${recChanged('gupta')?'p':''}" onclick="A.approveGupta()">Set future limit to ${inr(S.gupta.limitRec)}</button>`:''}${S.chase[id]&&S.chase[id].st==='draft'?`<button class="mbtn ${rq&&!S.req[id]?'':'p'}" onclick="A.mobSheet('follow:${id}')">${ctaLabel(chaseOf(id))}</button>`:''}<button class="mbtn g" onclick="A.closeMobile();go('raahi/buyer/${id}')">Open full profile on desktop</button></div>
   </div>`;
 }
 function mobPortfolio(){
@@ -155,7 +155,7 @@ function mobActions(){
   const cr=CREQ.filter(r=>!S.req[r.id]).map(r=>mrowT(`A.mobGo('request','${r.id}')`,chem(r.id).name,`${inr(r.amt)} requested`,((v)=>`<span class="verdict sm v-${v.tone}">${v.verdict}</span>`)(reqV(r))));
   const up=['mehta','chawla'].filter(id=>!['received','paidbank'].includes(collSt(id))).map(id=>mrowT(`A.mobGo('coll','${id}')`,chem(id).name,`${inr(UPCOMING[id].amt)} · ${collMethod(id).m} · due ${UPCOMING[id].due}`,'<span class="mb mb-n">SCHEDULED</span>'));
   const fl=Object.keys(FAILS).filter(failOpen).map(id=>mrowT(`A.mobGo('recover','${id}')`,chem(id).name,`${inr(FAILS[id].amt)} · ${FAILS[id].reason}`,'<span class="mb mb-r">FAILED</span>'));
-  const pr=['verma','lifeline','goyal','citycare'].filter(prPending).map(id=>mrowT(`A.mobGo('pay','${id}')`,chem(id).name,`${inr(PAYREV[id].amt)} · ${PAYREV[id].dueTxt}`,`<span class="mb mb-a">${id==='verma'?'PAUSED':id==='citycare'?'CHEQUE':'UNCONFIRMED'}</span>`));
+  const pr=Object.keys(PAYREV).filter(prPending).map(id=>mrowT(`A.mobGo('pay','${id}')`,chem(id).name,`${inr(PAYREV[id].amt)} · ${PAYREV[id].dueTxt}`,`<span class="mb mb-a">${id==='verma'?'PAUSED':id==='citycare'?'CHEQUE':'UNCONFIRMED'}</span>`));
   const ew=CHASE.filter(c=>c.kind==='Early follow-up'&&S.chase[c.id].st==='draft').map(c=>mrowT(`A.mobSheet('follow:${c.id}')`,chem(c.id).name,`${inr(c.amt)} · ${c.id==='chawla'?'slipping with other distributors':c.id==='gupta'?'due 12 Oct':'due in 3 days'}`,'<span class="mb mb-a">FOLLOW UP</span>'));
   const all=[card('Credit decisions',cr),card('Upcoming collections',up),card('Failed collections',fl),card('Payment review',pr),card('Early warnings',ew)].join('');
   return `${rcHdr()}<div class="mob-body">${all||'<div class="mc">Nothing waiting for you.</div>'}<div class="xs muted mt12" style="text-align:center">One decision at a time. Bulk review stays on desktop.</div></div>`;
@@ -176,12 +176,18 @@ function mobAnswer(q){ const g=S.gupta; q=q.toLowerCase();
   if(q.includes('gupta')&&/aaya|paid|payment/.test(q)) return g.paidVia?`Yes. ₹19,200 was received at 10:37 AM and matched to INV-24891. ₹19,200 is still due Monday.`:`Not yet. Nothing from Gupta Traders in Razorpay${S.bank.st==='on'?' or your bank feed':''} today. ₹38,400 is due in 7 days.`;
   if(q.includes('gupta')) return `Gupta Traders is on ${g.band}. ${reqV(creq('gupta')).verdict==='DO NOT EXTEND YET'?'I would not extend additional credit right now.':'Additional credit fits the recommended limit.'}\n\n${guptaWhyLines(3).join(' · ')}.\nRecommended limit ${inr(g.limitRec)} · ${g.terms}-day terms (same as desktop).`;
   if(/slip/.test(q)) { const L=slipLines(); return `${L.length} buyers are showing weaker repayment behaviour than usual: ${L.map(r=>r.name).join(', ')}.`; }
-  return 'I can help with credit, collections and payments. Try asking about a buyer.'; }
-A.mobAsk=(q)=>{ const m=S.mob; m.chat.push({me:true,t:q}); m.chat.push({t:mobAnswer(q),link:q.toLowerCase().includes('gupta')&&!/aaya|kya hua/.test(q.toLowerCase()),rec:q.toLowerCase().includes('gupta')&&/kya hua/.test(q.toLowerCase())}); mobRender(); const b=document.querySelector('.mob-body'); if(b) b.scrollTop=b.scrollHeight; const i=document.querySelector('.ask-in'); if(i) i.focus(); };
+  return MOB_FALLBACK; }
+const MOB_FALLBACK='I can help with credit, collections and payments. Try asking about a buyer.';
+A.mobAsk=(q)=>{ const m=S.mob; m.chat.push({me:true,t:q}); const ans=mobAnswer(q);
+  if(ans===MOB_FALLBACK){ const c={t:'',pending:true}; m.chat.push(c); mobRender();
+    askRay(q,'mob').then(res=>{ c.pending=false; if(res.fallback) c.t=ans+(res.note?'\n\n'+res.note:''); else { c.t=res.answer+(res.flags.length?'\n\n'+res.flags.join(' '):''); c.acts=res.actions.filter(a=>a.mob); c.ai=true; }
+      if(S.mob===m) mobRender(); const b=document.querySelector('.mob-body'); if(b) b.scrollTop=b.scrollHeight; }); }
+  else m.chat.push({t:ans,link:q.toLowerCase().includes('gupta')&&!/aaya|kya hua/.test(q.toLowerCase()),rec:q.toLowerCase().includes('gupta')&&/kya hua/.test(q.toLowerCase())});
+  mobRender(); const b=document.querySelector('.mob-body'); if(b) b.scrollTop=b.scrollHeight; const i=document.querySelector('.ask-in'); if(i) i.focus(); };
 function mobAsk(){
   const m=S.mob;
   return `${rcHdr()}<div class="mob-body ask-body"><div class="ask-intro"><span class="mob-ray">${clover(13)} RAY</span><div class="small muted mt8">Ask about any buyer, payment or credit decision.</div></div>
-   ${m.chat.map(c=>c.me?`<div class="ask-me">${esc(c.t)}</div>`:`<div class="ask-ray">${esc(c.t).replace(/\n/g,'<br>')}${c.link?`<button class="link xs mt8" style="display:block" onclick="A.mobGo('request','gupta')">Review credit request</button>`:''}${c.rec?`<button class="link xs mt8" style="display:block" onclick="A.mobGo('recover','gupta')">Review recovery</button>`:''}</div>`).join('')}
+   ${m.chat.map(c=>c.me?`<div class="ask-me">${esc(c.t)}</div>`:`<div class="ask-ray">${c.pending?thinking('Checking your data…'):esc(c.t).replace(/\n/g,'<br>')}${(c.acts||[]).map(a=>`<button class="link xs mt8" style="display:block" onclick="A.mobGo('${a.mob[0]}','${a.mob[1]||''}')">${esc(a.label)}</button>`).join('')}${c.ai?`<div class="xs muted mt8">${clover(10)} Answered by Claude from your RAY data</div>`:''}${c.link?`<button class="link xs mt8" style="display:block" onclick="A.mobGo('request','gupta')">Review credit request</button>`:''}${c.rec?`<button class="link xs mt8" style="display:block" onclick="A.mobGo('recover','gupta')">Review recovery</button>`:''}</div>`).join('')}
    ${m.chat.length?'':`<div class="xs muted mt16" style="font-weight:600;letter-spacing:.04em">TRY ASKING</div><div class="col gap6 mt8">${MOB_Q.map(q=>`<button class="ask-chip" onclick="A.mobAsk(this.textContent)">${q}</button>`).join('')}</div>`}</div>
    <div class="ask-bar"><input class="ask-in" placeholder="Ask RAY…" onkeydown="if(event.key==='Enter'&&this.value.trim()){A.mobAsk(this.value.trim())}"><button class="ask-send" onclick="const i=document.querySelector('.ask-in');if(i.value.trim())A.mobAsk(i.value.trim())">${I('send',16,2.2)}</button></div>`;
 }
@@ -199,7 +205,7 @@ function mobSheetHtml(t){
 }
 function mobPay(id){ return `${subHdr('Review payment','actions')}<div class="mob-body"><div class="mc" style="margin-top:0">${prBody(id,true)}</div></div>`; }
 A.mobInstall=()=>{ ensureBank(); S.installed=true; log({ic:'agent',ti:'RAY Credit installed from the Razorpay app',de:'Marg (demo connector) · bank connected · Review first',src:['led'],who:'Installed by '+M.owner+' · RAY Credit for Mobile'}); S.mob.sheet=null; S.mob.tab='products'; A.mobGo('rc'); rr(); toast('RAY Credit is ready'); };
-A.mobFollow=(id)=>{ const c=CHASE.find(x=>x.id===id), ch=chem(id); S.chase[id].st='sent'; S.chase[id].at=nowT(); log({ic:'send',ti:`Early follow-up sent to ${ch.name}`,de:`WhatsApp · ${inr(c.amt)} · payment link ${LINK(id)}`,src:['conv'],who:'Approved by '+M.owner+' · RAY Credit for Mobile',chem:ch.name});
+A.mobFollow=(id)=>{ const c=chaseOf(id), ch=chem(id); S.chase[id].st='sent'; S.chase[id].at=nowT(); log({ic:'send',ti:`Early follow-up sent to ${ch.name}`,de:`WhatsApp · ${inr(c.amt)} · payment link ${LINK(id)}`,src:['conv'],who:'Approved by '+M.owner+' · RAY Credit for Mobile',chem:ch.name});
   if(id==='gupta'&&!S.req.gupta){ S.req.gupta='follow'; log({ic:'shield',ti:'Credit request from Gupta Traders: not extended · follow-up started',de:'₹50,000 requested on WhatsApp · RAY recommended do not extend yet · buyer not messaged by RAY',src:['conv','led'],who:'Decided by '+M.owner+' · RAY Credit for Mobile',chem:'Gupta Traders'}); }
   S.mob.sheet=null; rr(); mobRender(); toast('Follow-up sent to '+ch.name); if(id==='gupta') guptaReplySoon(); };
 A.mobMatch=()=>{ S.vermaMatched=true; S.chase.verma.st='matched'; log({ic:'match',ti:'₹26,500 matched to INV-24655',de:'Verma Retail · reminder cancelled, no longer due',src:['rzp','led'],who:'Confirmed by '+M.owner+' · RAY Credit for Mobile',chem:'Verma Retail'}); S.mob.sheet=null; rr(); mobRender(); toast('Payment matched · reminder cancelled'); };
@@ -208,7 +214,7 @@ A.mobMatch=()=>{ S.vermaMatched=true; S.chase.verma.st='matched'; log({ic:'match
 function surfRender(){
   const r=document.getElementById('surf-root'); if(!r) return;
   const wa=!!document.getElementById('wa-root').innerHTML, mob=!!S.mob, cur=mob?'mob':wa?'wa':'desk';
-  r.innerHTML=`<div class="surf"><span class="surf-l" onclick="A.about()" title="About this demo: what is real and what is simulated">Concept prototype ${I('info',11,2.2)}</span><button class="${cur==='desk'?'on':''}" onclick="A.surf('desk')">Desktop</button><button class="${cur==='wa'?'on':''}" onclick="A.surf('wa')">RAY on WhatsApp</button><button class="${cur==='mob'?'on':''}" onclick="A.surf('mob')">RAY Credit for Mobile</button></div>`;
+  r.innerHTML=`<div class="surf"><span class="surf-l" onclick="A.about()" title="About this demo: what is real and what is simulated">Concept prototype ${I('info',11,2.2)}</span><button class="${cur==='desk'&&!['raahi/checks','raahi/how'].includes(route())?'on':''}" onclick="A.surf('desk')">Desktop</button><button class="${cur==='wa'?'on':''}" onclick="A.surf('wa')">RAY on WhatsApp</button><button class="${cur==='mob'?'on':''}" onclick="A.surf('mob')">RAY Credit for Mobile</button><button class="${cur==='desk'&&route()==='raahi/how'?'on':''}" onclick="A.surf('desk');go('raahi/how')">How it works</button><button class="${cur==='desk'&&route()==='raahi/checks'?'on':''}" onclick="A.surf('desk');go('raahi/checks')">Checks</button></div>`;
 }
 A.surf=(k)=>{ if(k==='desk'){ A.closeWA(); A.closeMobile(); } else if(k==='wa') A.openWA(); else { if(!S.installed){ S.installed=true; ensureBank(); rr(); } A.openMobile('rc'); } surfRender(); };
 hooks.push(()=>surfRender());

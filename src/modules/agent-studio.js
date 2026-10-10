@@ -80,7 +80,7 @@ function instRender(){
     }
   } else if(s.step===3){
     body=`<div class="h3" style="font-size:16px">Choose mode</div><p class="muted mt4">Choose how much RAY can do automatically.</p><div class="col gap8 mt16"><button class="radio-card ${s.auto==='review'?'on':''}" onclick="S.inst.auto='review';instRender()"><span class="radio"></span><div><b style="color:var(--strong)">Review first</b> <span class="badge b-n" style="margin-left:6px">Recommended</span><div class="muted small mt4">RAY prepares recommendations. You approve actions.</div></div></button><button class="radio-card ${s.auto==='routine'?'on':''}" onclick="S.inst.auto='routine';instRender()"><span class="radio"></span><div><b style="color:var(--strong)">Routine automation</b><div class="muted small mt4">Allow low-risk routine actions after you configure limits.</div></div></button></div>
-     <div class="xs muted mt12 row gap4">${I('lock',12)} Sensitive decisions always require approval.</div>`;
+     <div class="xs muted mt12 row gap4">${I('lock',12)} Sensitive decisions always require approval.</div>${pilotBox()}`;
     acts=[{label:'Back',fn:()=>{S.inst.step=2;instRender()}},{label:'Install RAY Credit',cls:'btn-p',fn:()=>A.installDo()}];
   }
   modal({wide:true,title:'Install RAY Credit',body:`<div class="inst-dots">${dots}</div>${body}`,actions:acts});

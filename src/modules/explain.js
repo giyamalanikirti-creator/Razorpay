@@ -139,14 +139,31 @@ function commitRows(offset=0){ return S.promises.filter(p=>p.status==='confirmed
 async function interpretMessage(key, input){
   const st=S.interp[key]={status:'loading', input, startedAt:nowLabel()}; rr();
   let res=null, why='';
-  if(location.protocol!=='file:'&&!(AI.checked&&!AI.reachable&&AI._failed)){
+  const cs=await claudeSample();
+  if(cs&&!AI.claudeOff){
+    try{
+      const prompt=[RayPromise.SYSTEM_PROMPT,'',RayPromise.buildUserPrompt(input),'',
+        'Reply with only one JSON object, no other text. It must match this JSON Schema exactly (every key present, null where a value is not stated):',
+        JSON.stringify(RayPromise.SCHEMA)].join('\n');
+      const raw=await cs.json(prompt,{modelTier:'quick'});
+      if(!raw||typeof raw!=='object'||Array.isArray(raw)) throw {code:'invalid_json'};
+      const v=RayPromise.validateInterpretation(raw,input);
+      res={mode:'ai', provider:'Anthropic', model:'Claude', interpretation:v.interpretation, checks:v.checks, canConfirm:v.canConfirm};
+    }catch(e){
+      const code=(e&&e.code)||'upstream_error';
+      const map={not_granted:'AI_NOT_GRANTED', sampling_disabled:'SAMPLING_DISABLED', not_declared:'SAMPLING_DISABLED', capability_disabled:'SAMPLING_DISABLED', capability_removed:'SAMPLING_DISABLED', session_expired:'SESSION_EXPIRED', rate_limited:'RATE_LIMITED', invalid_json:'INVALID_MODEL_OUTPUT', refused:'INVALID_MODEL_OUTPUT', empty_completion:'INVALID_MODEL_OUTPUT'};
+      why=map[code]||'UPSTREAM_ERROR';
+      if(['AI_NOT_GRANTED','SAMPLING_DISABLED'].includes(why)) AI.claudeOff=why; // permanent for this view: stop asking
+    }
+  }
+  if(!res&&!cs&&location.protocol!=='file:'&&!(AI.checked&&!AI.reachable&&AI._failed)){
     try{
       const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),15000);
       const r=await fetch('/api/parse-promise',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:input.message, outstanding:input.outstanding, invoiceId:input.inv, buyerName:input.buyerName, messageDate:input.messageDate, currentDate:S.today}),signal:ctl.signal});
       clearTimeout(t); const j=await r.json().catch(()=>null);
       if(r.ok&&j&&j.ok&&j.mode==='ai') res=j; else why=(j&&j.code)||('HTTP_'+r.status);
     }catch(e){ why=e.name==='AbortError'?'TIMEOUT':'NETWORK_ERROR'; AI._failed=true; }
-  } else why='NO_SERVER';
+  } else if(!res&&!why) why=cs?(AI.claudeOff||'UPSTREAM_ERROR'):'NO_CLAUDE';
   if(!res){ const raw=RayPromise.demoParse(input.message,input); const v=RayPromise.validateInterpretation(raw,input); res={mode:'rule', interpretation:v.interpretation, checks:v.checks, canConfirm:v.canConfirm, unavailable:why}; }
   const it=res.interpretation;
   Object.assign(st,{status:'done', mode:res.mode, provider:res.provider||null, model:res.model||null, unavailable:res.unavailable||null, interpretation:it, checks:res.checks||[], canConfirm:!!res.canConfirm,
@@ -155,14 +172,14 @@ async function interpretMessage(key, input){
   rr(); if(document.getElementById('wa-root').innerHTML) waRender();
   return st;
 }
-const UNAVAIL = {AI_NOT_CONFIGURED:'AI is not configured on this deployment (no API key)', NO_SERVER:'Opened without the API server', NETWORK_ERROR:'AI endpoint not reachable from here', TIMEOUT:'AI request timed out', RATE_LIMITED:'AI provider is rate limiting', INVALID_MODEL_OUTPUT:'Model returned invalid output', UPSTREAM_ERROR:'AI provider error', HTTP_404:'No AI endpoint on this host', HTTP_405:'No AI endpoint on this host'};
+const UNAVAIL = {NO_CLAUDE:'Live AI runs when this page is opened in Claude', AI_NOT_GRANTED:'You chose not to let this page use Claude', SAMPLING_DISABLED:'Claude is not available for this account', SESSION_EXPIRED:'Sign in to Claude again to use live AI', SCENARIO:'Presenter shortcut: scenario loaded without a live call', AI_NOT_CONFIGURED:'AI is not configured on this deployment (no API key)', NO_SERVER:'Opened without the API server', NETWORK_ERROR:'AI endpoint not reachable from here', TIMEOUT:'AI request timed out', RATE_LIMITED:'AI provider is rate limiting', INVALID_MODEL_OUTPUT:'Model returned invalid output', UPSTREAM_ERROR:'AI provider error', HTTP_404:'No AI endpoint on this host', HTTP_405:'No AI endpoint on this host'};
 const INTENT_LABEL = {promise:'Payment promise', payment_claim:'Payment claim', dispute:'Dispute', extension_request:'Extension request', general_query:'General query', unclear:'Unclear'};
 function modeBadge(st){ return st.mode==='ai'?`<span class="badge b-b">${clover(11)} AI · ${esc(st.model||'model')}</span>`:`<span class="badge b-n" title="${esc(UNAVAIL[st.unavailable]||st.unavailable||'')}">Rule-based demo parser · not AI</span>`; }
 function highlight(msg, spans){ let h=esc(msg); (spans||[]).slice().sort((a,b)=>b.length-a.length).forEach(sp=>{ const re=new RegExp(esc(sp).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'); h=h.replace(re,m=>`<mark>${m}</mark>`); }); return h; }
 function interpPanel(key, opts={}){
   const st=S.interp[key]; const id=opts.buyerId||(st&&st.input.buyerId);
   if(!st||st.status==='idle'){ return opts.idle||''; }
-  if(st.status==='loading') return `<div style="padding:16px 0">${thinking(AI.configured?`Interpreting with ${AI.model}…`:'Interpreting the message…')}</div>`;
+  if(st.status==='loading') return `<div style="padding:16px 0">${thinking(claudeLive()?'Reading the message with Claude…':AI.configured?`Interpreting with ${AI.model}…`:'Interpreting the message…')}</div>`;
   const it=st.interpretation, f=st.fields, inp=st.input, prom=S.promises.find(p=>p.key===key&&p.status!=='replaced');
   const status=prom?(prom.status==='kept'?'<span class="badge b-g">Kept · payment verified</span>':prom.status==='missed'?'<span class="badge b-r">Promise missed</span>':'<span class="badge b-g">'+I('check',11,2.6)+' Confirmed by you</span>'):st.routed?`<span class="badge b-b">${esc(st.routed)}</span>`:'<span class="badge b-a">Extracted · not confirmed</span>';
   const fld=(k,lbl,type)=>`<div class="field"><label>${lbl}</label>${type==='date'?`<input type="date" class="input" id="ip-${key}-${k}" min="${S.today}" value="${f[k]||''}" ${prom?'disabled':''} oninput="A.ipEdit('${key}')">`:`<input class="input num" id="ip-${key}-${k}" value="${f[k]!=null?f[k]:''}" placeholder="Not stated" ${prom?'disabled':''} oninput="A.ipEdit('${key}')">`}</div>`;
@@ -270,8 +287,8 @@ A.about=()=>{ const st=pfStats();
   const col=(h,cls,items)=>`<div class="ab-c"><div class="ab-h ${cls}">${h}</div>${items.map(x=>`<div class="ab-i">${x}</div>`).join('')}</div>`;
   modal({title:'About this demo',wide:true,body:`<p class="small" style="color:var(--strong)">RAY Credit is a <b>concept prototype</b> for Razorpay Agent Studio, built on synthetic data. It is not a live Razorpay product and connects to no real account, bank or WhatsApp number.</p>
    <div class="ab-g mt12">
-    ${col('Working','ok',['Credit policy engine: bands, limits, terms, explanations for all '+st.buyers+' synthetic buyers','Event-driven ledger: payments, failures, promises, disputes update balances and signals','Outcome-informed recommendations with "What changed" and approval','Payment promise editing, validation and collections view','Merchant controls enforced at send time: Do not contact, weekly limit, quiet hours (IST), channels, stale ledger, payment review','Per-buyer network consent: request, accept, decline, revoke, dispute','Live LLM interpretation of buyer messages <b>when an API key is configured</b> on the server ('+esc(aiLabel())+')','Unit, API and browser tests'])}
-    ${col('Simulated','sim',['Marg ERP ledger and sync','Razorpay payment events and Smart Collect','Bank-feed transactions (Connected Banking+)','WhatsApp delivery and buyer replies','UPI Autopay / eNACH mandates and debits','<b>Razorpay network repayment signals: synthetic and aggregated</b>','Credit approvals written to a mock ledger','The rule-based message parser used when live AI is unavailable (labelled, not AI)'])}
+    ${col('Working','ok',['Credit policy engine: bands, limits, terms, explanations for all '+st.buyers+' synthetic buyers','Event-driven ledger: payments, failures, promises, disputes update balances and signals','Outcome-informed recommendations with "What changed" and approval','Payment promise editing, validation and collections view','Merchant controls enforced at send time: Do not contact, weekly limit, quiet hours (IST), channels, stale ledger, payment review','Per-buyer network consent: request, accept, decline, revoke, dispute','Live AI reads buyer messages (promise, payment claim, dispute) with Claude, on the viewer’s own Claude account; every answer is checked against the message before you can confirm it ('+esc(aiLabel())+')','Unit, API and browser tests'])}
+    ${col('Simulated','sim',['Marg ERP ledger and sync','Razorpay payment events and Smart Collect','Bank-feed transactions (Connected Banking+)','WhatsApp delivery and buyer replies','UPI Autopay / eNACH mandates and debits','<b>Razorpay network repayment signals: synthetic and aggregated</b>','Credit approvals written to a mock ledger','The rule-based message parser, used only when Claude is unavailable or not allowed (labelled, not AI)'])}
     ${col('Proposed','prop',['Production cross-distributor network (needs participation, consent, privacy and legal review, potentially including credit-information regulation)','RAY Payment Passport for retailers','Regulated financing through a lending partner (separate from trade-credit decisions)','WhatsApp Business inbox integration'])}
    </div>
    <div class="row between mt16 wrap gap8" style="border-top:1px solid var(--border-subtle);padding-top:12px"><label class="row gap8 small" style="cursor:pointer"><input type="checkbox" ${S.persist!==false?'checked':''} onchange="S.persist=this.checked;if(!this.checked)persistClear();else persistSave()"> Keep my demo changes in this browser after refresh</label><span class="xs muted">Policy ${POL.version} · build ${BUILD_ID} · ${st.buyers} buyers · ${st.openInvoices.toLocaleString('en-IN')} open invoices (synthetic)</span></div>`,

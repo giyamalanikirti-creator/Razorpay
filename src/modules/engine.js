@@ -117,7 +117,7 @@ function gateState(id, inv){ const due=inv?balOf(id,inv):outOf(id); const i=inv?
   const claim=invsOf(id).some(x=>x.claim&&x.bal>0);
   const review=(typeof prPending==='function'&&prPending(id)) || (id==='verma'&&!S.vermaMatched);
   const disputed=inv?(i&&i.disputed||0):invsOf(id).reduce((a,x)=>a+(x.bal>0?(x.disputed||0):0),0);
-  return {dueAmount:due, disputed, paid:due<=0, claimPending:claim, unmatchedPending:review, reviewText:review&&id!=='verma'?(id==='citycare'?'A salesperson recorded a cheque that is not in the bank yet. Review it before sending a reminder.':'Payment status is not confirmed yet. Review the payment before sending a reminder.'):null}; }
+  return {dueAmount:due, disputed, paid:due<=0, claimPending:claim, unmatchedPending:review, reviewText:review&&(PAYREV[id]||{}).kind!=='unmatched_credit'?((PAYREV[id]||{}).kind==='cheque_recorded'?'A salesperson recorded a cheque that is not in the bank yet. Review it before sending a reminder.':'Payment status is not confirmed yet. Review the payment before sending a reminder.'):null}; }
 function gateFor(id, channel='whatsapp', inv){
   const b=BUY[id]||{id,name:id};
   return RayGuards.sendGate({buyer:{id, name:b.name}, channel,
@@ -146,10 +146,17 @@ A.advanceToMs=(ms)=>{ const p=RayDates.istParts(ms); if(RayDates.diffDays(p.date
 A.advanceClock=(toMin)=>{ const cur=simMin(); if(toMin<=cur){ toast('Already past that time'); return; } _clock=toMin-9*60; const r=runOutbox(); rr(); toast(`Demo clock moved to ${nowLabel()} IST${r.sent?` · ${r.sent} scheduled message${r.sent===1?'':'s'} sent`:''}${r.blocked?` · ${r.blocked} blocked at send time`:''}`); };
 
 /* ---------- AI status (server tells us honestly whether a model is configured) ---------- */
-const AI = {checked:false, configured:false, provider:null, model:null, reachable:false};
-function aiCheck(){ if(AI.checked) return; AI.checked=true; if(location.protocol==='file:') return;
+const AI = {checked:false, configured:false, provider:null, model:null, reachable:false, claude:null, claudeChecked:false, claudeOff:null};
+/* Live AI through the page's own Claude access (artifact `sample` capability, on the viewer's Claude account). */
+let _claudeP=null;
+function claudeSample(){ if(_claudeP) return _claudeP;
+  _claudeP=(async()=>{ try{ const c=window.claude; AI.claude=(c&&typeof c.use==='function')?await c.use('sample'):null; }catch(e){ AI.claude=null; }
+    AI.claudeChecked=true; if(route().startsWith('raahi')||route().startsWith('ray')) render(); return AI.claude; })();
+  return _claudeP; }
+const claudeLive = () => !!AI.claude && !AI.claudeOff;
+function aiCheck(){ claudeSample(); if(AI.checked) return; AI.checked=true; if(location.protocol==='file:') return;
   fetch('/api/parse-promise',{method:'GET'}).then(r=>r.ok?r.json():null).then(j=>{ if(j&&typeof j.configured==='boolean'){ AI.reachable=true; AI.configured=j.configured; AI.provider=j.provider; AI.model=j.model; if(route().startsWith('raahi')) render(); } }).catch(()=>{}); }
-const aiLabel = () => AI.configured?`Live AI · ${AI.model}`:AI.reachable?'AI not configured on this deployment':'AI endpoint not reachable here';
+const aiLabel = () => claudeLive()?'Live AI · Claude':AI.configured?`Live AI · ${AI.model}`:AI.claudeOff?(UNAVAIL[AI.claudeOff]||'Live AI off'):!AI.claudeChecked?'Connecting to Claude…':AI.reachable?'AI not configured on this deployment':'Live AI off · open in Claude to use it';
 
 /* ---------- persistence (optional, per browser) ---------- */
 const PERSIST_KEY='ray-credit-demo-v2';
@@ -166,7 +173,7 @@ function persistLoad(){ try{ const raw=localStorage.getItem(PERSIST_KEY); if(!ra
 function persistClear(){ try{ localStorage.removeItem(PERSIST_KEY); }catch(e){} }
 hooks.push(()=>{ clearTimeout(window._psT); window._psT=setTimeout(persistSave,300); });
 
-function engBoot(){ if(!persistLoad()) engInit(); else engineSync(); const dc=document.getElementById('datechip'); if(dc) dc.textContent=S.date; aiCheck(); }
+function engBoot(){ if(!persistLoad()) engInit(); else engineSync(); syncChase(true); const dc=document.getElementById('datechip'); if(dc) dc.textContent=S.date; aiCheck(); }
 /* apply a verified payment to the ledger (clamped to the open balance, de-duplicated by reference) */
 function ledgerPay(id, inv, amt, o={}){ const i=(inv&&invOf(id,inv))||nextOpenInv(id); if(!i||i.bal<=0||!amt) return {ok:false};
   return recordEvent({type:o.type||'PAYMENT_RECEIVED', buyerId:id, invoice:i.inv, amount:Math.min(amt,i.bal), verification:'verified', source:o.source||'Razorpay', actor:o.actor||'Razorpay', ref:o.ref||null, meta:o.meta||{}},{quiet:true}); }

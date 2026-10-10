@@ -60,8 +60,8 @@ const goSec = (r,id) => { go(r); setTimeout(()=>{const e=document.getElementById
 function decisionsOpen(){ return [!S.newLife, S.gupta.rec==='open'].filter(Boolean).length; }
 function unsafeCount(){ return (S.vermaMatched?0:1)+(S.jainReviewed?0:1); }
 function bankPending(){ return S.bank.ever ? S.bank.rows.filter(r=>['r3','r4','r5'].includes(r.id)&&['suggested','unid'].includes(r.st)).length : 3; }
-function pendingMatches(){ return ['verma','lifeline','goyal','citycare'].filter(prPending).length+bankPending(); }
-function reviewCount(){ return ['verma','lifeline','goyal','citycare'].filter(prPending).length; }
+function pendingMatches(){ return Object.keys(PAYREV).filter(prPending).length+bankPending(); }
+function reviewCount(){ return Object.keys(PAYREV).filter(prPending).length; }
 
 /* ---------- OVERVIEW: network first, then the credit lifecycle in four cards ---------- */
 function vOverview(){
@@ -94,9 +94,9 @@ function vOverview(){
    ${commits.length?row('ov-commit','cal','background:var(--blue-tint);color:var(--link)',`${commits.length} payment commitment${commits.length===1?'':'s'} confirmed · ${inr(cAmt)} expected`,commits.map(x=>`${chem(x.buyerId).name}${x.later&&x.later.date?' by '+RayDates.fmtShort(x.later.date):''}`).join(' · ')+' · expected, not guaranteed',`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-upcoming')">View</button>`):''}
    ${row('ov-fail','alert',failOpen('gupta')?'background:var(--r-bg);color:var(--r)':'background:var(--n-bg);color:var(--n)',failOpen('gupta')?'Gupta Traders · ₹20,000 · UPI Autopay failed':`Gupta Traders · recovering ${inr(balOf('gupta','INV-24790'))}`,failOpen('gupta')?'Insufficient balance · RAY recommends a payment link that allows partial payment':recStatus('gupta').replace(/<[^>]+>/g,''),failOpen('gupta')?`<button class="btn btn-p btn-sm" onclick="go('raahi/recover/gupta')">Start recovery</button>`:`<button class="btn btn-s btn-sm" onclick="go('raahi/recover/gupta')">View recovery</button>`)}
    ${kirOverviewRow()}
-   ${row('ov-pay','match',p?'background:#fff1dc;color:#9a5b00':'background:var(--g-bg);color:var(--g)',p?`${p} payment${p===1?' needs':'s need'} reconciliation`:'Payments reconciled',p?`${['verma','lifeline','goyal','citycare'].filter(prPending).map(i=>chem(i).name).join(', ')} · confirm payment first, chase second${S.bank.st==='on'?'':' · bank account not connected'}`:'Nothing to review',`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-check')">Review payments</button>`)}
+   ${row('ov-pay','match',p?'background:#fff1dc;color:#9a5b00':'background:var(--g-bg);color:var(--g)',p?`${p} payment${p===1?' needs':'s need'} reconciliation`:'Payments reconciled',p?`${Object.keys(PAYREV).filter(prPending).map(i=>chem(i).name).join(', ')} · confirm payment first, chase second${S.bank.st==='on'?'':' · bank account not connected'}`:'Nothing to review',`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-check')">Review payments</button>`)}
    ${kirForecastRow()}</div>
-  <div class="mt16">${outcomesCard()}</div>`;
+  <div class="mt16">${outcomesCard()}</div>${learnCard()}`;
 }
 function useAnywhere(){ return `<div class="card mt16"><div class="sec-h"><div><div class="h3">Use RAY anywhere</div><div class="small muted mt4">The same RAY Credit intelligence on desktop, mobile and WhatsApp.</div></div></div>
    <div class="grid g2" style="gap:0"><div class="any"><span class="any-ic wa">${I('chat',20,2.2)}</span><div class="grow"><b>RAY on WhatsApp</b><div class="small muted mt4">Ask questions, receive alerts, and share buyer credit requests.</div></div><button class="btn btn-s btn-sm" onclick="A.openWA()">Open WhatsApp</button></div>

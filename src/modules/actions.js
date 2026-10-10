@@ -55,11 +55,11 @@ A.editTerms=()=>modal({title:'Edit credit terms',body:`<div class="field"><label
 
 /* ---- chase: every send goes through the controls gate, at draft time and again at send time ---- */
 A.chaseSet=(id,st)=>{S.chase[id].st=st; if(st==='skipped') log({ic:'skip',ti:`Action dismissed for ${chem(id).name}`,de:'Will reappear in Actions tomorrow if still due',src:[],who:M.owner+' · Dashboard',chem:chem(id).name}); rr()};
-A.saveEdit=id=>{S.chase[id].msg=document.getElementById('ed-'+id).value;S.chase[id].editing=false;rr();toast('Draft updated')};
+A.saveEdit=id=>{S.chase[id].msg=document.getElementById('ed-'+id).value;S.chase[id].by='you';S.chase[id].editing=false;rr();toast('Draft updated')};
 const chaseInv = id => { const n=nextDueInv(id); return id==='gupta'?'INV-24891':n?n.inv:null; };
 function checksLine(id, g){ if(S.stale) return `<span style="color:var(--a);font-weight:600">Ledger last synced 31 hours ago. RAY can’t confirm payment status until it is refreshed.</span>`;
   return `RAY checked Razorpay payments${S.bank.st==='on'?', your bank feed':''}, unidentified credits and salesperson collections. ${g&&g.action==='block'?'':'No matching payment found.'} Quiet hours ${S.ctl.qf}–${S.ctl.qt} IST and max ${S.ctl.max} apply.`; }
-A.approveOne=id=>{const c=CHASE.find(x=>x.id===id), ch=chem(id);
+A.approveOne=id=>{const c=chaseOf(id), ch=chem(id);
   if(c.ch==='sm') return A.assignTo(id);
   const lab=ctaLabel(c), early=c.kind==='Early follow-up', inv=chaseInv(id), g=gateFor(id,'whatsapp',inv);
   const ten=RayDates.istMs(S.today,600), canSchedule=simNowMs()<ten;
@@ -74,7 +74,7 @@ A.approveOne=id=>{const c=CHASE.find(x=>x.id===id), ch=chem(id);
      log({ic:r.ok?'send':'clock',ti:r.ok?(early?`Early follow-up sent to ${ch.name}`:`Reminder sent to ${ch.name}`):`${early?'Follow-up':'Reminder'} to ${ch.name} ${r.scheduled?'scheduled for 10:00 AM':'queued (quiet hours)'}`,de:`WhatsApp · ${inr(c.amt)} · payment link ${LINK(id)}${r.ok?'':' · controls re-checked at send time'}`,src:['conv'],who:'Approved by '+M.owner+' · Dashboard',chem:ch.name});
      rr(); toast(r.ok?(early?'Follow-up sent to ':'Reminder sent to ')+ch.name:r.scheduled?'Scheduled for 10:00 AM':'Queued until quiet hours end'); if(id==='gupta'&&r.ok) guptaReplySoon()}}]});
 };
-A.assignTo=(id)=>{const ch=chem(id), c=CHASE.find(x=>x.id===id)||{id,amt:outOf(id),kind:'Salesperson visit',note:`Collect ${inr(outOf(id))} on the next route visit. WhatsApp is disabled for this buyer.`};
+A.assignTo=(id)=>{const ch=chem(id), c=chaseOf(id)||{id,amt:outOf(id),kind:'Salesperson visit',note:`Collect ${inr(outOf(id))} on the next route visit. WhatsApp is disabled for this buyer.`};
   const g=gateFor(id,'salesperson',chaseInv(id));
   if(g.action==='block'){ return modal({title:'Can’t assign this collection',body:`<p style="color:var(--strong)">${esc(gateNote(g))}</p>`,actions:[{label:'OK',cls:'btn-p'}]}); }
   const cod=c.kind==='Collect before supply', def=id==='bansal'?1:0;
@@ -85,7 +85,7 @@ A.assignTo=(id)=>{const ch=chem(id), c=CHASE.find(x=>x.id===id)||{id,amt:outOf(i
      log({ic:'truck',ti:cod?`Collect on delivery assigned to ${p}`:`Collection assigned to ${p}`,de:`${ch.name} · ${inr(c.amt)} · ${c.note}`,src:['led'],who:'Approved by '+M.owner+' · Dashboard',chem:ch.name});rr();toast('Assigned to '+p)}}]});
 };
 /* bulk: the count shown is exactly what the gate will allow at execution time */
-function bulkPlan(){ const drafts=CHASE.filter(c=>c.ch==='wa'&&S.chase[c.id].st==='draft'); const send=[], queue=[], excluded=[];
+function bulkPlan(){ syncChase(); const drafts=CHASE.filter(c=>c.ch==='wa'&&S.chase[c.id].st==='draft'); const send=[], queue=[], excluded=[];
   drafts.forEach(c=>{ const g=gateFor(c.id,'whatsapp',chaseInv(c.id)); if(g.action==='send') send.push(c); else if(g.action==='queue') queue.push(c); else excluded.push({c, why:gateNote(g), code:g.code}); });
   CHASE.filter(c=>S.chase[c.id].st==='held').forEach(c=>{ if(!excluded.some(x=>x.c.id===c.id)) excluded.push({c, why:'A recent payment may already cover this. Review it first.', code:'unmatched'}); });
   return {send, queue, excluded}; }

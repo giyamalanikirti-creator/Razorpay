@@ -447,6 +447,16 @@ svg{flex-shrink:0}
 .wa-close{position:absolute;top:24px;right:24px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;display:grid;place-items:center}
 .wa-close:hover{background:rgba(255,255,255,.2)}
 
+.how-flow{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr) 24px minmax(0,1fr) 24px minmax(0,1fr);gap:8px;align-items:start}
+.how-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.how-h{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.how-b{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:2px}
+.how-b b{font-size:13px;color:var(--strong)}.how-b span{font-size:12px;color:var(--muted);line-height:1.4}
+.how-b.sim{border-style:dashed;background:#fbfbfc}.how-b.real{border-color:#cfe0fd;background:var(--blue-tint2)}
+.how-arrow{align-self:center;color:var(--faint);display:grid;place-items:center}
+.how-ai{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--ai-mint);flex-wrap:wrap}
+@media (max-width:900px){.how-flow{grid-template-columns:minmax(0,1fr)}.how-arrow{transform:rotate(90deg)}}
+
 /* ============ Demo panel ============ */
 .demo-fab{position:fixed;right:22px;bottom:18px;z-index:90;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 10px;background:#1f2123;color:#fff;border-radius:9px;font-weight:600;font-size:12.5px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
 .demo-fab:hover{background:#2a2d30}

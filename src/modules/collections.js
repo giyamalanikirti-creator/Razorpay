@@ -14,7 +14,7 @@ const BASE_M = {
   gupta:{m:'UPI Autopay', max:100000}, arora:{m:'UPI Autopay', max:120000}, mehta:{m:'UPI Autopay', max:75000}, sethi:{m:'UPI Autopay', max:60000},
   chawla:{m:'eNACH', max:60000}, singhms:{m:'eNACH', max:40000},
 };
-function collMethod(id){ return S.mand[id] || BASE_M[id] || (id==='newlife' ? {m:'Not set up'} : {m:'Manual'}); }
+function collMethod(id){ const b=BUY[id], dm=b&&b.debit&&b.debit.method; return S.mand[id] || BASE_M[id] || (id==='newlife' ? {m:'Not set up'} : dm&&dm!=='Manual' ? {m:dm} : {m:'Manual'}); }
 const isAuto = id => ['UPI Autopay','eNACH'].includes(collMethod(id).m);
 const mLabel = m => m==='eNACH'?'eNACH mandate':m==='Manual'?'Manual payment':m;
 function methodChip(id, sub){ const c=collMethod(id), m=c.m;
@@ -23,23 +23,64 @@ function methodChip(id, sub){ const c=collMethod(id), m=c.m;
 }
 
 /* ---------- scheduled automatic collections this week ---------- */
-const UPCOMING = {
-  arora:{inv:'INV-24860', amt:42800, due:'5 Oct', d:5, when:'Today · attempt at 11:00 AM'},
-  mehta:{inv:'INV-24812', amt:30000, due:'6 Oct', d:6, when:'Tomorrow, 6 Oct'},
-  chawla:{inv:'INV-24930', amt:27600, due:'6 Oct', d:6, when:'Tomorrow, 6 Oct'},
-  sethi:{inv:'INV-24940', amt:18900, due:'8 Oct', d:8, when:'Thu, 8 Oct'},
-};
+const UPCOMING = {};
 const collSt = id => S.coll[id]||'scheduled';
 function collStatus(id){ const s=collSt(id);
   if(s==='received') return `<span class="badge b-g">${I('check',11,2.6)} Received · matched automatically</span>`;
   if(s==='progress') return `<span class="badge b-b">Collection in progress</span>`;
   if(s==='paidbank') return `<span class="badge b-g">${I('check',11,2.6)} Paid by NEFT · autopay cancelled</span>`;
-  return `<span class="badge b-n">${UPCOMING[id].d===5?'Due today':UPCOMING[id].d===6?'Due tomorrow':'Scheduled'}</span>`; }
+  return `<span class="badge b-n">${planDays(UPCOMING[id].iso)===0?'Due today':planDays(UPCOMING[id].iso)===1?'Due tomorrow':'Scheduled'}</span>`; }
 
 /* ---------- failed automatic collections ---------- */
-const FAILS = {
-  gupta:{inv:'INV-24790', amt:20000, due:'3 Oct 2026', m:'UPI Autopay', on:'Sat, 3 Oct · 10:02 AM', reason:'Insufficient balance', rec:'Send a payment link and allow partial payment.', why:'Gupta Traders has paid in parts before. A partial-payment link lets them start paying now instead of waiting until the full amount is available.'},
-};
+const FAILS = {};
+/* ================= COMPUTED COLLECTION LISTS =================
+   Scheduled automatic collections, failed automatic debits and payment reviews are rebuilt from mandates,
+   ledger events and incoming payment signals, the same way for every buyer. */
+/* Incoming payment signals RAY has not confirmed yet (synthetic prototype data). Review entries are built from these. */
+const PAY_SIGNALS = [
+  {buyerId:'verma', inv:'INV-24655', kind:'unmatched_credit', possible:{amt:26500, t:'Yesterday, 6:10 PM', from:'UPI · Razorpay Smart Collect', ref:'pay_Q8f2Kx91LmZ4'}},
+  {buyerId:'lifeline', inv:'INV-24702', kind:'bank_candidates', cands:[{amt:31200,t:'Yesterday, 4:32 PM',from:'LIFELINE MART',ref:'NEFT/HDFC81732',conf:'High'},{amt:31000,t:'Yesterday, 1:14 PM',from:'LIFELINE & CO',ref:'UPI/40918276',conf:'Low'}]},
+  {buyerId:'goyal', inv:'INV-24611', kind:'not_confirmed'},
+  {buyerId:'citycare', inv:'INV-24733', kind:'cheque_recorded', sp:{amt:42000, t:'3 Oct · 5:40 PM', date:'3 Oct', by:'Rakesh Sharma', from:'Cheque #004512 · recorded by Rakesh Sharma', ref:'Not yet seen in the bank'}},
+];
+function prNote(sg){
+  if(sg.kind==='unmatched_credit') return `We found an unmatched ${inr(sg.possible.amt)} Razorpay credit (${sg.possible.t.toLowerCase()}) that may be this payment.`;
+  if(sg.kind==='cheque_recorded') return `${sg.sp.by} recorded a ${inr(sg.sp.amt)} cheque collection on ${sg.sp.date}. It has not appeared in your bank account yet.`;
+  return 'We haven’t found a confirmed payment for this invoice yet.'; }
+const dueYear = iso => `${RayDates.fmtShort(iso)} ${iso.slice(0,4)}`;
+function syncLists(){
+  /* payment reviews: one per unconfirmed payment signal; status comes from the ledger */
+  for(const k of Object.keys(PAYREV)) delete PAYREV[k];
+  PAY_SIGNALS.forEach(sg=>{ const i=invOf(sg.buyerId, sg.inv); if(!i) return; const bal=i.bal-(i.disputed||0), d=planDays(i.due);
+    PAYREV[sg.buyerId]=Object.assign({kind:sg.kind, inv:sg.inv, open:bal>0, amt:bal>0?bal:i.amt, due:dueYear(i.due), dueTxt:d===0?'Due today':d<0?`${-d} day${d===-1?'':'s'} overdue`:`Due in ${d} days`, note:prNote(sg), cands:sg.cands||[]},
+      sg.possible?{possible:sg.possible}:{}, sg.sp?{sp:sg.sp}:{}); });
+  /* failed automatic debits: every AUTOPAY_FAILED event whose invoice is still open (or already in recovery) */
+  const kept=Object.fromEntries(Object.entries(FAILS).filter(([id])=>S.rec&&S.rec[id]&&S.rec[id].st));
+  for(const k of Object.keys(FAILS)) delete FAILS[k];
+  S.led.events.filter(e=>e.type==='AUTOPAY_FAILED').forEach(e=>{ const i=invOf(e.buyerId, e.invoice); if(!i||!BUY[e.buyerId]) return;
+    if(i.bal<=0&&!kept[e.buyerId]) return;
+    const s=sigOf(e.buyerId), part=((s.promises&&s.promises.partial)||0)>0||(s.partialPayments||0)>0, nm=BUY[e.buyerId].name;
+    FAILS[e.buyerId]={inv:e.invoice, amt:e.amount||i.amt, due:dueYear(i.due), m:/enach/i.test(e.source||'')?'eNACH':collMethod(e.buyerId).m, on:`${RayDates.fmtDay(e.date)} · ${(e.meta&&e.meta.time)||'10:02 AM'}`,
+      reason:(e.meta&&e.meta.reason)||'Debit did not go through',
+      rec:part?'Send a payment link and allow partial payment.':'Retry the debit once and send a payment link.',
+      why:part?`${nm} has paid in parts before. A partial-payment link lets them start paying now instead of waiting until the full amount is available.`:`${nm} usually pays on time. One retry after they add balance, plus a link to pay now, is enough.`}; });
+  Object.keys(kept).forEach(id=>{ if(!FAILS[id]) FAILS[id]=kept[id]; });
+  /* scheduled automatic collections: next invoice due within 7 days for every buyer with an active mandate */
+  const keepUp=Object.fromEntries(Object.entries(UPCOMING).filter(([id])=>['received','progress','paidbank'].includes(S.coll&&S.coll[id])));
+  for(const k of Object.keys(UPCOMING)) delete UPCOMING[k];
+  const failed=new Set(S.led.events.filter(e=>e.type==='AUTOPAY_FAILED').map(e=>e.buyerId+'|'+e.invoice));
+  for(const b of RayData.ALL){ const id=b.id; if(keepUp[id]){ UPCOMING[id]=keepUp[id]; continue; } if(!isAuto(id)) continue;
+    const next=invsOf(id).filter(i=>i.bal-(i.disputed||0)>0&&!failed.has(id+'|'+i.inv)&&planDays(i.due)>=0&&planDays(i.due)<=7).sort((a,c)=>RayDates.toN(a.due)-RayDates.toN(c.due))[0];
+    if(!next) continue; const d=planDays(next.due);
+    UPCOMING[id]={inv:next.inv, amt:next.bal-(next.disputed||0), due:RayDates.fmtShort(next.due), iso:next.due, d:+next.due.slice(8), when:d===0?'Today · attempt at 11:00 AM':d===1?`Tomorrow, ${RayDates.fmtShort(next.due)}`:RayDates.fmtDay(next.due)}; }
+}
+const UP_SHOW = 6;
+function upKeysAll(){ return Object.keys(UPCOMING).sort((a,c)=>{ const A1=['received','paidbank','progress'].includes(collSt(a))?0:1, C1=['received','paidbank','progress'].includes(collSt(c))?0:1;
+  return (RayDates.toN(UPCOMING[a].iso)-RayDates.toN(UPCOMING[c].iso))||(UPCOMING[c].amt-UPCOMING[a].amt)||(A1-C1); }); }
+function upKeys(){ const all=upKeysAll(); const acted=all.filter(id=>['received','paidbank','progress'].includes(collSt(id))); const top=all.filter(id=>!acted.includes(id)).slice(0,UP_SHOW);
+  return all.filter(id=>acted.includes(id)||top.includes(id)); }
+function upMoreRow(){ const shown=new Set(upKeys()), rest=Object.keys(UPCOMING).filter(id=>!shown.has(id)); if(!rest.length) return '';
+  return `<div class="chase"><div class="chase-h" style="cursor:default;grid-template-columns:28px minmax(0,1fr) auto"><span class="rank">+</span><div class="small muted">${rest.length} more automatic collection${rest.length===1?'':'s'} this week · ${lakhs(rest.reduce((a,id)=>a+UPCOMING[id].amt,0))} · each runs only inside the buyer’s authorised mandate. RAY steps in only if a debit fails.</div><button class="btn btn-g btn-sm" onclick="go('raahi/portfolio')">View portfolio</button></div></div>`; }
 const recS = id => (S.rec[id]=S.rec[id]||{st:null});
 const failOpen = id => !!FAILS[id] && !recS(id).st;
 const failCount = () => Object.keys(FAILS).filter(failOpen).length;
@@ -123,7 +164,7 @@ function planSteps(id){
   const p=PLAN[id], c=chemView(chem(id)), m=collMethod(id).m, auto=m==='UPI Autopay'||m==='eNACH', watch=c.band!=='Reliable', st=[];
   const dd=k=>`${k} Oct`, today=5;
   const tag=(d,doneTxt)=> d<today?`<span class="badge b-g">${I('check',10,2.6)} ${doneTxt||'Done'}</span>`:d===today?'<span class="badge b-b">Today</span>':'';
-  if(watch) st.push([p.d-7,'Early follow-up','Watch buyer: RAY starts 7 days before the due date.', id==='gupta'&&S.chase.gupta.st!=='draft'?`<span class="badge b-g">${I('check',10,2.6)} Sent</span>`:id==='gupta'?'<span class="badge b-b">Today · needs approval</span>':tag(p.d-7)]);
+  if(watch) st.push([p.d-S.pol.watchLead,'Early follow-up',`Watch buyer: RAY starts ${S.pol.watchLead} days before the due date.`, id==='gupta'&&S.chase.gupta.st!=='draft'?`<span class="badge b-g">${I('check',10,2.6)} Sent</span>`:id==='gupta'?'<span class="badge b-b">Today · needs approval</span>':tag(p.d-7)]);
   st.push([p.d-3,'Pre-due reminder', auto?'WhatsApp via RAY. Mentions the mandate and the due date.':'WhatsApp via RAY with a payment link.', tag(p.d-3,'Sent')]);
   if(auto) st.push([p.d-1,'Upcoming debit notification', m==='eNACH'?'Pre-debit notice to the buyer before the mandate debit.':'Pre-debit notice through the buyer’s UPI app.', tag(p.d-1,'Sent')]);
   st.push([p.d, auto?(m==='eNACH'?'eNACH debit':'Autopay attempt'):'Due-date reminder', auto?`Collects ${inr(p.amt)} within the authorised mandate.`:'Payment link resent if unpaid.', p.d===today?'<span class="badge b-b">Today</span>':'']);
@@ -247,8 +288,8 @@ function outcomesCard(){
   return `<div class="card" id="ov-learn"><div class="sec-h"><div><div class="row gap8">${stage('LEARN')}<span class="h3">RAY learns from collection outcomes</span></div><div class="small muted mt4">Outcome-informed recommendations: every recorded payment, failure or promise updates the buyer’s signals and re-runs the policy. No model is trained.</div></div></div>${rows.join('')}</div>`;
 }
 /* ---------- Overview + Actions blocks ---------- */
-function upcomingRows(){ return Object.keys(UPCOMING).map((id,i)=>{ const u=UPCOMING[id], c=chemView(chem(id)), s=collSt(id);
-  return aRow(i,{id:'act-up-'+id,name:c.name,band:c.band,area:u.inv,amt:inr(u.amt),kind:collMethod(id).m,kc:'k-credit',reason:s==='paidbank'?'Paid by NEFT before the attempt · autopay cancelled':s==='received'?'Collected · matched automatically':`${u.when} · ${collMethod(id).m} active`,chan:'Automatic collection',chanIc:collMethod(id).m==='eNACH'?'bank':'refresh',right:s==='received'||s==='paidbank'?doneLine(s==='received'?'Received':'Paid · matched')+`<button class="btn btn-g btn-sm" onclick="go('raahi/collect/${id}')">View</button>`:`<button class="btn btn-s btn-sm" onclick="go('raahi/collect/${id}')">View</button>`}); }).join(''); }
+function upcomingRows(){ return upKeys().map((id,i)=>{ const u=UPCOMING[id], c=chemView(chem(id)), s=collSt(id);
+  return aRow(i,{id:'act-up-'+id,name:c.name,band:c.band,area:u.inv,amt:inr(u.amt),kind:collMethod(id).m,kc:'k-credit',reason:s==='paidbank'?'Paid by NEFT before the attempt · autopay cancelled':s==='received'?'Collected · matched automatically':`${u.when} · ${collMethod(id).m} active`,chan:'Automatic collection',chanIc:collMethod(id).m==='eNACH'?'bank':'refresh',right:s==='received'||s==='paidbank'?doneLine(s==='received'?'Received':'Paid · matched')+`<button class="btn btn-g btn-sm" onclick="go('raahi/collect/${id}')">View</button>`:`<button class="btn btn-s btn-sm" onclick="go('raahi/collect/${id}')">View</button>`}); }).join('')+upMoreRow(); }
 function failedRows(){ return Object.keys(FAILS).map((id,i)=>{ const f=FAILS[id], c=chemView(chem(id)), open=failOpen(id);
   return aRow(i,{id:'act-fail-'+id,name:c.name,band:c.band,area:f.inv,amt:inr(f.amt),kind:f.m==='eNACH'?'eNACH failed':'Autopay failed',kc:'k-held',reason:open?`${f.reason} · ${f.rec}`:recStatus(id).replace(/<[^>]+>/g,''),chan:'Smart recovery',chanIc:'alert',right:open?`<button class="btn btn-p btn-sm" onclick="go('raahi/recover/${id}')">${id==='gupta'?'Start recovery':'Review retry'}</button>`:`<button class="btn btn-g btn-sm" onclick="go('raahi/recover/${id}')">View</button>`}); }).join(''); }
 
