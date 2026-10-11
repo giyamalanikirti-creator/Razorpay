@@ -1,0 +1,587 @@
+{
+ "suite": "Browser journeys (Playwright, Chromium)",
+ "file": "tests/e2e_journeys.py",
+ "ranAt": "2026-10-11T18:42:56+00:00",
+ "build": "9bb5410e05",
+ "total": 96,
+ "passed": 96,
+ "failed": 0,
+ "cases": [
+  {
+   "journey": "J1",
+   "name": "Recommendation before approval is ₹60,000 · 14 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J1",
+   "name": "Confirmation shows exactly ₹60,000 · 14 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J1",
+   "name": "Applied limit and terms are exactly ₹60,000 · 14 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J1",
+   "name": "Audit event records ₹60,000 / 14",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J1",
+   "name": "Profile shows the applied ₹60,000 · 14-day terms",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J2",
+   "name": "Re-evaluating after approval keeps ₹60,000 · 14 days (no step down to 7)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J2",
+   "name": "Decision stays closed: nothing changed since approval",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J2",
+   "name": "Profile does not show 7-day terms",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J2",
+   "name": "RAY on WhatsApp shows the same 14-day terms",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J3",
+   "name": "Undo restores ₹1,00,000 · 30 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J3",
+   "name": "Undo reopens the decision and the credit request",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J3",
+   "name": "Audit keeps the approval and adds a reversal",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J3",
+   "name": "Activity shows the undo",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J3",
+   "name": "Request approval applies ₹60,000 · 14 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J3",
+   "name": "Request-page Undo restores the limit as well as reopening the request",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J3",
+   "name": "Mehta request decision undo restores limit and terms",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J4",
+   "name": "Double-click records one approval",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J4",
+   "name": "Confirming the same proposal twice applies once",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J4",
+   "name": "A proposal that no longer matches RAY's recommendation is refused, not applied",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J5",
+   "name": "Failed ₹20,000 collection is open",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J5",
+   "name": "Link payload: ₹20,000, partial, minimum ₹5,000",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J5",
+   "name": "₹5,000 partial leaves ₹15,000",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J5",
+   "name": "Recovery page shows ₹5,000 received · ₹15,000 remaining",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J5",
+   "name": "WhatsApp agrees: ₹15,000 still due",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Paying ₹15,000 completes the recovery",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Recovery page says recovered in full and stops steps",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Recovery page points to the next unpaid invoice INV-24891",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Actions: Gupta no longer in active failed collections",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Actions: completed recovery listed as history",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "No open failed collections counted",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Overview never says 'recovering ₹0'",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Overview shows the recovery as completed",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Buyer profile shows INV-24790 recovered in full",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J6",
+   "name": "Activity records the completion",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J7",
+   "name": "Ledger: INV-24790 ₹0, Gupta owes ₹58,400",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J7",
+   "name": "WhatsApp: recovered in full, next INV-24891, no stale ₹15,000",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J7",
+   "name": "WhatsApp: owes ₹58,400",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J7",
+   "name": "Mobile: same facts as WhatsApp",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J7",
+   "name": "Mobile home: no IN PROGRESS card for a completed recovery",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J7",
+   "name": "Ray AI: same facts",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J8",
+   "name": "Overpayment rejected with a reason",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J8",
+   "name": "Balance unchanged after rejection",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J8",
+   "name": "Double-submitting a payment form applies it once",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J8",
+   "name": "Same payment reference applied once",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J8",
+   "name": "A claim does not reduce the balance",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Minimum '25000' rejected inline and Send disabled",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Minimum 'abc' rejected inline and Send disabled",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Minimum '' rejected inline and Send disabled",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Minimum '0' rejected inline and Send disabled",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Minimum '-100' rejected inline and Send disabled",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Valid ₹10,000 minimum accepted",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Preview shows minimum ₹10,000",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Edit message keeps the ₹10,000 minimum",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Saved message appears in the preview",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Minimum still ₹10,000 after saving the message",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Sent link carries the edited minimum and message",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Outbox record carries the same minimum and is marked simulated",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Recovery page shows minimum ₹10,000 (not ₹5,000)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Activity log records minimum ₹10,000",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Buyer button pays the ₹10,000 minimum",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J9",
+   "name": "Balance below ₹5,000: link asks for the full amount",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J10",
+   "name": "Bank not connected after skip",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J10",
+   "name": "Recovery page lists the bank as not checked",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J10",
+   "name": "Recovery page never claims a bank check",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J10",
+   "name": "States that no match is not proof of non-payment",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J10",
+   "name": "Link modal never claims a bank check",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J10",
+   "name": "Reminder modal lists checked and unavailable sources",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J10",
+   "name": "With the bank connected, the bank is listed as checked with freshness",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J11",
+   "name": "Reminder scheduled for later",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J11",
+   "name": "Full payment recorded",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J11",
+   "name": "Scheduled reminder cancelled by the payment",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J11",
+   "name": "Nothing is sent at the scheduled time",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J11",
+   "name": "Matching Verma's Razorpay credit updates the invoice in the ledger",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J11",
+   "name": "Verma no longer has a payment review pending",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J11",
+   "name": "Without a connected bank, a claim cannot be 'found in bank'",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Desktop reminder: Send disabled for Do not contact",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Bulk send excludes the DNC buyer",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Recovery link: Send disabled for DNC",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Recovery link cannot be forced through by calling send",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Mobile follow-up: button disabled for DNC",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "WhatsApp follow-up refuses for DNC",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Retailer payment link blocked for DNC",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Payment-review reminder blocked while a possible payment is unreviewed",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "'Send anyway' override still respects Do not contact",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "No message left the outbox for a restricted buyer",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Paused RAY: no approvals and no sends",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Stale ledger blocks sends",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Quiet hours queue instead of sending",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "J12",
+   "name": "Every outbox item is marked simulated",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI",
+   "name": "Unsupported question: says so, does not guess",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI",
+   "name": "No claim that live AI works elsewhere",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI",
+   "name": "Ambiguous buyer: asks which Gupta",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI",
+   "name": "Instruction in a chat cannot mark a payment as paid",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI",
+   "name": "Invoice question answered from the ledger",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI",
+   "name": "AI status label is honest when no provider is configured",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "ROUTES",
+   "name": "No uncaught page errors in any journey or route",
+   "pass": true,
+   "detail": ""
+  }
+ ]
+}

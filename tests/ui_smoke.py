@@ -50,14 +50,14 @@ async def main():
         check("Recording an outcome does not change the limit by itself", await ev("S.gupta.limit") == before)
         await page.click("#wc-gupta button:has-text('Approve')"); await page.wait_for_timeout(300)
         await page.click("#set-limit"); await page.wait_for_timeout(500)
-        await ev("closeModal();if(S.rs){prClose()}")
+        await ev("closeModal();if(S.rs){S.rs=null;closeModal()}")
         check("Approved limit applied only after confirmation", await ev("S.gupta.limit") != before and await ev("S.gupta.rec") == "approved")
 
         # recovery
         await ev("go('raahi/recover/gupta')"); await page.wait_for_timeout(300)
-        await page.click("button:has-text('Send payment link')"); await page.wait_for_timeout(300)
-        await page.click("button:has-text('Send on WhatsApp')"); await page.wait_for_timeout(300)
-        await page.click("button:has-text('Prototype: buyer pays ₹5,000')"); await page.wait_for_timeout(300)
+        await page.click("#rec-link-btn"); await page.wait_for_timeout(300)
+        await page.click("#rl-send"); await page.wait_for_timeout(300)
+        await page.click("#rec-pay-min"); await page.wait_for_timeout(300)
         check("Verified partial payment reduces INV-24790 to ₹15,000", await ev("balOf('gupta','INV-24790')") == 15000)
 
         # promise editing (TEST 15 / TEST B)
@@ -103,6 +103,14 @@ async def main():
         await browser.close()
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)} passed, {len(failed)} failed")
+    import json, re as _re
+    from datetime import datetime, timezone
+    root = Path(__file__).resolve().parent.parent
+    b = _re.search(r"const BUILD_ID = '([^']+)'", (root / "index.html").read_text())
+    out = root / "tests" / "results"; out.mkdir(parents=True, exist_ok=True)
+    (out / "smoke.json").write_text(json.dumps({"suite": "Browser smoke and guided demos (Playwright)", "file": "tests/ui_smoke.py", "ranAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "build": b.group(1) if b else None, "total": len(results), "passed": len(results) - len(failed), "failed": len(failed),
+        "cases": [{"name": n, "pass": ok, "detail": "" if ok else str(d)[:300]} for n, ok, d in results]}, indent=1, ensure_ascii=False))
     return 1 if failed else 0
 
 if __name__ == "__main__":

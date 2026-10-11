@@ -35,9 +35,13 @@ The front end is still one self-contained `index.html` (vanilla JS, string templ
 | Send-time controls | `lib/guards.js` | Working logic |
 | Interpreter checks + fallback parser | `lib/promise-rules.js` | Working logic (fallback is rule-based, not AI) |
 | LLM endpoint (self-hosted) | `api/parse-promise.js` | Working when an API key is configured |
-| Claude in the page | `src/modules/engine.js` (`claudeSample`) | Working when the page is opened in Claude (artifact `sample` capability); rule-based fallback otherwise |
+| Credit decisions (approve, keep, undo) | `src/modules/credit-decisions.js` | Working logic: one command path for every surface; exact values, once; full-state undo with `CREDIT_REVERSED` |
+| Payment truth (balances, recovery, sources) | `src/modules/payment-truth.js` | Working logic: `recoveryOf`, `paymentStatus`, `payCheck`/`sourcesLine`, `ledgerPay` (the only way money is applied) |
+| Answers for Ray AI, WhatsApp, mobile | `src/modules/answers.js` | Working rule-based handler from current data; optional live AI only for free-form questions |
+| Optional live AI for free-form questions | `api/ask.js` | Working when an API key is configured; otherwise 503 and the page uses its rule-based answer |
+| Claude in the page | `src/modules/engine.js` (`claudeSample`) | Used only if the page runs where Claude access is granted; off on the Vercel deployment |
+| Checks page | `src/modules/checks.js` | Live policy and journey checks in the browser; recorded dev-suite results embedded at build time |
 | Daily chase plan | `src/modules/core.js` (`planItem`, `syncChase`) | Working logic, rebuilt on every ledger change |
-| Ask RAY (open questions) | `src/modules/whatsapp-and-ray-ai.js` (`askRay`) | Working with Claude; read-only page tools; amounts checked against data |
 | Computed collection lists | `src/modules/collections.js` (`syncLists`) | Working logic over ledger events, mandates and payment signals |
 | Checks, learning loop, How it works | `src/modules/workspace.js` (`runChecks`, `policyProposal`, `vHow`) | Working logic; outcome history is synthetic |
 | Synthetic portfolio | `lib/dataset.js` | Synthetic data, seeded |
@@ -71,7 +75,8 @@ The same manifest is visible in the app: **Concept prototype ⓘ** in the surfac
 
 ## 3. Where the LLM is used, and where it is not
 
-* **LLM (Claude in the page, or `/api/parse-promise` when self-hosted):** reads unstructured buyer replies into structured JSON, drafts reminder messages, and answers open questions in Ask RAY from read-only page data. Drafts must contain the exact amount, no link, no threats and no mention of other distributors; Ask RAY answers flag any rupee amount not found in the data; reply readings are checked against the message. It never sets a limit, a band, a balance or a policy, and never sends anything.
+* **Answers on every surface start rule-based.** `ruleAnswer()` (answers.js) answers buyer, invoice, balance, credit and payment-status questions from the current ledger and engine, in English with a short Hinglish line for Hinglish questions. Ambiguous names (two "Gupta" businesses) get a clarifying question; anything it cannot match gets "I won’t guess" plus examples. Only those unmatched questions go to live AI, and only if a provider is actually configured (`/api/ask` with a server key) or the page runs with Claude access. Every answer is labelled with its source.
+* **LLM (when configured):** reads unstructured buyer replies into structured JSON (`/api/parse-promise`), drafts reminder messages, and answers free-form questions (`/api/ask`) from a snapshot of the merchant's current data. Drafts must contain the exact amount, no link, no threats and no mention of other distributors; Ask RAY answers flag any rupee amount not found in the data; reply readings are checked against the message. It never sets a limit, a band, a balance or a policy, and never sends anything.
 * **Rule-based:** every credit recommendation, band, limit, term, explanation, early warning, portfolio figure, control and feedback-loop update.
 * **No model training.** Outcomes update the buyer's derived signals and the same policy re-runs. Separately, RAY compares on-time payment by follow-up timing and suggests a follow-up policy change only when another timing does at least 8 points better on 30+ reminders; the owner approves it, it is versioned, and it can be undone. Credit policy weights are never changed this way. The outcome history behind the suggestion is synthetic in this prototype.
 
@@ -117,6 +122,8 @@ Response (200): `{ ok, mode:"ai", provider, model, interpretation, checks[], can
 
 **Terms:** ladder 30 → 21 → 14 → 7 days. Watch at most 21; Risky 7; a Reliable buyer who is slowing (≥3 days slower, worsening trajectory) moves one step shorter with no limit change.
 
+**Reference vs current vs proposed.** Every record carries reference (contract) values `refLimit` and `refTerms`, separately from the current approved `limit` and `terms`. Proposals derive from the reference only, so approving ₹60,000 · 14 days re-evaluates to ₹60,000 · 14 days, not 7 (the bug fixed in this build: Watch terms used to be `min(currentTerms, 21)` and the network step then shortened the already-approved 14). An approved increase becomes the new reference (limit and terms); a reduction never does. Evaluation is idempotent: re-running it any number of times after an approval returns the same proposal.
+
 **Increases:** only for Reliable buyers with ≥90% on time, no failures, no missed promises and delay within 2 days of usual, and only with a trigger (a credit request, or ≥6 consecutive on-time automatic collections). Up to +⅓ of the reference limit per review, sized to the request when there is one (rounded up to ₹10,000); one increase per 90 days.
 
 **Consented network evidence** (used only if the distributor participates AND the buyer's consent is available AND ≥4 participating distributors AND the signal is ≤45 days old AND the buyer has not disputed it):
@@ -156,7 +163,7 @@ Two showcase numbers changed because the rules now compute them: Bansal General 
 
 `lib/events.js`. Each event has `id, type, buyerId, date (IST), invoice, amount, source, verification, actor, meta`.
 
-Types: `CREDIT_APPROVED, CREDIT_KEPT, PROMISE_RECORDED, PROMISE_EDITED, PROMISE_KEPT, PROMISE_PARTIALLY_KEPT, PROMISE_MISSED, PAYMENT_RECEIVED, PAYMENT_PARTIALLY_RECEIVED, PAYMENT_CLAIMED, PAYMENT_RECONCILED, CLAIM_REJECTED, AUTOPAY_FAILED, AUTOPAY_SUCCEEDED, DISPUTE_OPENED, DISPUTE_RESOLVED, CONSENT_REQUESTED, CONSENT_GRANTED, CONSENT_DENIED, CONSENT_REVOKED, NETWORK_DISPUTED, NETWORK_DISPUTE_RESOLVED, GST_VERIFIED`.
+Types: `CREDIT_APPROVED, CREDIT_KEPT, CREDIT_REVERSED, PROMISE_RECORDED, PROMISE_EDITED, PROMISE_KEPT, PROMISE_PARTIALLY_KEPT, PROMISE_MISSED, PAYMENT_RECEIVED, PAYMENT_PARTIALLY_RECEIVED, PAYMENT_CLAIMED, PAYMENT_RECONCILED, CLAIM_REJECTED, AUTOPAY_FAILED, AUTOPAY_SUCCEEDED, DISPUTE_OPENED, DISPUTE_RESOLVED, CONSENT_REQUESTED, CONSENT_GRANTED, CONSENT_DENIED, CONSENT_REVOKED, NETWORK_DISPUTED, NETWORK_DISPUTE_RESOLVED, GST_VERIFIED`.
 
 `applyRepaymentEvent(ledger, event)` is pure: verified payments reduce invoice balances and can never exceed them; a payment reference can only be applied once; `PAYMENT_RECEIVED` that leaves a balance becomes `PAYMENT_PARTIALLY_RECEIVED`; unverified payments must be `PAYMENT_CLAIMED` and never change balances; failed debits mark the invoice and change nothing else; disputes mark an amount as disputed.
 
@@ -171,21 +178,28 @@ event → applyRepaymentEvent() → ledger
 
 * Every screen (Overview, Portfolio, buyer profile, request review, approval modal, Ray AI, RAY on WhatsApp, mobile) reads `recOf(id)`; values are memoised on a state signature and re-derived on every render.
 * A partial payment reduces the balance and adds no risk; a verified on-time payment is positive evidence; an unverified claim changes nothing; a missed promise is negative; a disputed invoice is excluded; a failed debit is counted, never labelled a default.
-* Events and decisions live in app state and, by default, in this browser's `localStorage` (toggle in About this demo). **Reset demo** clears both and restores the Monday 9 AM baseline.
+* **Approval** (`creditProposal` → `holdProposal` → `creditApprove` → `applyCredit`): the confirmation captures the proposal with a one-time key; confirming applies exactly those values once (a second click or a second confirm of the same key is a no-op); if RAY's recommendation changed after the confirmation was shown, nothing is applied and the merchant is asked to review again.
+* **Undo** (`undoCredit`) restores the complete prior state captured at approval time (limit, terms, reference raise, credit-request decision, decision snapshot and status, saved-for-later flag, legacy screen state) and records `CREDIT_REVERSED` with `meta.reverses`. The original approval stays in the ledger and Activity. A reversed increase no longer counts toward the 90-day increase cooldown. Request decisions (extend, offer terms, keep, follow up) go through the same path, so their Undo reverses the credit change too.
+* **Payments** (`ledgerPay`): verified source, whole-rupee amount, never above the invoice balance (rejected, not clamped), and a payment reference that can be applied only once. Bank credits that span invoices are allocated oldest first (`ledgerPayAllocate`) and rejected if they exceed everything owed. A verified payment that clears an invoice cancels scheduled or queued reminders for it. Claims never change balances; a claim is closed only by a bank match (bank connected) or the merchant confirming receipt with a reference.
+* **Recovery** status is derived, never stored: `recoveryOf(id)` reads the failed invoice's balance and the verified payments after the failure → open, action, partial, claimed or completed. A completed recovery drops out of every active list (Actions, Overview, mobile, answers) and its remaining steps stop; the next unpaid invoice is handled by the daily plan.
+* **Sends** (`sendMessage` → `trySend` → `sendGate`) re-check every control at execution time for desktop single and bulk sends, recovery links, payment-review reminders, retailer payment links, mobile and WhatsApp follow-ups and scheduled sends. Every outbox item is marked `simulated`.
+* **Payment sources** (`payCheck`, `sourcesLine`) list what was checked and what was not (bank not connected, paused, or a stale ledger), with freshness, and never turn "no matching payment found" into "the buyer has not paid".
+* Events and decisions live in app state and, by default, in this browser's `localStorage` (toggle in "What is real"). **Reset demo** asks for confirmation, then clears both and restores the Monday 9 AM baseline.
 
 ## 9. Testing approach and results
 
-| Suite | Command | What it covers | Result (this build) |
-|---|---|---|---|
-| Unit: policy, ledger, controls, dataset | `npm test` | the 20 required functional checks that are pure logic, feedback loop, request verdicts, no special-casing | 37 tests, 37 passed (with the two suites below) |
-| Unit: interpreter rules | `npm test` | the six spec examples, injection, fabricated amounts and dates, past dates, weekday resolution, request validation | included above |
-| API with mocked provider | `npm test` | GET status, missing key, valid output, fabricated output, invalid JSON, timeout, 429, 5xx, size limits, Anthropic path | included above |
-| Browser smoke | `python3 tests/ui_smoke.py` | open, install, Gupta, network toggle, approval, recovery, promise edit, DNC, reset, every route, both demos, no uncaught errors | 20 checks, 20 passed |
-| Interpreter evaluation | `npm run eval` | 40 hand-labelled Hinglish messages | see `tests/eval/RESULTS.md` |
+| Suite | Command | What it covers |
+|---|---|---|
+| Unit: policy, ledger, controls, dataset, interpreter | `npm test` | policy rules, feedback loop, request verdicts, interpreter checks, no special-casing |
+| Unit: reported journeys | `npm test` (`tests/journeys.test.js`) | exact ₹60,000 · 14 days, no compounding, reversed increase, partial and full repayment, overpayment and duplicates, claims, link minimums, every send safeguard |
+| API with mocked providers | `npm test` (`api.test.js`, `ask-api.test.js`) | configuration status, missing key, timeouts, invalid output, cleaned actions |
+| Browser journeys (real clicks) | `npm run test:e2e` | the 12 reported journeys across desktop, Actions, Overview, WhatsApp, mobile and Ray AI, plus AI fallback honesty and every route |
+| Browser smoke and guided demos | `npm run test:ui` | install, network toggle, approval, recovery, promise editing, DNC, reset, every route, both guided demos |
+| Record everything for the Checks page | `npm run test:all` | runs all of the above against the current build and embeds the results |
 
-Interpreter evaluation (`tests/eval/RESULTS.md`), rule-based fallback only: intent 97.5%, amounts 100%, dates 95.0%, clarification behaviour 97.5%, never confirmable when clarification was needed 100%. The fallback was written alongside the dataset, so this shows it is safe for the demo; it is not an AI result. **The live model evaluation was not run** because no API key was available in the build environment. Set `OPENAI_API_KEY` and run `npm run eval` to produce it.
+Results for this build are in `tests/results/*.json` and on the in-app **Checks** page, which separates (1) journey checks and (2) policy checks that run live in the viewer's browser from (3) recorded development runs, each with its run time and build id. Failures are shown, never hidden. See `docs/QA-REPORT.md` for the current numbers.
 
-Required checks 15 (promise edit saves the real values), 18 (approval required), 19 (reset) are covered in the browser suite; the rest in the unit suites.
+Interpreter evaluation (`tests/eval/RESULTS.md`), rule-based fallback only: intent 97.5%, amounts 100%, dates 95.0%, clarification behaviour 97.5%, never confirmable when clarification was needed 100%. The fallback was written alongside the dataset, so this shows it is safe for the demo; it is not an AI result. **The live model evaluation was not run** because no API key was available in the build environment.
 
 ## 10. Local setup
 
@@ -193,7 +207,8 @@ Required checks 15 (promise edit saves the real values), 18 (approval required),
 python3 scripts/build.py          # bundle lib/ + src/ into index.html
 open index.html                   # works offline; the interpreter uses the labelled fallback
 npm test                          # unit + API tests (Node 18+, no dependencies)
-pip install playwright && python3 tests/ui_smoke.py   # browser smoke tests (Chromium)
+pip install playwright && npm run test:e2e   # browser journey tests (Chromium)
+npm run test:all                  # every suite, results embedded into the Checks page
 npm run eval                      # interpreter evaluation; live model only if a key is set
 ```
 
@@ -222,7 +237,9 @@ Set them in Vercel → Project → Settings → Environment Variables (Productio
 * The policy weights are illustrative and were calibrated so the scenarios are plausible; they have not been validated on real repayment data.
 * Signals for the 626 generated buyers are deliberately steady background; only the 16 scenario buyers carry recent changes and detailed history.
 * The 30-day collections forecast is a rule (Reliable buyers' invoices due in 30 days plus approved commitments), not a prediction model.
-* The live LLM path has been tested with mocked provider responses only; it has not been evaluated against a real model in this build.
+* The live LLM paths (`/api/parse-promise`, `/api/ask`) have been tested with mocked provider responses only; they have not been run against a real model in this build, and live AI is off on the public deployment.
+* In-browser journey checks call the same commands as the buttons but do not click; real clicks are covered by the Playwright suite, whose results are recorded at build time.
+* A payment applied to the ledger cannot be undone from the UI (the event model has no payment reversal yet); credit decisions can.
 * The rule-based fallback parser handles common Hinglish forms but misses some (for example "20 ko 12000", conditionals with "ho gaya to kal").
 * The in-memory API rate limit is per warm serverless instance, not global.
 * The guided demo still advances a simulated clock and calendar (Mon 5 Oct, IST) for quiet hours, scheduled messages and missed promises.

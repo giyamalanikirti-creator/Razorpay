@@ -1,0 +1,271 @@
+{
+ "suite": "Unit and API tests (node --test)",
+ "file": "tests/*.test.js",
+ "ranAt": "2026-10-11T18:42:15+00:00",
+ "build": "9bb5410e05",
+ "total": 52,
+ "passed": 52,
+ "failed": 0,
+ "cases": [
+  {
+   "name": "GET reports configuration honestly, without exposing the key",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Missing API key → 503 AI_NOT_CONFIGURED (never pretends the model ran)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Valid model output is validated and returned with mode \"ai\"",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Fabricated amounts from the model are removed by deterministic checks",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Invalid JSON, timeouts, rate limits and upstream errors fail safely",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Input validation and size limits",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Anthropic provider (optional) uses forced tool output",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "ask: GET reports configuration without exposing the key",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "ask: no key → 503 AI_NOT_CONFIGURED, so the page uses its rule-based answer",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "ask: invalid requests are rejected before any provider call",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "ask: model output is cleaned (allowed actions only, length capped) and never changes state",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "ask: provider timeout → 504 with an honest message",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1. Gupta Traders, own data only: Watch, ₹75,000, 21-day terms",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "2. Gupta Traders with eligible network data: ₹60,000, 14-day terms, from the reusable −20% rule",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "3. Network disabled, or buyer consent revoked: network evidence is excluded and the decision recalculates",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "4. Chawla Enterprises: Reliable on own data, Watch with network, limit held (uncorroborated rule)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "5. New Life Stores, first credit without consent: starter ₹50,000, 15 days, Unrated",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "6. New Life Stores with valid consent: ₹1,50,000, 21 days; revocation reverts to starter",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "7. Positive repayment history improves the recommendation within policy limits",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "8. A failed Autopay updates collection state without marking a default",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "9. A verified partial payment reduces the invoice outstanding and never adds risk",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "10. An unverified payment claim does not count as received",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "11. An existing unmatched payment blocks an inappropriate reminder",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "12. A Do Not Contact buyer cannot be messaged on WhatsApp (salesperson tasks still allowed)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "13. Quiet hours queue the message for the next permitted window (IST)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "14. The weekly reminder limit is enforced with the next eligible time",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "16. A dispute is routed to review and is not classified as default or a missed promise",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "17. Stale data blocks unsafe execution and lowers confidence",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "18. Consequential changes are proposals that need merchant approval",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "20. Portfolio aggregates are internally consistent",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Featured scenarios match their expected bands; no buyer is special-cased",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Feedback loop: failed Autopay + partial payment + missed promise moves Gupta to Risky, ₹40,000, 7 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Requests: verdicts come from the same decision",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Example 1: \"Aadha abhi bhej raha hoon, baaki Monday pakka.\" → ₹19,200 now, ₹19,200 on Mon 12 Oct (inferred)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Example 2: \"Kal 5 hazaar bhejunga, baaki Friday.\" → ₹5,000 tomorrow, remainder Friday",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Example 3: \"Monday tak try karunga.\" → tentative, no invented amount, clarification",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Example 4: \"Bhai maal short aaya, pehle adjust karo.\" → dispute, verification suggested",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Example 5: \"Payment kar diya, UTR bhej raha hoon.\" → payment claim, unverified, reconcile",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Example 6: \"Abhi 5000 de sakta hoon, baki agle hafte.\" → ₹5,000 now, balance date needs clarification",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Instructions inside a buyer message are treated as data",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Model output checks: fabricated amounts and dates are removed, past dates rejected, sums capped",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Request validation",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J1. The recommendation is ₹60,000 on 14 days, and approving it leaves the recommendation at exactly those values",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J2. No compounding: re-evaluating any number of times after approval never shortens terms or lowers the limit",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J2b. The old failure mode is gone: current terms of 14 used to step down to 7",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J3. Undo: a reversed increase no longer counts toward the 90-day increase cooldown",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J5. Failed ₹20,000 collection, then ₹5,000 partial: ₹15,000 remains and the invoice is not settled",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J6. Paying the remaining ₹15,000 settles the invoice; the next unpaid invoice is INV-24891",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J8. Overpayment and duplicate payments are rejected and leave the ledger unchanged",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J8b. A payment claim alone never verifies a payment",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J9. Recovery-link minimum: invalid inputs rejected with a reason, valid edits accepted, small balances paid in full",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "J12. Send safeguards: claim, unmatched review, paid, dispute, DNC, weekly limit, quiet hours, pause, stale, channel and approval",
+   "pass": true,
+   "detail": ""
+  }
+ ]
+}

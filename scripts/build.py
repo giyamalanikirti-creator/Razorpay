@@ -17,6 +17,8 @@ LIB = ["dates.js", "dataset.js", "policy.js", "events.js", "guards.js", "promise
 MODULES = [
     "core.js",                 # icons, formatting, display records, state, router, shell
     "engine.js",               # bridge: recommendations, ledger, controls, AI status, persistence
+    "payment-truth.js",        # balances, recovery status and payment-source checks from the ledger
+    "credit-decisions.js",     # one command path for approvals, overrides and undo (exact values, once)
     "identity.js",             # GSTIN / business identity lookups
     "dashboard.js",            # Razorpay dashboard pages and Agent Studio
     "agent-studio.js",         # RAY Credit agent page and install flow
@@ -25,6 +27,7 @@ MODULES = [
     "actions.js",              # approvals, limits, reminders, promise loop
     "bank-feed.js",            # bank account via RazorpayX Connected Banking
     "whatsapp-and-ray-ai.js",  # RAY on WhatsApp and Ray AI answers
+    "answers.js",              # one rule-based question handler for every surface (+ optional live AI)
     "credit-requests.js",      # incoming buyer credit requests
     "reconciliation.js",       # review payment: confirm payment first, chase second
     "collections.js",          # repayment setup, mandates, collection, smart recovery, learning
@@ -32,6 +35,7 @@ MODULES = [
     "explain.js",              # how RAY decides, what changed, outcomes, AI interpreter, Behind RAY, About
     "kirana-payment-link.js",  # retailer-side payment link: pay now, schedule payment, raise dispute
     "mobile.js",               # RAY Credit for Mobile inside the Razorpay app
+    "checks.js",               # Checks page: live policy + journey checks, recorded dev runs
     "demo.js",                 # guided demo story (Shift+D)
 ]
 
@@ -48,6 +52,13 @@ def build() -> Path:
     js += "\nengBoot();shellInit();render(true);\n"
     build_id = hashlib.sha1((lib + js).encode()).hexdigest()[:10]
     js = lib + "\n" + js.replace("__BUILD__", build_id)
+    # recorded test runs are embedded AFTER the build id is computed, so recording results never changes the build id
+    runs = {}
+    for k in ("unit", "e2e", "smoke"):
+        f = ROOT / "tests" / "results" / f"{k}.json"
+        if f.exists():
+            runs[k] = __import__("json").loads(f.read_text())
+    js = js.replace("__TESTRUNS__", __import__("json").dumps(runs, ensure_ascii=False).replace("</", "<\\/"))
     js = js.replace("__LOGO__", data_uri("logo.png")).replace("__MARK__", data_uri("mark.png"))
 
     html = (SRC / "template.html").read_text()

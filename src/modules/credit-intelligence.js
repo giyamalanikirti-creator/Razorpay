@@ -19,7 +19,7 @@ function pfView(c){
   const pending=['reduce','increase'].includes(r.action)&&(!d||d.status==='baseline'||recChanged(c.id));
   if(pending) out.rec=r.recommendedLimit;
   if(c.synthetic){ out.next=pending?(r.recommendedLimit>c.limit?'Raise limit':'Review credit'):r.action==='terms'?'Review terms':'No action'; return out; }
-  if(c.id==='gupta'){ const g=S.gupta; out.next=g.rec==='open'?'Review credit':failOpen('gupta')?'Start recovery':S.chase.gupta.st==='draft'?'Start early follow-up':'Monitor'; return out; }
+  if(c.id==='gupta'){ const g=S.gupta; out.next=g.rec==='open'?'Review credit':failOpen('gupta')?'Start recovery':(S.chase.gupta&&S.chase.gupta.st==='draft')?'Start early follow-up':'Monitor'; return out; }
   if(c.id==='newlife'){ if(c.unchecked){ out.net=NET_STATE_LABEL[sigOf('newlife').consent]||'Pending consent'; out.next='Run credit check'; } else out.next='First order'; return out; }
   if(c.id==='verma') out.next=S.vermaMatched?'Paid · matched':'Review payment';
   if(c.id==='guptak'){ const k=kirS(); out.next=!k.kind?(k.sent?'Waiting for retailer':'Send payment link'):k.kind==='dispute'?'Review dispute':k.commit==='pending'?'Approve payment plan':'Track commitment'; }
@@ -92,7 +92,7 @@ function vOverview(){
   <div class="card mt16" id="ov-coll"><div class="sec-h"><div><div class="row gap8">${stage('COLLECT')}<span class="h3" style="font-size:17px">Collections this week</span></div><div class="small muted mt4">Collected within authorised mandates, recovered when a debit fails, and reconciled before anyone is chased.</div></div></div>
    ${row('ov-up','refresh','background:var(--blue-tint);color:var(--link)',`${lakhs(st.autoThisWeek)} scheduled for automatic collection`,`${st.autoDebitsThisWeek} debits within authorised mandates · ${mehta?'Mehta Enterprises collected and matched automatically':'Mehta Enterprises ₹30,000 tomorrow'} · ${collSt('arora')==='paidbank'?'Arora Retail paid by NEFT, autopay cancelled':'Arora Retail today'}`,`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-upcoming')">View collections</button>`)}
    ${commits.length?row('ov-commit','cal','background:var(--blue-tint);color:var(--link)',`${commits.length} payment commitment${commits.length===1?'':'s'} confirmed · ${inr(cAmt)} expected`,commits.map(x=>`${chem(x.buyerId).name}${x.later&&x.later.date?' by '+RayDates.fmtShort(x.later.date):''}`).join(' · ')+' · expected, not guaranteed',`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-upcoming')">View</button>`):''}
-   ${row('ov-fail','alert',failOpen('gupta')?'background:var(--r-bg);color:var(--r)':'background:var(--n-bg);color:var(--n)',failOpen('gupta')?'Gupta Traders · ₹20,000 · UPI Autopay failed':`Gupta Traders · recovering ${inr(balOf('gupta','INV-24790'))}`,failOpen('gupta')?'Insufficient balance · RAY recommends a payment link that allows partial payment':recStatus('gupta').replace(/<[^>]+>/g,''),failOpen('gupta')?`<button class="btn btn-p btn-sm" onclick="go('raahi/recover/gupta')">Start recovery</button>`:`<button class="btn btn-s btn-sm" onclick="go('raahi/recover/gupta')">View recovery</button>`)}
+   ${recoveryOverviewRow(row)}
    ${kirOverviewRow()}
    ${row('ov-pay','match',p?'background:#fff1dc;color:#9a5b00':'background:var(--g-bg);color:var(--g)',p?`${p} payment${p===1?' needs':'s need'} reconciliation`:'Payments reconciled',p?`${Object.keys(PAYREV).filter(prPending).map(i=>chem(i).name).join(', ')} · confirm payment first, chase second${S.bank.st==='on'?'':' · bank account not connected'}`:'Nothing to review',`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-check')">Review payments</button>`)}
    ${kirForecastRow()}</div>
@@ -118,7 +118,7 @@ function chemRows(){
    const cell1=`<td><div class="row gap8"><span class="nm">${c.name}</span>${c.isNew?'<span class="pill-new">New</span>':''}${c.synthetic?'<span class="xs faint">generated</span>':''}${S.ctl.dnc.map(x=>x.toLowerCase()).includes(c.name.toLowerCase())?`<span class="tt">${I('ban',13)}<span class="tip">Do not contact</span></span>`:''}</div><div class="row gap6 mt4">${c.synthetic?'':idChips(c.id)}<span class="xs muted">${c.area}</span></div></td>`;
    const nx=`<td><span class="link small" style="font-weight:600">${p.next}</span></td>`;
    const fl=FAILS[c.id]&&failOpen(c.id), u=UPCOMING[c.id];
-   const netc=`<td>${methodChip(c.id, fl?['Failed '+FAILS[c.id].on.split(', ')[1].split(' · ')[0],'r-txt']:u&&!['received','paidbank'].includes(collSt(c.id))?['Next debit '+u.due]:c.id==='gupta'?['Next debit 12 Oct']:null)}</td>`;
+   const netc=`<td>${methodChip(c.id, fl?['Failed '+FAILS[c.id].on.split(', ')[1].split(' · ')[0],'r-txt']:u&&!['received','paidbank'].includes(collSt(c.id))?['Next debit '+u.due]:(isAuto(c.id)&&nextDueInv(c.id))?['Next debit '+RayDates.fmtShort(nextDueInv(c.id).due)]:null)}</td>`;
    if(c.unchecked) return pre+`<tr class="click" onclick="go('raahi/check')">${cell1}<td><span class="badge b-n">Unrated</span></td><td class="r muted">–</td><td class="r muted">–</td><td class="r"><span class="small muted">${inr(recOf('newlife').recommendedLimit)} starter</span></td><td class="muted">–</td>${netc}${nx}</tr>`;
    const rec=(p.rec?`<span class="num" style="font-weight:600;color:var(--link)">${inr(p.rec)}</span>`:'<span class="small muted">No change</span>')+(on&&recOf(c.id).networkStep?`<div class="mt4">${netMark('Network')}</div>`:'');
    return pre+`<tr class="click" onclick="go('raahi/buyer/${c.id}')">${cell1}<td>${bandBadge(c.band)}</td><td class="r num nm">${inr(c.out)}</td><td class="r num">${inr(c.limit)}</td><td class="r">${rec}</td><td>${trendCell(c.trend)}</td>${netc}${nx}</tr>`});
@@ -175,7 +175,7 @@ function vProfile(id){
    </div></div>
   ${netVsYou('gupta')}
   ${whatChangedCard('gupta')}
-  ${failOpen('gupta')||S.rec.gupta.st?`<div class="alert ${failOpen('gupta')?'risk':'neutral'} mt16"><span class="ic">${I(failOpen('gupta')?'alert':'refresh',17)}</span><div class="grow"><div class="row gap8 wrap">${stage('RECOVER')}<h4>${failOpen('gupta')?'UPI Autopay failed on 3 Oct · ₹20,000 · insufficient balance':'Recovery in progress · INV-24790'}</h4></div><div class="small muted mt4">${failOpen('gupta')?'Not marked as defaulted. RAY recommends a payment link that allows partial payment.':recStatus('gupta').replace(/<[^>]+>/g,'')+'. Credit decision kept under review.'}</div></div><button class="btn ${failOpen('gupta')?'btn-p':'btn-s'} btn-sm" onclick="go('raahi/recover/gupta')">${failOpen('gupta')?'Start recovery':'View recovery'}</button></div>`:''}
+  ${recoveryAlert('gupta')}
   <div class="grid g-21 mt16">${guptaWhyCard()}${recCard()}</div>
   ${howPanel('gupta')}
   <div class="mt16">${planCard('gupta')}</div>
@@ -184,21 +184,33 @@ function vProfile(id){
   ${interpCard('gupta')}
 `;
 }
-function overLimitNote(out,lim){ const d=out-lim; return d>0?`<div class="ol-note mt12"><span style="color:var(--a);flex-shrink:0">${I('info',15,2)}</span><span>Currently <b class="num">${inr(d)}</b> above the proposed limit. RAY will flag any additional credit request for approval. Existing supply is not paused automatically.</span></div>`:`<div class="ol-note mt12"><span style="color:var(--g);flex-shrink:0">${I('check',15,2.4)}</span><span>Outstanding is within the proposed limit. Existing supply is not paused automatically.</span></div>`; }
+/* failed-collection summary for the Overview, from the ledger through recoveryOf() */
+/* buyer-profile recovery banner (any buyer) */
+function recoveryAlert(id){ const r=recoveryOf(id); if(!r) return '';
+  if(r.status==='completed') return `<div class="alert ok mt16"><span class="ic">${I('check',17,2.4)}</span><div class="grow"><div class="row gap8 wrap">${stage('RECOVER')}<h4>${r.inv} recovered in full · ${inr(r.received)} received</h4></div><div class="small muted mt4">The failed ${r.method} collection of ${inr(r.amount)} is fully paid. No further collection steps for this invoice.</div></div><button class="btn btn-g btn-sm" onclick="go('raahi/recover/${id}')">View</button></div>`;
+  const open=r.needsAction;
+  return `<div class="alert ${open?'risk':'neutral'} mt16"><span class="ic">${I(open?'alert':'refresh',17)}</span><div class="grow"><div class="row gap8 wrap">${stage('RECOVER')}<h4>${open?`${r.method} failed on ${r.on.split(' · ')[0]} · ${inr(r.amount)} · ${r.reason.toLowerCase()}`:`Recovery in progress · ${r.inv}`}</h4></div><div class="small muted mt4">${open?'Not marked as defaulted. '+FAILS[id].rec:r.label+'. Credit decision kept under review.'}</div></div><button class="btn ${open?'btn-p':'btn-s'} btn-sm" onclick="go('raahi/recover/${id}')">${open?'Start recovery':'View recovery'}</button></div>`; }
+function recoveryOverviewRow(row){ const act=recoveriesActive(), done=recoveriesDone(), open=act.filter(failOpen);
+  if(!act.length&&!done.length) return '';
+  if(!act.length) return row('ov-fail','check','background:var(--g-bg);color:var(--g)',`Failed collection${done.length===1?'':'s'} recovered in full`,done.map(id=>`${chem(id).name} · ${FAILS[id].inv} paid`).join(' · ')+' · no further steps',`<button class="btn btn-g btn-sm" onclick="go('raahi/recover/${done[0]}')">View</button>`);
+  const f=open[0]||act[0], r=recoveryOf(f), more=act.length-1;
+  if(open.length) return row('ov-fail','alert','background:var(--r-bg);color:var(--r)',`${chem(f).name} · ${inr(r.balance)} · ${r.method} failed${more?` · ${more} more`:''}`,`${r.reason} · ${FAILS[f].rec}`,`<button class="btn btn-p btn-sm" onclick="go('raahi/recover/${f}')">Start recovery</button>`);
+  return row('ov-fail','refresh','background:var(--n-bg);color:var(--n)',`Recovering ${inr(recoveringAmt())} from ${act.length} failed collection${act.length===1?'':'s'}`,act.map(id=>`${chem(id).name}: ${recoveryOf(id).label}`).join(' · ')+(done.length?` · ${done.length} completed`:''),`<button class="btn btn-s btn-sm" onclick="go('raahi/recover/${f}')">View recovery</button>`); }
+function overLimitNote(out,lim,name='This buyer'){ const t=overLimitText(name,out,lim); return t?`<div class="ol-note mt12"><span style="color:var(--a);flex-shrink:0">${I('info',15,2)}</span><span>${t}</span></div>`:`<div class="ol-note mt12"><span style="color:var(--g);flex-shrink:0">${I('check',15,2.4)}</span><span>Outstanding is within the limit. Existing supply is not paused automatically.</span></div>`; }
 function recCard(){
   const g=S.gupta, risky=g.band==='Risky';
   const foot=`<div class="xs muted mt12 row gap4">${I('lock',12)} RAY never changes a limit or pauses supply without your approval.</div>`;
   const what=`<div class="lbl mt16">If you approve</div><div class="col gap8 mt8 small">${[`Future limit ${inr(g.limitRec)} on ${g.terms}-day terms for new invoices`,'Any additional credit request is flagged for your approval','Follow-up starts 7 days before each due date',risky?`Collect ${inr(g.oldest)} before the next delivery`:'Existing deliveries continue as usual'].map(x=>`<div class="row gap8" style="align-items:flex-start"><span style="color:var(--link);margin-top:2px;flex-shrink:0">${I('check',13,2.4)}</span><span>${x}</span></div>`).join('')}</div>`;
   if(g.rec==='approved') return `<div class="card pad rec"><div class="row between"><span class="lbl">Your decision</span><span class="badge b-g">${I('check',11,2.6)} Future limit set</span></div>
    <div class="say mt12">Future limit ${inr(g.limit)} · ${g.curTerms}-day terms.</div>
-   ${overLimitNote(g.out,g.limit)}
-   <div class="xs muted mt12">Set by ${M.owner} · ${g.approvedVia||'Dashboard'} · ${g.approvedAt||'5 Oct'}</div>
-   <button class="btn btn-g btn-sm mt8" onclick="A.undoGupta()">Undo</button>${foot}</div>`;
-  if(g.rec==='kept') return `<div class="card pad rec"><div class="row between"><span class="lbl">Your decision</span><span class="badge b-n">Current limit kept</span></div><div class="say mt12">You kept ${inr(g.limit)} on ${g.curTerms}-day terms.</div><div class="muted small mt8">RAY recorded this as an override and will learn from the outcome. It keeps watching Gupta Traders.</div><button class="btn btn-s btn-sm mt16" onclick="S.gupta.rec='open';rr()">Show recommendation again</button>${foot}</div>`;
+   ${overLimitNote(g.out,g.limit,'Gupta Traders')}
+   <div class="xs muted mt12">Set by ${M.owner} · ${g.approvedVia||'Dashboard'} · ${g.approvedAt||'5 Oct'} · RAY now recommends ${inr(recOf('gupta').recommendedLimit)} · ${recOf('gupta').recommendedTerms} days${recChanged('gupta')?' (changed since you approved)':' (unchanged)'}</div>
+   ${undoBar('gupta')}${foot}</div>`;
+  if(g.rec==='kept') return `<div class="card pad rec"><div class="row between"><span class="lbl">Your decision</span><span class="badge b-n">Current limit kept</span></div><div class="say mt12">You kept ${inr(g.limit)} on ${g.curTerms}-day terms.</div><div class="muted small mt8">RAY recorded this as an override and will learn from the outcome. It keeps watching Gupta Traders.</div><button class="btn btn-s btn-sm mt16" id="undo-gupta" onclick="A.undoCredit('gupta')">Undo override · show recommendation again</button>${foot}</div>`;
   return `<div class="card pad rec"><div class="row between"><span class="lbl">Your decision</span>${S.later.gupta?'<span class="badge b-n">Saved for later</span>':''}</div>
    <div class="mt12">${netCompare('gupta')}</div>
    <div class="say mt12">${risky?`Lower the future limit to ${inr(g.limitRec)} and collect ${inr(g.oldest)} before the next delivery.`:'Keep supplying, with lower future exposure, shorter terms and earlier follow-up.'}</div>
-   ${overLimitNote(g.out,g.limitRec)}
+   ${overLimitNote(g.out,g.limitRec,'Gupta Traders')}
    ${what}
    <div class="col gap8 mt20"><button class="btn btn-p" onclick="A.approveGupta()" ${blocked()?'disabled':''}>Set future limit to ${inr(g.limitRec)}</button><div class="row gap8"><button class="btn btn-s grow" onclick="A.keepLimit()">Keep current limit</button><button class="btn btn-g grow" onclick="S.later.gupta=true;rr();toast('Saved for later · stays in Credit decisions')">Review later</button></div></div>
    ${foot}</div>`;

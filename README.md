@@ -14,7 +14,7 @@ This repository contains a clickable product prototype of RAY Credit as an agent
 
 > Concept prototype built on synthetic data (Agarwal Distributors, Ludhiana). It is not a live Razorpay product and does not connect to any real account, bank or WhatsApp number.
 
-**What actually works:** a deterministic, explainable credit policy engine that evaluates all 642 synthetic buyers; an event-driven repayment ledger that re-runs the policy when payments, failures, promises or disputes are recorded; merchant controls enforced at send time; per-buyer network consent; a daily chase plan rebuilt from every buyer with dues (amount due × repayment risk × urgency); failed collections, payment reviews and scheduled autopays computed from ledger events and mandates; live Claude (when the page is opened in Claude) for reading Hinglish replies, drafting reminders and answering open questions in Ask RAY, with every answer checked by rules; a learning loop that suggests follow-up policy changes from outcomes for the owner to approve, version and undo; a built-in Checks page that runs 36 rule checks in the browser; and a secure `/api/parse-promise` endpoint for self-hosted deployments with an API key. Everything else (ERP, bank feed, WhatsApp, mandates, the cross-distributor network) is simulated and labelled. Full details: [`docs/TECHNICAL.md`](docs/TECHNICAL.md).
+**What actually works:** a deterministic, explainable credit policy engine that evaluates all 642 synthetic buyers; an event-driven repayment ledger that re-runs the policy when payments, failures, promises or disputes are recorded; merchant controls enforced at send time; per-buyer network consent; a daily chase plan rebuilt from every buyer with dues (amount due × repayment risk × urgency); failed collections, payment reviews and scheduled autopays computed from ledger events and mandates; one rule-based answer engine for Ray AI, RAY on WhatsApp and mobile that reads the current ledger (optional live AI, server-side, only for free-form questions and only when a key is configured; off on the public deployment); one validated command path for approvals with exact values, double-click protection and full-state undo; recovery status derived from the ledger so every surface agrees; a learning loop that suggests follow-up policy changes from outcomes for the owner to approve, version and undo; a Checks page that shows only tests that ran: live journey and policy checks in the browser, plus the recorded unit and Playwright runs for this build; and a secure `/api/parse-promise` endpoint for self-hosted deployments with an API key. Everything else (ERP, bank feed, WhatsApp, mandates, the cross-distributor network) is simulated and labelled. Full details: [`docs/TECHNICAL.md`](docs/TECHNICAL.md).
 
 ## Why the network matters
 
@@ -64,15 +64,15 @@ All payments in the prototype are simulated and labelled as such. No money moves
 - Trade credit stays separate from lending; any financing comes from a regulated lending partner
 - Controls are enforced at the moment of sending, not just when a list is drawn: Do not contact, weekly reminder limit, quiet hours (IST), allowed channels, a stale ledger and pending payment reviews all block or queue a message, with the reason shown
 
-## AI: one capability, honestly scoped
+## AI: honestly scoped
 
-The LLM is used for one job: reading unstructured buyer replies such as *"Aadha abhi bhej raha hoon, baaki Monday pakka"* and returning structured JSON (intent, amounts, dates, conditionality, evidence). Deterministic checks then remove any amount or date the message does not support, resolve relative dates from the message date (IST), route disputes and payment claims separately, and block confirmation of ambiguous promises. The merchant always reviews, can edit, and confirms before anything is saved. When no API key is configured the app says so and uses a clearly labelled **rule-based demo parser (not AI)**. Credit limits are never set by the LLM.
+Questions on every surface are answered first by rules, from the current ledger: buyer, invoice, balance, credit and payment status. Ambiguous names get a clarifying question; anything else gets "I won’t guess" with examples. Only those unmatched questions go to live AI, and only when it is really configured. The LLM is also used for reading replies: reading unstructured buyer replies such as *"Aadha abhi bhej raha hoon, baaki Monday pakka"* and returning structured JSON (intent, amounts, dates, conditionality, evidence). Deterministic checks then remove any amount or date the message does not support, resolve relative dates from the message date (IST), route disputes and payment claims separately, and block confirmation of ambiguous promises. The merchant always reviews, can edit, and confirms before anything is saved. When no API key is configured the app says so and uses a clearly labelled **rule-based demo parser (not AI)**. Credit limits are never set by the LLM.
 
 ## Running it
 
 No install needed. Open `index.html` in a browser, or visit the deployed link. On Vercel with `OPENAI_API_KEY` set, the interpreter runs on the live model.
 
-**Two guided demos** (press `Shift` + `D`): **Try RAY Credit: Core Journey** (8 steps: signal → intelligence → recommendation → approval → action → outcome → updated decision) and **Explore all features** (25 steps). Navigating a step never approves, sends or records money on its own; steps that need earlier state offer a labelled "Load scenario" button.
+**Judge walkthrough** (the **Walkthrough** button in the bottom bar, or `Shift` + `D`), about five minutes: install or continue without a bank → your ledger vs the network → explainable approval → undo with an audit trail → failed collection and a partial payment → balance paid, recovery completes everywhere → reconcile before any follow-up → the same status on WhatsApp and mobile → what ran on Checks. **Explore all features** (25 steps) is still there. Navigating a step never approves, sends or records money on its own; simulated outcomes are explicit buttons. **Concept prototype · what’s real** opens the disclosure (logic running here, synthetic data, simulated integrations, optional live AI, proposed). The reset icon asks before resetting. The eight-week pilot plan and its success measures are on **How it works**. Script and fix list: [`docs/QA-REPORT.md`](docs/QA-REPORT.md).
 
 
 **Presenter controls**
@@ -92,7 +92,8 @@ The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **R
 .
 ├── index.html                  # built, self-contained prototype (what gets deployed)
 ├── api/
-│   └── parse-promise.js        # Vercel function: LLM interpretation + deterministic checks
+│   ├── parse-promise.js        # Vercel function: LLM interpretation + deterministic checks
+│   └── ask.js                  # Vercel function: optional live AI for free-form questions (explains only)
 ├── lib/                        # pure logic shared by the browser, the API and the tests
 │   ├── policy.js               # deriveBuyerSignals() + evaluateCredit(): the credit policy engine
 │   ├── events.js               # applyRepaymentEvent(): event model and invoice ledger
@@ -104,8 +105,10 @@ The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **R
 │   ├── template.html · styles.css · assets/
 │   └── modules/                # screens (core, engine bridge, explain, workspace, ...)
 ├── tests/
-│   ├── engine.test.js · interpreter.test.js · api.test.js   # node --test
-│   ├── ui_smoke.py             # Playwright browser checks
+│   ├── engine.test.js · journeys.test.js · interpreter.test.js · api.test.js · ask-api.test.js   # node --test
+│   ├── e2e_journeys.py         # Playwright: the 12 reported journeys with real clicks
+│   ├── ui_smoke.py             # Playwright: smoke, every route, both guided demos
+│   └── results/                # last recorded run of every suite (embedded in the Checks page)
 │   └── eval/                   # 40 labelled Hinglish messages + RESULTS.md
 ├── scripts/
 │   ├── build.py                # bundles lib/ + src/ into index.html
@@ -120,8 +123,10 @@ Plain JavaScript with string templates and a hash router. No framework and no ru
 
 ```bash
 python3 scripts/build.py        # writes index.html
-npm test                        # 37 unit + API tests (Node 18+)
-python3 tests/ui_smoke.py       # 20 browser checks (pip install playwright)
+npm test                        # unit, journey and API tests (Node 18+)
+npm run test:e2e                # browser journeys (pip install playwright)
+npm run test:ui                 # browser smoke + guided demos
+npm run test:all                # all suites, results embedded into the Checks page
 npm run eval                    # interpreter evaluation; live model only with an API key
 ```
 
@@ -133,7 +138,7 @@ Environment variables (Vercel → Settings → Environment Variables):
 
 | Variable | Needed for | Default |
 |---|---|---|
-| `OPENAI_API_KEY` | live AI interpretation | none (app falls back to the labelled rule-based parser) |
+| `OPENAI_API_KEY` | live AI interpretation and free-form answers | none (app uses the labelled rule-based reader and answers) |
 | `OPENAI_MODEL` | choosing the model | `gpt-4o-mini` |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_PROVIDER` | optional alternative provider | |
 | `AI_TIMEOUT_MS` | provider timeout | `12000` |

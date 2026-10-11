@@ -3,7 +3,7 @@ const RAY_CHIPS={
   Transactions:['Aaj kitne payments aaye?','Show failed payments today'],
   Settlements:['Next settlement kab hai?','Why was Tuesday’s settlement higher?'],
   'Growing my business':['How can I collect faster from buyers?'],
-  Collections:['Gupta Traders ko ₹50,000 aur credit de doon?','Kaun buyers slip kar rahe hain?','Gupta ka payment kya hua?','Mehta ka paisa aaya?','New Life Stores ka credit check karo, GSTIN 03AANFN7781K1Z3','City Mart bol raha hai cheque de diya.','Is hafte kaun paisa rok ke baitha hai?','Is hafte kitna aaya?'],
+  Collections:['Gupta Traders ko ₹50,000 aur credit de doon?','Kaun buyers slip kar rahe hain?','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','New Life Stores ka credit check karo, GSTIN 03AANFN7781K1Z3','City Mart bol raha hai cheque de diya.','Is hafte kaun paisa rok ke baitha hai?','Is hafte kitna aaya?'],
 };
 function spark(){const pts=[96,95.4,96.8,96.1,97,95.8,96.5,96.9,96.2,97.1,96.4,96.2];const x=i=>i*(220/11),y=v=>34-(v-95)*12;return `<svg viewBox="0 0 220 40" width="100%" height="40"><path d="${pts.map((v,i)=>`${i?'L':'M'}${x(i)},${y(v)}`).join('')}" fill="none" stroke="#1364f1" stroke-width="1.6"/></svg>`}
 function pgRay(){
@@ -20,7 +20,7 @@ function pgRay(){
     <div class="ray-card"><div class="small muted" style="font-weight:500">Collected Payments</div><div class="mid num mt4">₹1,42,380<span style="font-size:16px">.00</span></div><div class="xs mt4" style="color:var(--g);font-weight:500">↗ 12% above usual</div><div class="rf" style="cursor:pointer" onclick="go('transactions')">${clover(15)} See today’s payments <span style="margin-left:auto">${I('arrowR',15)}</span></div></div>
    </div></div></div></div>`;
   return `<div class="ray">${rail}${back}<div class="ray-body" id="raybody"><div class="ray-glow" style="height:180px;opacity:.7"></div><div class="ray-thread">${m.map(rayMsg).join('')}${S.ray.busy?`<div class="ray-ans"><div class="who">${clover(22)}</div><div class="body">${thinking('Fetching RAY signals from the server')}</div></div>`:''}</div>
-   <div class="ray-dock"><div class="inner">${composer(true)}<div class="ray-disc">Ray is AI and can make mistakes. Please check important information.</div></div></div></div></div>`;
+   <div class="ray-dock"><div class="inner">${composer(true)}<div class="ray-disc">${esc(aiLabel())}. Answers come from your RAY data and are labelled with their source; check important information.</div></div></div></div></div>`;
 }
 function composer(dock){return `<div class="composer"><textarea id="rayq" rows="${dock?1:2}" placeholder="${dock?'Ask anything…':'Ask about payments, settlements or your collections'}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();A.rayAsk(this.value)}" oninput="document.getElementById('raygo').classList.toggle('on',!!this.value.trim())"></textarea><div class="cfoot"><button class="up" onclick="toast('Upload a ledger, statement or invoice (PDF, XLSX)')">${I('plus',15,2)} Upload file</button><button class="go" id="raygo" onclick="A.rayAsk(document.getElementById('rayq').value)">${I('arrowR',16,2.2)}</button></div></div>`}
 function rayMsg(x){
@@ -74,7 +74,7 @@ function rayCheckAmounts(answer, seen){ const flags=[]; const re=/₹\s?([\d,]+)
   return flags.length?[`RAY could not find ${flags.join(', ')} directly in your data. It may be a total RAY worked out, so check it before acting.`]:[]; }
 async function askRay(q, surface){
   const cs=await claudeSample();
-  if(!cs||AI.claudeOff) return {fallback:true, note:AI.claudeOff?(UNAVAIL[AI.claudeOff]||'Live AI is off'):'Live AI runs when this page is opened in Claude. Until then RAY answers the suggested questions only.'};
+  if(!cs||AI.claudeOff) return {fallback:true, note:AI.claudeOff?(UNAVAIL[AI.claudeOff]||'Live AI is off'):'Live AI is off on this deployment'};
   const ctx=rayContext(q); let seen=JSON.stringify(ctx); let lookups=0;
   let tools=null; try{ const lim=await cs.limits(); if(lim&&lim.tools) tools=[
     {name:'find_buyer', description:'Find buyers by part of their shop name. Returns up to 5 matches with id, band, outstanding and maximum overdue days.', inputSchema:{type:'object',properties:{name:{type:'string'}},required:['name']},
@@ -104,7 +104,7 @@ async function askRay(q, surface){
     return {fallback:true, note:code==='rate_limited'?'Claude is busy right now. Try again in a minute.':code==='not_granted'?'You chose not to let this page use Claude.':'RAY could not reach Claude for this question.'}; } }
 function rayLlmHtml(x){
   if(x.status==='loading') return RAY_PENDING.has(x.id)?thinking('RAY is checking your data…'):'<p class="muted">This answer was interrupted. Ask again.</p>';
-  if(x.fallback) return `<p>I can help with payments, settlements, credit and collections. Try asking about a buyer, for example “Gupta Traders ko ₹50,000 aur credit de doon?”</p><p class="xs muted">${esc(x.note||'')}</p>`;
+  if(x.fallback) return `<p>I can answer questions about buyers, invoices, balances, credit limits and payment status from your RAY data. Try “Gupta Traders ka payment kya hua?”</p><p class="xs muted">Rule-based · ${esc(x.note||'Live AI is off')}</p>`;
   return `<p>${esc(x.answer).replace(/\n/g,'<br>')}</p>${(x.flags||[]).map(f=>`<div class="xs mt4" style="color:#9a5b00">${I('alert',12,2)} ${esc(f)}</div>`).join('')}
    ${x.actions&&x.actions.length?`<div class="row gap8 mt12 wrap">${x.actions.map(a=>`<button class="btn btn-s btn-sm" onclick="go('${a.route}')">${esc(a.label)}</button>`).join('')}</div>`:''}
    <div class="row gap8 mt12"><span class="agent-src">${clover(11)} Answered by Claude from your RAY data${x.lookups?` · ${x.lookups} lookup${x.lookups===1?'':'s'}`:''} · recommends only</span></div>`; }
@@ -125,13 +125,17 @@ function rayKind(q){q=q.toLowerCase();
   return 'other';
 }
 A.rayAsk=(q)=>{q=(q||'').trim(); if(!q||S.ray.busy) return; if(!route().startsWith('ray')){go('ray')}
-  if(rayKind(q)==='newlife'&&!['result','approved'].includes(S.check.step)) S.check={step:'result',q:'03AANFN7781K1Z3',by:'GSTIN',who:'newlife'};
-  if(rayKind(q)==='other'){ const x={role:'ray',kind:'llm',status:'loading',id:Date.now()}; S.ray.msgs.push({role:'user',text:q},x); S.ray.chip=null; RAY_PENDING.add(x.id); render(); scrollRay();
-    askRay(q,'ray').then(res=>{ RAY_PENDING.delete(x.id); Object.assign(x,res,{status:'done'}); render(); scrollRay(); }); return; }
-  S.ray.msgs.push({role:'user',text:q}); S.ray.busy=true; S.ray.chip=null; render(); scrollRay();
-  setTimeout(()=>{S.ray.busy=false;S.ray.msgs.push({role:'ray',kind:rayKind(q),id:Date.now()});render();scrollRay()},1700)};
+  const rb=ruleAnswer(q,'ray'), id=(rb.ids||[])[0];
+  /* rich cards for a few structured answers; they read the same engine values */
+  const legacy=rb.kind==='credit'&&id==='gupta'?'gupta':rb.kind==='credit'&&id==='newlife'?'newlife':['slip','priority','collected'].includes(rb.kind)?rb.kind:null;
+  if(legacy){ if(legacy==='newlife'&&!['result','approved'].includes(S.check.step)) S.check={step:'result',q:'03AANFN7781K1Z3',by:'GSTIN',who:'newlife'};
+    S.ray.msgs.push({role:'user',text:q}); S.ray.busy=true; S.ray.chip=null; render(); scrollRay();
+    setTimeout(()=>{S.ray.busy=false;S.ray.msgs.push({role:'ray',kind:legacy,id:Date.now()});render();scrollRay()},900); return; }
+  const x={role:'ray',kind:'ans',status:'loading',id:Date.now()}; S.ray.msgs.push({role:'user',text:q},x); S.ray.chip=null; RAY_PENDING.add(x.id); render(); scrollRay();
+  answerAny(q,'ray').then(a=>{ RAY_PENDING.delete(x.id); x.status='done'; x.a=a; render(); scrollRay(); }); };
 function scrollRay(){const b=document.getElementById('raybody'); if(b) b.scrollTop=b.scrollHeight}
 function rayAnswer(x){
+  if(x.kind==='ans') return x.status==='loading'||!x.a?(RAY_PENDING.has(x.id)?thinking('RAY is checking your data…'):'<p class="muted">This answer was interrupted. Ask again.</p>'):ansHtml(x.a);
   if(x.kind==='llm') return rayLlmHtml(x);
   const g=S.gupta, risky=g.band==='Risky';
   const srcs=(a)=>`<div class="row gap12 mt8">${a.map(s=>`<span class="src ${s[0]}">${s[1]}</span>`).join('')}</div>`;
@@ -152,14 +156,8 @@ function rayAnswer(x){
      <div style="padding:12px 16px;border-top:1px solid var(--border-subtle)"><div class="xs muted" style="font-weight:500">Why</div>${shortReasons('newlife',3).concat(used?[]:[`Network check not used: ${(NET_STATE_LABEL[r.network.state]||'').toLowerCase()}`]).map(x=>`<div class="row gap8 mt8" style="font-size:14.5px"><span style="color:var(--g)">${I('check',14,2.4)}</span>${x}</div>`).join('')}</div>
      <div class="rs-f"><span class="xs muted">${used?'Consented network check used':c==='pending'?'Consent request pending':'Starter policy until the buyer consents'}</span><button class="btn btn-p btn-sm" style="margin-left:auto" onclick="A.netNewLife()">${used?'Review credit terms':'Open credit check'}</button></div></div>
     ${srcs([['','GST public record']].concat(used?[['net','Razorpay network signal']]:[]))}`; }
-  case 'guptapay': {
-    const g=S.gupta;
-    if(g.paidVia==='bank') return `<p><b>Yes. ₹19,200 was received at 10:37 AM and matched to INV-24891.</b></p><p class="small muted">From guptatraders@okhdfc, found in your bank feed.</p><div class="ray-struct"><div class="rs-why" style="grid-template-columns:1fr 1fr"><div><div class="xs muted">Remaining</div><div class="num" style="font-weight:600;color:var(--strong);font-size:17px;margin-top:2px">₹19,200</div></div><div><div class="xs muted">Promise</div><div style="font-weight:600;color:${g.promise==='broken'?'var(--r)':'var(--strong)'};font-size:17px;margin-top:2px">${g.promise==='broken'?'Missed Monday':'Due Monday'}</div></div></div><div class="rs-f"><span class="src aa">${BANK_NAME} · Connected Banking+</span><button class="btn btn-s btn-sm" style="margin-left:auto" onclick="S.bank.filter='All';go('raahi/activity/bank')">View payment</button></div></div>`;
-    if(g.paidVia==='sc') return `<p><b>Yes. ₹19,200 came in at 9:34 AM through Razorpay Smart Collect.</b> RAY matched it to INV-24891. ₹19,200 is still due${g.promise==='broken'?'. Monday’s promise was missed':' on Monday'}.</p>`;
-    if(g.promise==='saved') return `<p>Not that I can see yet. Gupta Traders promised ₹19,200 today, and nothing has arrived through Razorpay${S.bank.st==='on'?' or your bank feed':''}.</p>${S.bank.st==='on'?'':`<p>He usually pays by Google Pay, which lands in your bank. I can’t read that until you connect it.</p><button class="btn btn-p btn-sm" onclick="A.bankStart()">Connect bank</button>`}`;
-    const rc=S.rec.gupta; if(rc.st==='part'||rc.st==='learned') return `<p><b>₹5,000 received through the partial-payment link</b> and matched automatically to INV-24790. ₹15,000 is still due on that invoice. ₹38,400 on INV-24891 is due on 12 Oct through UPI Autopay.</p><button class="btn btn-s btn-sm" onclick="go('raahi/recover/gupta')">View recovery</button>`;
-    return `<p><b>₹20,000 against INV-24790 was due on 3 Oct.</b> The UPI Autopay attempt failed due to insufficient balance. ${rc.st==='sent'?'A partial-payment link was sent and RAY is watching for payment.':'I’ve prepared a partial-payment link for your approval.'}</p><p class="small muted">₹38,400 on INV-24891 is due on 12 Oct through UPI Autopay.</p><button class="btn btn-p btn-sm" onclick="go('raahi/recover/gupta')">Review recovery</button>`; }
-  case 'mehtapay': return collSt('mehta')==='received'?`<p><b>Yes. ₹30,000 was collected through UPI Autopay at 10:42 AM</b> and matched automatically to INV-24812.</p>`:`<p>Not yet. ₹30,000 against INV-24812 is scheduled for UPI Autopay tomorrow, 6 Oct. The pre-debit notice went to Mehta Enterprises through their UPI app.</p><button class="btn btn-s btn-sm" onclick="go('raahi/collect/mehta')">View collection</button>`;
+  case 'guptapay': return ansHtml(ruleAnswer('Gupta Traders ka payment kya hua?','ray'));
+  case 'mehtapay': return ansHtml(ruleAnswer('Mehta Enterprises ka paisa aaya?','ray'));
   case 'citycare': {
     const st=prS('citycare').st;
     if(st) return `<p>City Mart’s INV-24733 is ${PR_ST[st].toLowerCase()}.</p>`;
@@ -180,7 +178,7 @@ function rayAnswer(x){
   }
 }
 A.rayConfirm=(id,v)=>{const x=S.ray.msgs.find(m=>m.id===id); x.confirm=v; render()};
-A.rayApprove=(id)=>{approveGuptaDo('Ray AI'); A.rayConfirm(id,false)};
+A.rayApprove=(id)=>{ A.rayConfirm(id,false); creditConfirmModal('gupta',{via:'Ray AI'}); };
 
 /* ================= RAY ON WHATSAPP ================= */
 function waInit(){
@@ -214,7 +212,7 @@ function waRender(first){
     <div class="wa-status"><span>9:41</span><span class="row gap4" style="font-size:12px">▂▄▆ ${I('pulse',14,2)}</span></div>
     <div class="wa-head"><span style="color:#027eb5">${I('left',24,2.2)}</span><span class="wa-av">RAY</span><div class="grow"><div class="wa-name">Razorpay RAY <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#1d9bf0" d="M12 1l2.6 2.1 3.3-.4 1.1 3.1 3 1.6-.7 3.3 1.7 2.9-2.4 2.3-.2 3.4-3.3.6-1.9 2.8-3.2-1.2-3.2 1.2-1.9-2.8-3.3-.6-.2-3.4L.8 14.6l1.7-2.9-.7-3.3 3-1.6 1.1-3.1 3.3.4z"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="wa-biz">Business Account</div></div><span style="color:#027eb5">${I('video',22,1.8)}</span><span style="color:#027eb5;margin-left:14px">${I('phone',20,1.8)}</span></div>
     <div class="wa-chat" id="wachat"><div class="wa-day"><span>Today</span></div><div class="wa-sys"><span>This is an official business account of Razorpay.</span></div>${msgs}${S.wa.busy?'<div class="wa-typing"><i></i><i></i><i></i></div>':''}</div>
-    <div class="wa-try">${['↪ Forward Gupta’s message','Gupta ka payment kya hua?','Mehta ka paisa aaya?','Gupta ko 50,000 aur credit de doon?','Kaun buyers slip kar rahe hain?','City Mart bol raha hai cheque de diya','🎙 Voice note'].map(t=>`<button onclick="A.waTry(this.textContent)">${t}</button>`).join('')}</div>
+    <div class="wa-try">${['↪ Forward Gupta’s message','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','Gupta ko 50,000 aur credit de doon?','Kaun buyers slip kar rahe hain?','City Mart bol raha hai cheque de diya','🎙 Voice note'].map(t=>`<button onclick="A.waTry(this.textContent)">${t}</button>`).join('')}</div>
     <div class="wa-input"><span style="color:#027eb5">${I('plus',24,2)}</span><div class="box"><input id="wain" placeholder="Message" onkeydown="if(event.key==='Enter'){A.waSend(this.value);this.value=''}">${I('emoji',20)}</div><span style="color:#027eb5">${I('cam',22)}</span><button class="mic" onclick="const v=document.getElementById('wain').value;if(v){A.waSend(v)}else A.waTry('🎙 Voice note')">${I('mic',20,2)}</button></div>
    </div></div></div>`;
   const c=document.getElementById('wachat'); c.scrollTop=c.scrollHeight;
@@ -223,20 +221,16 @@ function waReply(fn,delay=1300){S.wa.busy=true;waRender();setTimeout(()=>{S.wa.b
 A.waTry=t=>{ if(t.includes('Voice')) return A.waVoice(); if(t.includes('Forward')) return A.waForward(); A.waSend(t) };
 A.waSend=t=>{t=(t||'').trim(); if(!t||S.wa.busy) return; S.wa.msgs.push({from:'me',html:esc(t),t:waTime()}); waRender();
   const q=t.toLowerCase();
-  if(/haan|bhejo|send|yes/.test(q)) return waReply(waAskSendAll);
-  if(/slip/.test(q)) return waReply(()=>{ const L=slipLines(); waPush({from:'ray',html:`<b>${L.length} buyer${L.length===1?' is':'s are'} showing weaker repayment behaviour than usual.</b>\n${L.map((r,k)=>`${k+1}. ${r.name} · ${r.you} · ${r.sig} · ${r.due}`).join('\n')}`,btns:[{l:'Review in RAY',a:'waReviewEW'}]}); });
-  if(q.includes('gupta')&&/kya hua|status/.test(q)) return waReply(()=>{ const r=S.rec.gupta; waPush(r.st==='part'||r.st==='learned'?{from:'ray',html:'₹5,000 came in through the partial-payment link and is matched to INV-24790.\n\nRemaining: ₹15,000\nNext: ₹38,400 on INV-24891 is due 12 Oct through UPI Autopay.',btns:[{l:'View recovery',a:'waRecover'}]}:{from:'ray',html:`₹20,000 against INV-24790 was due on 3 Oct.\n\nUPI Autopay attempt failed due to insufficient balance.\n\n${r.st==='sent'?'The partial-payment link has been sent. I’m watching for the payment.':'I’ve prepared a partial-payment link.'}`,btns:[{l:'Review recovery',a:'waRecover'}]}); });
-  if(q.includes('mehta')&&/aaya|paid|paisa|mila/.test(q)) return waReply(()=>waPush(collSt('mehta')==='received'?{from:'ray',html:'Yes. ₹30,000 was collected through UPI Autopay at 10:42 AM and matched to INV-24812.'}:{from:'ray',html:'Not yet. ₹30,000 against INV-24812 is scheduled for UPI Autopay tomorrow, 6 Oct. Mehta Enterprises got the pre-debit notice in their UPI app.',btns:[{l:'View collection',a:'waColl'}]}));
-  if(q.includes('gupta')&&/aaya|paid|received|mila/.test(q)) return waReply(()=>{const g=S.gupta; waPush({from:'ray',html:g.paidVia==='bank'?'Yes. ₹19,200 was received at 10:37 AM and matched to INV-24891.\n\nRemaining: ₹19,200\nPromise: due Monday':g.paidVia==='sc'?'Yes. ₹19,200 came in through Razorpay Smart Collect and is matched to INV-24891. ₹19,200 is still due Monday.':S.bank.st==='on'?'Not yet. Nothing from Gupta Traders in Razorpay or your bank feed today.':'Nothing through Razorpay yet. If he paid by GPay or NEFT, it went to your bank. Connect it so I can check.',btns:g.paidVia||S.bank.st==='on'?null:[{l:'Connect',a:'waConnect'}]});});
-  if(q.includes('city mart')) return waReply(()=>{const st=prS('citycare').st; waPush({from:'ray',html:st?`City Mart’s INV-24733 is ${PR_ST[st].toLowerCase()}.`:'Rakesh Sharma recorded a ₹42,000 cheque from City Mart on 3 Oct.\nIt hasn’t appeared in your bank account yet, so it may still be clearing. I’ve held reminders until you review it.',btns:st?null:[{l:'Review payment',a:'waReviewCC'}]});});
-  if(q.includes('gupta')) return waReply(waGupta);
-  if(/kitna|aaya/.test(q)) return waReply(()=>{ const st=pfStats(), got=S.led.events.filter(e=>RayEvents.MONEY_IN.includes(e.type)&&e.verification==='verified').reduce((a,e)=>a+(e.amount||0),0); waPush({from:'ray',html:`<b>This week so far: ${lakhs(got)} collected (verified) of ${lakhs(st.dueThisWeek)} due.</b>\nLast week: ${lakhs(WEEK.lastCollected)} of ${lakhs(WEEK.lastDue)} (${WEEK.pct}%).`}); });
-  if(/kaun|rok/.test(q)) return waReply(()=>waPush({from:'ray',html:`${lakhs(pfStats().dueThisWeek)} is due this week. Top 3 to prioritise:\n${planTop(3).map((c,k)=>`${k+1}. ${(BUY[c.id]||{}).name} · ${inr(c.amt)} · ${c.kind.toLowerCase()}`).join('\n')}`,btns:[{l:'Review in RAY',a:'waReview'}]}));
-  S.wa.busy=true; waRender(); askRay(t,'wa').then(res=>{ S.wa.busy=false;
-    if(res.fallback) waPush({from:'ray',html:'I can help with credit, collections and payments. Try “Gupta ko 50,000 aur credit de doon?”'+(res.note?`\n\n<i>${esc(res.note)}</i>`:'')});
-    else waPush({from:'ray',html:esc(res.answer)+(res.flags.length?`\n\n<i>${esc(res.flags.join(' '))}</i>`:'')+`\n\n<i>Answered by Claude from your RAY data</i>`,btns:res.actions.filter(a=>a.mob).map(a=>({l:a.label,a:'m:'+a.mob.join('/')}))});
-    if(document.getElementById('wa-root').innerHTML) waRender(); });
+  if(/^(haan|haan ji|ha|yes|ok|bhejo|bhej do|send|send (them|all|reminders))[.! ]*$/.test(q)) return waReply(waAskSendAll);
+  const rb=ruleAnswer(t,'wa'), id=(rb.ids||[])[0];
+  if(rb.kind==='credit'&&id==='gupta') return waReply(waGupta);
+  if(rb.kind!=='unsupported') return waReply(()=>waPush(waAns(rb)));
+  S.wa.busy=true; waRender(); answerAny(t,'wa').then(a=>{ S.wa.busy=false; waPush(waAns(a)); if(document.getElementById('wa-root').innerHTML) waRender(); });
 };
+/* one answer, WhatsApp formatting: links open RAY Credit inside the Razorpay app */
+function waAns(a){ const btns=(a.actions||[]).filter(x=>x.mob).map(x=>({l:x.label, a:'m:'+x.mob.join('/')}))
+    .concat((a.choices||[]).map(c=>({l:c.label, a:'ask:'+c.label+(a.intent==='credit'?' ka limit?':' ka payment kya hua?')})));
+  return {from:'ray', html:`${a.lead?`<b>${esc(a.lead)}</b>\n`:''}${(a.lines||[]).map(esc).join('\n\n')}${(a.flags||[]).length?`\n\n<i>${esc(a.flags.join(' '))}</i>`:''}\n\n<i>${esc(a.label)}${a.note?' · '+esc(a.note):''}</i>`, btns:btns.length?btns:null}; }
 function waAskSendAll(){ const n=bulkCounts(); if(!n.wa) return waSendAll(); waPush({from:'ray',html:`This will send <b>${n.wa} WhatsApp reminders</b>, including early follow-ups. ${n.held?'1 reminder stays paused because of an unmatched payment. ':''}Salesperson visits are assigned separately.\n\nSend them?`,btns:[{l:`Send ${n.wa} reminders`,a:'waSendAll'},{l:'Review in RAY',a:'waReview'}]}); }
 function waSendAll(){
   const n=bulkCounts();
@@ -250,10 +244,11 @@ function waGupta(){
   const r=recOf('gupta'); const body=`Gupta Traders is on <b>${g.band}</b>.\n${risky?'I wouldn’t extend more credit right now.':'I’d limit additional exposure for now.'}\n\n<b>Why</b>\n${guptaWhyLines(5).map(x=>'· '+x).join('\n')}\n\nRecommended future limit: ${inr(g.limitRec)}\nTerms: ${g.terms} days · Confidence: ${r.confidence}\n<i>Same recommendation as in RAY Credit · policy ${POL.version}</i>`;
   waPush({from:'ray',html:body+(ap?`\n\n<i>Future limit already set in RAY (${g.approvedVia}).</i>`:''),btns:ap?[{l:'See why',a:'waWhy'}]:[{l:'See why',a:'waWhy'},{l:'Set future limit',a:'waAskLimit'}]});
 }
-A.waVoice=()=>{ if(S.wa.busy) return; S.wa.msgs.push({from:'me',voice:true,t:waTime()}); waReply(()=>{ const sent=S.chase.singh.st==='sent';
-  waPush({from:'ray',html:`<i>Heard: “Sandhu Mart ka payment aaya kya?”</i>\n\nNot yet. Sandhu Mart promised ₹54,000 today.${sent?` The reminder went out at ${S.chase.singh.at}.`:' Their reminder is drafted and waiting for your approval.'} I’ll tell you when it lands.`}) },1800) };
+A.waVoice=()=>{ if(S.wa.busy) return; S.wa.msgs.push({from:'me',voice:true,t:waTime()}); const heard='Sandhu Mart ka payment aaya kya?';
+  waReply(()=>{ const a=ruleAnswer(heard,'wa'), m=waAns(a); m.html=`<i>Heard: “${heard}” (voice transcription simulated)</i>\n\n`+m.html; waPush(m); },1800) };
 A.waBtn=(i,a)=>{ const m=S.wa.msgs[i]; if(m.used) return; m.used=true;
   const label=(m.btns.find(b=>b.a===a)||{}).l;
+  if(a&&a.startsWith('ask:')){ m.used=false; return A.waSend(a.slice(4)); }
   if(a&&a.startsWith('m:')){ m.used=false; if(!S.installed){ S.installed=true; rr(); } A.openMobile(...a.slice(2).split('/')); return; }
   /* every RAY on WhatsApp link opens RAY Credit inside the Razorpay app */
   const MOBLINK={waReview:['actions'],waReviewEW:['portfolio'],waReviewGupta:['buyer','gupta'],waWhy:['buyer','gupta'],waReviewPay:['pay','verma'],waReviewPromise:['actions'],waEditFollow:['buyer','gupta'],waConnect:['bank'],waReviewCC:['pay','citycare'],waRecover:['recover','gupta'],waRecoverS:['recover','singhms'],waColl:['coll','mehta'],waMobile:['request','gupta'],waAskLimit:['buyer','gupta'],waFollow:['request','gupta']};
@@ -261,11 +256,13 @@ A.waBtn=(i,a)=>{ const m=S.wa.msgs[i]; if(m.used) return; m.used=true;
   if(a==='waRenew'){ A.aaRenew(); return; }
   S.wa.msgs.push({from:'me',html:esc(label),t:waTime()}); waRender();
   if(a==='waSendAll') return waReply(waSendAll);
-  if(a==='waFollow') return waReply(()=>{ const st=S.chase.gupta; if(st.st!=='draft'){ waPush({from:'ray',html:`The early follow-up to Gupta Traders already went out at ${st.at||'9:14 AM'}.`}); return; } waPush({from:'ray',html:`Here’s the early follow-up for Gupta Traders:\n\n<i>“${esc(st.msg)}”</i>\n\nSend it now?`,btns:[{l:'Send follow-up',a:'waFollowSend'},{l:'Edit in RAY',a:'waEditFollow'}]}); });
-  if(a==='waFollowSend') return waReply(()=>{ if(S.chase.gupta.st==='draft'){ const t=nowT(); S.chase.gupta.st='sent'; S.chase.gupta.at=t; log({ic:'send',ti:'Early follow-up sent to Gupta Traders',de:`WhatsApp · ₹38,400 · payment link ${LINK('gupta')}`,src:['conv'],who:'Approved by '+M.owner+' · RAY on WhatsApp',chem:'Gupta Traders'}); if(onRAY()) render(); guptaReplySoon(); } waPush({from:'ray',html:'Sent. I’ll tell you when Gupta Traders replies.'}); });
-  if(a==='waAskLimit') return waReply(()=>{ const g=S.gupta, over=g.out-g.limitRec; waPush({from:'ray',html:`Please confirm: set Gupta Traders’ <b>future limit to ${inr(g.limitRec)}</b> on ${g.terms}-day terms?\n\n${over>0?`They are ${inr(over)} above it today, so any new credit request will need your approval. `:''}Existing supply is not paused.`,btns:[{l:'Confirm',a:'waApproveGupta'},{l:'Cancel',a:'waCancel'}]}); });
+  if(a==='waFollow') return waReply(()=>{ const id='gupta', st=S.chase[id]; if(!st||st.st!=='draft'){ waPush({from:'ray',html:st&&st.at?`The early follow-up to ${BUY[id].name} already went out at ${st.at}.`:`There is no follow-up waiting for ${BUY[id].name}.`}); return; } const g=gateFor(id,'whatsapp',chaseInv(id)); if(g.action==='block'){ waPush({from:'ray',html:`I can’t send this now. ${esc(gateNote(g))}`}); return; } waPush({from:'ray',html:`Here’s the early follow-up for ${BUY[id].name}:\n\n<i>“${esc(st.msg)}”</i>\n\n${esc(sourcesLine(id,chaseInv(id),{html:false}))}\n\nSend it now? (Simulated delivery.)`,btns:[{l:'Send follow-up',a:'waFollowSend'},{l:'Edit in RAY',a:'waEditFollow'}]}); });
+  if(a==='waFollowSend') return waReply(()=>{ const id='gupta', st=S.chase[id]; if(!st||st.st!=='draft'){ waPush({from:'ray',html:'Already handled. Nothing sent twice.'}); return; } const r=sendMessage(id,{kind:'followup', inv:chaseInv(id), msg:st.msg, via:'RAY on WhatsApp', quiet:true}); if(!r.ok&&!r.queued){ waPush({from:'ray',html:`Not sent. ${esc(gateNote(r.gate))}`}); return; } st.st=r.queued?'queued':'sent'; st.at=r.queued?RayDates.fmtTime(RayDates.istParts(r.item.sendAt).min):nowT(); log({ic:'send',ti:`Early follow-up ${r.queued?'queued':'sent'} to ${BUY[id].name}`,de:`WhatsApp · simulated delivery · ${inr(chaseOf(id).amt)} · payment link ${LINK(id)}`,src:['conv'],who:'Approved by '+M.owner+' · RAY on WhatsApp',chem:BUY[id].name}); if(onRAY()) render(); if(r.ok&&typeof guptaReplySoon==='function') guptaReplySoon(); waPush({from:'ray',html:r.queued?`Queued until ${st.at} (quiet hours). Controls are checked again when it goes out.`:'Sent (simulated). I’ll tell you when Gupta Traders replies.'}); });
+  if(a==='waAskLimit') return waReply(()=>{ const p=creditProposal('gupta'), key=holdProposal(p), over=overLimitText('Gupta Traders',p.out,p.limit); waPush({from:'ray',prop:key,html:`Please confirm: set Gupta Traders’ <b>future limit to ${inr(p.limit)}</b> on ${p.terms}-day terms (now ${inr(p.from.limit)} · ${p.from.terms} days)?\n\n${over?over+'\n\n':''}Existing supply is not paused.`,btns:[{l:'Confirm',a:'waApproveGupta'},{l:'Cancel',a:'waCancel'}]}); });
   if(a==='waCancel') return waReply(()=>waPush({from:'ray',html:'No change made.'}));
-  if(a==='waApproveGupta') return waReply(()=>{ if(S.gupta.rec!=='approved') approveGuptaDo('RAY on WhatsApp'); waPush({from:'ray',html:`Done. Gupta Traders’ future limit is ${inr(S.gupta.limit)} on ${S.gupta.terms}-day terms. Logged in Activity.\nSupply continues. Nothing is paused automatically.`}); });
+  if(a==='waApproveGupta') return waReply(()=>{ const res=approveGuptaDo('RAY on WhatsApp', true, m.prop); if(onRAY()) render();
+    waPush(res&&res.ok?{from:'ray',html:`Done. Gupta Traders’ future limit is ${inr(res.op.to.limit)} on ${res.op.to.terms}-day terms, exactly as confirmed. Logged in Activity.\nSupply continues. Nothing is paused automatically.`,btns:[{l:'Undo',a:'waUndoGupta'}]}:{from:'ray',html:esc((res&&res.msg)||'Nothing was changed.')}); });
+  if(a==='waUndoGupta') return waReply(()=>{ const op=lastCreditOp('gupta'); if(!op){ waPush({from:'ray',html:'There is no decision to undo.'}); return; } A.undoCredit('gupta','RAY on WhatsApp'); waPush({from:'ray',html:`Undone. Gupta Traders is back to ${inr(curLimitOf('gupta'))} on ${curTermsOf('gupta')}-day terms. The approval and the reversal are both kept in Activity.`}); });
   if(a==='waConfirmPromise') return waReply(()=>{ if(['new','reading','understood'].includes(S.gupta.promise)){S.gupta.promise='understood'; A.confirmPromise();} waPush({from:'ray',html:'Promise saved: ₹19,200 today, ₹19,200 by Monday, 12 Oct. I’ll watch for the payment.'}); });
 };
 

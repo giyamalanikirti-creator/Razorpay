@@ -81,7 +81,9 @@ function completeConnection(){
   S.bank.st='on'; S.bank.ever=true; S.adj.arora=42800;
   log({ic:'shield',ti:`Bank account connected · ${BANK_FULL}`,de:'RazorpayX Connected Banking+ · transaction information for reconciliation · payment actions need separate banking permissions',src:['aa'],who:'Approved by '+M.owner+' · Connected Banking+'});
   log({ic:'match',ti:'First bank sync: 1,284 credits',de:'1,201 matched · 61 suggested · 22 unidentified',src:['aa'],who:'RAY'});
-  if(S.coll.arora==='scheduled'){ S.coll.arora='paidbank'; log({ic:'ban',ti:'Autopay attempt cancelled for Arora Retail',de:'₹42,800 already received 10:16 AM by NEFT · matched to INV-24860 from your bank account · RAY does not collect twice',src:['aa'],who:'RAY',chem:'Arora Retail'}); }
+  /* the first sync finds Arora's NEFT: it is applied to the ledger like any verified payment, then the autopay is cancelled */
+  if(S.coll.arora==='scheduled'&&balOf('arora','INV-24860')>0){ const pr=ledgerPay('arora','INV-24860',balOf('arora','INV-24860'),{type:'PAYMENT_RECONCILED', source:'Bank account (Connected Banking+)', actor:'Connected Banking+', ref:'NEFT/AXIS/N27810'}); if(pr.ok) S.coll.arora='paidbank'; }
+  if(S.coll.arora==='paidbank'&&!S.act.some(x=>/Autopay attempt cancelled for Arora/.test(x.ti))){ log({ic:'ban',ti:'Autopay attempt cancelled for Arora Retail',de:'₹42,800 already received 10:16 AM by NEFT · matched to INV-24860 from your bank account · ledger updated · RAY does not collect twice',src:['aa'],who:'RAY',chem:'Arora Retail'}); }
   if(S.gupta.promise==='saved') payGupta('bank');
 }
 function payGupta(via){
@@ -137,9 +139,11 @@ A.bankSuggest=(id)=>{ const r=S.bank.rows.find(x=>x.id===id), ch=chem(r.to);
    <p class="xs muted mt12">RAY doesn’t auto-match new payer names. Lower-confidence payments always wait for you.</p>`,
    actions:[{label:'Leave unidentified',cls:'btn-g',fn:()=>{closeModal();r.st='unid';S.bank.sugg--;S.bank.unid++;rr();toast('Left unidentified')}},{label:'Choose another',fn:()=>{closeModal();A.bankAssign(id)}},{label:'Confirm match',cls:'btn-p',fn:()=>{closeModal();bankMatch(r,r.to,r.inv,true)}}]}); };
 function bankMatch(r,to,inv,fromSugg){
-  const ch=chem(to); r.st='matched'; r.to=to; r.inv=inv||'On account';
+  const ch=chem(to); const res=ledgerPayAllocate(to, r.amt, inv&&inv!=='On account'?inv:null, {type:'PAYMENT_RECONCILED', source:'Bank account (Connected Banking+)', actor:M.owner, ref:r.ref});
+  if(!res.ok){ toast(res.error); return; }
+  r.st='matched'; r.to=to; r.inv=res.parts.map(e=>e.invoice).join(', ');
   if(fromSugg) S.bank.sugg--; else S.bank.unid--;
-  S.adj[to]=(S.adj[to]||0)+r.amt; ledgerPay(to, inv, r.amt, {type:'PAYMENT_RECONCILED', source:'Bank account (Connected Banking+)', actor:M.owner, ref:r.ref}); S.bank.learned++; S.bank.aliases.unshift([r.payer,ch.name,true]);
+  S.adj[to]=(S.adj[to]||0)+r.amt; S.bank.learned++; S.bank.aliases.unshift([r.payer,ch.name,true]);
   log({ic:'match',ti:`${inr(r.amt)} matched to ${ch.name}`,de:`${r.payer} · ${r.ref} · ${r.inv} · RAY will recognise this payer next time`,src:['aa'],who:'Confirmed by '+M.owner+' · Bank feed',chem:ch.name});
   rr(); toast(`Matched · RAY will recognise “${r.payer}” as ${ch.name}`);
 }
@@ -187,8 +191,8 @@ function preSendChecks(){
    ${it(held?'warn':true,'Unidentified credits',held?`· ${held} reminder${held===1?'':'s'} paused`:'· none')}
    ${it(true,'Salesperson collections','')}</div>`;
 }
-A.sendAnyway=(id)=>{const ch=chem(id), c=chaseOf(id);
-  modal({title:`Send reminder anyway to ${ch.name}?`,body:`<p style="color:var(--strong)">RAY found an unmatched ₹26,500 payment from yesterday that may already cover this.</p><p class="muted mt8">If it’s theirs, you’ll be chasing a buyer who has already paid. Review the payment first if you can.</p>`,actions:[{label:'Cancel'},{label:'Review payment',fn:()=>{closeModal();goSec('raahi/actions','grp-check')}},{label:'Send reminder anyway',cls:'btn-d',id:'send-anyway',fn:()=>{closeModal();S.chase[id].st='sent';S.chase[id].at=nowT();log({ic:'send',ti:`Reminder sent anyway to ${ch.name}`,de:`Override · unmatched ₹26,500 credit still unreviewed · ${inr(c.amt)}`,src:['conv'],who:'Approved by '+M.owner+' · Dashboard',chem:ch.name});rr();toast('Reminder sent · override logged')}}]});};
+A.sendAnyway=(id)=>{const ch=chem(id), c=chaseOf(id), p=PAYREV[id], pos=p&&p.possible;
+  modal({title:`Send reminder anyway to ${ch.name}?`,body:`<p style="color:var(--strong)">${pos?`RAY found an unmatched ${inr(pos.amt)} payment (${esc(pos.t)}) that may already cover this.`:'A possible payment is still waiting for your review.'}</p><p class="muted mt8">If it’s theirs, you’ll be chasing a buyer who has already paid. Review the payment first if you can. Every other control (Do not contact, weekly limit, quiet hours, pause, stale ledger) still applies.</p>`,actions:[{label:'Cancel'},{label:'Review payment',fn:()=>{closeModal();goSec('raahi/actions','grp-check')}},{label:'Send reminder anyway',cls:'btn-d',id:'send-anyway',fn:()=>{closeModal(); const it=S.chase[id]; const r=sendMessage(id,{kind:'reminder', inv:chaseInv(id), msg:it&&it.msg, via:'Dashboard', override:'unmatched'}); if(!r.ok&&!r.queued) return; if(it){ it.st=r.queued?'queued':'sent'; it.at=nowT(); } log({ic:'send',ti:`Reminder ${r.queued?'queued':'sent'} anyway to ${ch.name}`,de:`Override · possible payment still unreviewed · ${inr(c.amt)} · simulated delivery`,src:['conv'],who:'Approved by '+M.owner+' · Dashboard',chem:ch.name});rr();toast(`Reminder ${r.queued?'queued':'sent (simulated)'} · override logged`)}}]});};
 
 /* ---------- Connect bank account: choose account → verify OTP → authorise → sync (Razorpay-native) ---------- */
 function otpBoxes(id){return `<div class="aa-otp" id="${id}" style="justify-content:flex-start">${[0,1,2,3,4,5].map(()=>`<input maxlength="1" inputmode="numeric" oninput="if(this.value&&this.nextElementSibling)this.nextElementSibling.focus()">`).join('')}</div>`}

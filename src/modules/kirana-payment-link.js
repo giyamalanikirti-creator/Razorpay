@@ -45,10 +45,15 @@ A.kirSend=()=>{ const k=kirS(), c=chem(KIR.id);
    <div class="ol-note mt12"><span style="color:var(--link);flex-shrink:0">${I('lock',14,2)}</span><span>Any new payment date is a proposal. Dates within ${K_AUTO_DAYS} days follow your plan rules; later dates come back to you for approval. Nothing is collected automatically without a separate mandate.</span></div>
    <div class="xs muted mt8">Prototype: delivery is simulated. No real WhatsApp message is sent.</div>`,
    actions:[{label:'Cancel'},{label:k.editing?'Save message':'Edit message',fn:()=>{ if(k.editing){ const t=document.getElementById('kir-msg'); if(t) k.msg=t.value; } k.editing=!k.editing; A.kirSend(); }},{label:'Preview kirana experience',fn:()=>{ closeModal(); A.kirPreview(); }},{label:k.sent?'Send again':'Approve and send',cls:'btn-p',id:'kir-send',fn:()=>{ closeModal(); kirDoSend(); }}]}); };
-function kirDoSend(quiet){ const k=kirS(), first=!k.sent; k.sent=true; k.sentAt=nowT();
-  if(first) log({ic:'link',ti:'Payment link sent to Gupta Kirana Store',de:`${KIR.inv} · ${inr(KIR.amt)} · ${KIR.link} · options: pay now, schedule payment, raise dispute · delivery simulated in prototype`,src:['conv','rzp'],who:'Approved by '+M.owner+' · Dashboard',chem:'Gupta Kirana Store'});
-  if(!quiet){ rr(); toast('Payment link sent (simulated)',{label:'Preview kirana experience',fn:()=>A.kirPreview()}); } }
-A.kirPreview=()=>{ const k=kirS(); if(!k.sent) kirDoSend(true); if(!k.kind) k.view='home'; A.closeWA&&A.closeWA(); S.mob&&A.closeMobile(); go(KIR_ROUTE); };
+function kirDoSend(quiet){ const k=kirS(), first=!k.sent;
+  if(balOf(KIR.id,KIR.inv)<=0){ if(!quiet) toast(`${KIR.inv} is already paid in full. Nothing sent.`); return {ok:false}; }
+  const r=sendMessage(KIR.id,{kind:'payment_link', inv:KIR.inv, msg:kirMsg(), via:'Dashboard', quiet});
+  if(!r.ok&&!r.queued) return r;
+  k.sent=true; k.sentAt=nowT();
+  log({ic:'link',ti:`Payment link ${r.queued?'queued':'sent'} to ${chem(KIR.id).name}`,de:`${KIR.inv} · ${inr(balOf(KIR.id,KIR.inv))} · ${KIR.link} · options: pay now, schedule payment, raise dispute · simulated delivery`,src:['conv','rzp'],who:'Approved by '+M.owner+' · Dashboard',chem:chem(KIR.id).name});
+  if(!quiet){ rr(); toast(`Payment link ${r.queued?'queued (quiet hours)':'sent (simulated)'}`,{label:'Preview kirana experience',fn:()=>A.kirPreview()}); }
+  return r; }
+A.kirPreview=()=>{ const k=kirS(); if(!k.sent){ const r=kirDoSend(true); if(!r||(!r.ok&&!r.queued)) return toast('Not sent: '+(r&&r.gate?gateNote(r.gate):'nothing due')); } if(!k.kind) k.view='home'; A.closeWA&&A.closeWA(); S.mob&&A.closeMobile(); go(KIR_ROUTE); };
 
 /* 2. what the distributor sees once the kirana acts */
 A.kirApprove=()=>{ const k=kirS(); k.commit='approved'; k.notif=false; kirCommitEvent();
@@ -56,11 +61,13 @@ A.kirApprove=()=>{ const k=kirS(); k.commit='approved'; k.notif=false; kirCommit
   rr(); toast('Plan approved · forecast updated'); };
 A.kirReject=()=>modal({title:'Reject the proposed date?',body:`<p class="muted">The ${inr(kBal())} balance stays due on the original terms. RAY will not message Gupta Kirana Store. You tell them what you can accept.</p>`,actions:[{label:'Cancel'},{label:'Reject proposed date',cls:'btn-d',fn:()=>{ closeModal(); const k=kirS(); k.commit='rejected'; k.notif=false;
   log({ic:'x',ti:'Payment plan rejected for Gupta Kirana Store',de:`Proposed ${kFmt(k.date)} not accepted · balance due on original terms`,src:['conv'],who:'Decided by '+M.owner+' · Dashboard',chem:'Gupta Kirana Store'}); rr(); toast('Proposed date rejected'); }}]});
-A.kirPaid=()=>{ const k=kirS(); k.pay='received'; S.adj[KIR.id]=(S.adj[KIR.id]||0)+(k.kind==='full'?KIR.amt:k.now); ledgerPay(KIR.id, KIR.inv, k.kind==='full'?KIR.amt:k.now, {source:'Razorpay Payment Link (simulated)', actor:'Razorpay', ref:'kir-now-'+KIR.inv});
-  log({ic:'rupee',ti:`${inr(k.kind==='full'?KIR.amt:k.now)} received from Gupta Kirana Store (simulated)`,de:`${KIR.inv} · Razorpay payment link · matched automatically · prototype simulation, no money moved`,src:['rzp'],who:'Razorpay',chem:'Gupta Kirana Store'}); rr(); toast('Payment marked received (simulated)'); };
+A.kirPaid=()=>{ const k=kirS(), amt=k.kind==='full'?balOf(KIR.id,KIR.inv):k.now;
+  const r=ledgerPay(KIR.id, KIR.inv, amt, {source:'Razorpay Payment Link (simulated)', actor:'Razorpay', ref:'kir-now-'+KIR.inv}); if(!r.ok) return toast(r.error);
+  k.pay='received'; S.adj[KIR.id]=(S.adj[KIR.id]||0)+amt;
+  log({ic:'rupee',ti:`${inr(amt)} received from Gupta Kirana Store (simulated)`,de:`${KIR.inv} · Razorpay payment link · matched automatically · balance ${inr(r.event.meta.balanceBefore)} → ${inr(r.event.meta.balanceAfter)} · prototype simulation, no money moved`,src:['rzp'],who:'Razorpay',chem:'Gupta Kirana Store'}); rr(); toast('Payment marked received (simulated)'); };
 const kirCommitEvent=()=>{ const k=kirS(); if(!evOf(KIR.id).some(e=>e.type==='PROMISE_RECORDED')) recordEvent({type:'PROMISE_RECORDED', buyerId:KIR.id, invoice:KIR.inv, amount:kBal(), source:'Retailer payment page (Razorpay link)', actor:'Gupta Kirana Store', meta:{date:k.date, commit:k.commit}},{quiet:true}); };
 A.kirOutcome=(o)=>{ const k=kirS(); k.outcome=o; kirCommitEvent();
-  if(o==='kept'){ ledgerPay(KIR.id, KIR.inv, kBal(), {source:'Razorpay Payment Link (simulated)', ref:'kir-bal-'+KIR.inv}); recordEvent({type:'PROMISE_KEPT', buyerId:KIR.id, invoice:KIR.inv, source:'Ledger check', actor:'RAY'},{quiet:true}); }
+  if(o==='kept'){ const pr=ledgerPay(KIR.id, KIR.inv, kBal(), {source:'Razorpay Payment Link (simulated)', ref:'kir-bal-'+KIR.inv}); if(!pr.ok&&!pr.dup) return toast(pr.error); recordEvent({type:'PROMISE_KEPT', buyerId:KIR.id, invoice:KIR.inv, source:'Ledger check', actor:'RAY'},{quiet:true}); }
   else recordEvent({type:'PROMISE_MISSED', buyerId:KIR.id, invoice:KIR.inv, amount:kBal(), source:'Ledger check', actor:'RAY'},{quiet:true});
   log({ic:o==='kept'?'check':'alert',ti:`Gupta Kirana Store ${o==='kept'?'kept':'missed'} its payment commitment`,de:`${inr(kBal())} ${o==='kept'?'paid':'not paid'} by ${kFmt(k.date)} · recorded as a repayment behaviour signal for future recommendations`,src:['rzp','conv'],who:'RAY',chem:'Gupta Kirana Store'});
   rr(); toast(o==='kept'?'Commitment kept · added to repayment record':'Commitment missed · RAY will factor this in'); };

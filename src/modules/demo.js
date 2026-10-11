@@ -12,8 +12,11 @@ const scenario = (text, label, fn) => { S.demoNote={text, label, fn}; };
 
 /* explicit simulated scenario: the outcomes that change Gupta Traders’ recommendation */
 function loadOutcomeScenario(){
-  if(!S.rec.gupta.st){ S.rec.gupta.st='sent'; S.rec.gupta.at=nowT(); log({ic:'link',ti:'Partial-payment link sent to Gupta Traders',de:'Scenario loaded by presenter · ₹20,000 · INV-24790 · minimum ₹5,000',src:['rzp','conv'],who:'Prototype scenario',chem:'Gupta Traders'}); }
-  if(S.rec.gupta.st==='sent') A.recPay('gupta');
+  const rv=recoveryOf('gupta');
+  if(rv&&rv.status==='open'){ const rs=recS('gupta'), v=RayGuards.linkMinimum(RayGuards.LINK_RULES.defaultMin, rv.balance); rs.st='link'; rs.at=nowT(); rs.n=(rs.n||0)+1;
+    rs.link={at:rs.at, status:'sent', amount:rv.balance, min:v.value, partial:v.partial, msg:recLinkDraft('gupta').msg, inv:rv.inv, ref:'plink_scn_'+rs.n};
+    log({ic:'link',ti:'Partial-payment link sent to Gupta Traders',de:`Scenario loaded by presenter · ${inr(rv.balance)} · ${rv.inv} · minimum ${inr(v.value)} · simulated delivery`,src:['rzp','conv'],who:'Prototype scenario',chem:'Gupta Traders'}); }
+  const rv2=recoveryOf('gupta'); if(rv2&&rv2.link&&rv2.status==='action') A.recPay('gupta', Math.min(rv2.link.min, rv2.balance), 'plink_scn_pay_'+rv2.inv);
   if(!openPromise('gupta')){ const bal=balOf('gupta','INV-24891'); const raw=RayPromise.demoParse(GUPTA_REPLY,{outstanding:bal,messageDate:S.today}); const v=RayPromise.validateInterpretation(raw,{message:GUPTA_REPLY,outstanding:bal,messageDate:S.today}).interpretation;
     S.interp.gupta={status:'done',mode:'rule',unavailable:'SCENARIO',input:{buyerId:'gupta',buyerName:'Gupta Traders',message:GUPTA_REPLY,inv:'INV-24891',outstanding:bal,messageDate:S.today},interpretation:v,checks:[],canConfirm:true,fields:{firstAmt:v.promisedAmountNow,firstDate:v.firstPaymentDate,laterAmt:v.promisedAmountLater,laterDate:v.promisedDate}};
     if(!S.gupta.promise) S.gupta.promise='understood'; saveCommitment('gupta',S.interp.gupta.fields,false); }
@@ -23,17 +26,27 @@ function loadOutcomeScenario(){
 }
 const outcomesRecorded = () => eventsSince('gupta').some(e=>['AUTOPAY_FAILED','PROMISE_MISSED'].includes(e.type));
 
-/* ---------- Core Journey: signal → intelligence → recommendation → approval → action → outcome → updated decision ---------- */
+/* ---------- Judge walkthrough: eight short steps, each one shows a real state change ---------- */
 const CORE = [
- ['Gupta Traders asks for ₹50,000 more credit', ()=>{ installed(); go('raahi/request/gupta'); }],
- ['RAY reviews the repayment signals', ()=>{ installed(); S.howOpen=S.howOpen||{}; S.howOpen.gupta=true; goSec('raahi/request/gupta','how-gupta'); }],
- ['Your data vs consented network evidence', ()=>{ installed(); goSec('raahi/request/gupta','ncmp-gupta'); }],
- ['Approve the new limit and terms', ()=>{ installed(); goSec('raahi/request/gupta','req-rec'); if(S.gupta.rec==='open') setTimeout(()=>A.approveGupta(),350); }, KEEP.modal],
- ['Buyer replies in Hinglish · AI extracts the promise', ()=>{ installed(); if(S.gupta.promise){ goSec('raahi/activity','promise'); return; }
-    go('raahi/actions'); scenario('Gupta Traders replies once the follow-up is sent. Send it (you approve), then the reply is interpreted.','Open follow-up',()=>{ S.demoNote=null; demoRender(); A.approveOne('gupta'); setTimeout(()=>{ if(S.gupta.promise) go('raahi/activity'); },4200); }); }],
- ['Record a payment or a collection failure', ()=>{ installed(); S.ocOpen=S.ocOpen||{}; S.ocOpen.gupta=true; goSec('raahi/buyer/gupta','oc-gupta'); }],
- ['Repayment events update the recommendation', ()=>{ installed(); if(!outcomesRecorded()) { goSec('raahi/buyer/gupta','oc-gupta'); scenario('No outcome recorded yet. Load a simulated sequence: ₹5,000 partial payment, a failed Autopay attempt and a missed promise.','Load scenario (simulated)',loadOutcomeScenario); } else goSec('raahi/buyer/gupta','wc-gupta'); }],
- ['You decide what to do', ()=>{ installed(); goSec('raahi/buyer/gupta','wc-gupta'); }],
+ ['Install · or continue without a bank', ()=>{ S.installed=false; go('studio/raahi'); setTimeout(()=>{ S.inst=null; inst(2,'marg'); },120);
+    scenario('Choose “No” to skip the bank. RAY still works; every payment check then says the bank was not checked, instead of claiming it was.','',null); }, KEEP.modal],
+ ['Your ledger vs the Razorpay network', ()=>{ installed(); goSec('raahi/request/gupta','ncmp-gupta');
+    scenario('Toggle “Your data only”: ₹75,000 · 21 days. With consented, aggregated network evidence: ₹60,000 · 14 days. No other distributor is ever named.','',null); }],
+ ['Explainable approval', ()=>{ installed(); S.howOpen=S.howOpen||{}; S.howOpen.gupta=true; goSec('raahi/request/gupta','req-rec'); if(S.gupta.rec==='open') setTimeout(()=>A.approveGupta(),350);
+    scenario('The confirmation shows exactly what will be applied, why, and what happens to the ₹78,400 already owed. The same values are applied once, even on a double click.','',null); }, KEEP.modal],
+ ['Undo, with an audit trail', ()=>{ installed(); goSec('raahi/buyer/gupta','why');
+    if(lastCreditOp('gupta')) scenario('Undo restores the limit, terms, request and decision. The approval stays in Activity next to the reversal.','Undo the approval',()=>{ S.demoNote=null; A.undoCredit('gupta'); go('raahi/activity'); demoRender(); });
+    else scenario('Approve first (step 3), then come back to undo it.','',null); }],
+ ['Failed collection → partial payment', ()=>{ installed(); go('raahi/recover/gupta'); const r=recoveryOf('gupta');
+    if(r&&r.status==='open') setTimeout(()=>A.recLink('gupta'),300);
+    scenario('Try a ₹25,000 minimum: it is rejected inline. Send the link, then simulate the buyer paying the minimum.','Buyer pays the minimum (simulated)',()=>{ const x=recoveryOf('gupta'); if(!x||x.status==='completed') return; if(!x.link){ recLinkKeep&&recLinkKeep('gupta'); A.recSend('gupta'); } const y=recoveryOf('gupta'); if(y.link) A.recPay('gupta', Math.min(y.link.min,y.balance), 'demo_min_'+y.inv); S.demoNote=null; demoRender(); }); }, KEEP.modal],
+ ['Balance paid · recovery completes everywhere', ()=>{ installed(); go('raahi/recover/gupta'); const r=recoveryOf('gupta');
+    if(r&&r.status!=='completed') scenario(`Simulate the buyer paying the remaining ${inr(r.balance)}. The recovery closes, steps stop, and Overview, Actions, WhatsApp and mobile all show it.`,'Buyer pays the balance (simulated)',()=>{ const x=recoveryOf('gupta'); A.recPay('gupta', x.balance, 'demo_full_'+x.inv); S.demoNote=null; demoRender(); }); }],
+ ['Reconcile before any follow-up', ()=>{ installed(); go('raahi/payment/verma');
+    scenario('A ₹26,500 Razorpay credit may already cover Verma Retail. The reminder is held until you match it; matching updates the invoice and cancels the reminder.','',null); }],
+ ['Same status on WhatsApp and mobile', ()=>{ installed(); A.openWA(); setTimeout(()=>A.waSend('Gupta Traders ka payment kya hua?'),300);
+    scenario('RAY on WhatsApp answers from the same ledger. Ask the same question in RAY Credit for Mobile.','Ask on mobile',()=>{ S.demoNote=null; A.closeWA(); A.openMobile('ask'); setTimeout(()=>A.mobAsk('Gupta Traders ka payment kya hua?'),200); demoRender(); }); }, KEEP.wa],
+ ['What ran: Checks', ()=>{ installed(); go('raahi/checks'); }],
 ];
 
 /* ---------- Explore all features (original story, now side-effect free on navigation) ---------- */
@@ -51,7 +64,7 @@ const STEPS = [
  ['Hidden risk: Chawla Enterprises', ()=>{ installed(); goSec('raahi/buyer/chawla','net'); }],
  ['Day-one credit: New Life Stores', ()=>{ installed(); A.netNewLife(); }],
  ['Collection succeeds, matched automatically', ()=>{ installed(); go('raahi/collect/mehta'); if(collSt('mehta')==='scheduled') scenario('Run the scheduled UPI Autopay collection (simulated).','Run collection',()=>{ S.demoNote=null; A.collRun('mehta'); demoRender(); }); }],
- ['Autopay fails: smart recovery', ()=>{ installed(); go('raahi/recover/gupta'); if(!S.rec.gupta.st) setTimeout(()=>A.recLink('gupta'),300); }, KEEP.modal],
+ ['Autopay fails: smart recovery', ()=>{ installed(); go('raahi/recover/gupta'); if(recoveryOf('gupta')&&recoveryOf('gupta').status==='open') setTimeout(()=>A.recLink('gupta'),300); }, KEEP.modal],
  ['Repayment outcomes update the recommendation', ()=>{ installed(); go('raahi/recover/gupta'); if(!outcomesRecorded()) scenario('Record the outcomes on the recovery page, or load the simulated sequence.','Load scenario (simulated)',loadOutcomeScenario); else setTimeout(()=>{const e=document.getElementById('wc-gupta'); e&&e.scrollIntoView({behavior:'smooth',block:'center'})},300); }],
  ['Payment review: check bank statement', ()=>{ installed(); go('raahi/payment/lifeline'); if(!prS('lifeline').check&&!prS('lifeline').st) setTimeout(()=>A.prCheck('lifeline'),300); }],
  ['Kirana: at-risk invoice', ()=>{ installed(); go('raahi/invoice/INV-2048'); }],
@@ -74,10 +87,10 @@ function demoRender(){
   const note=S.demoNote?`<div class="demo-note"><div class="small" style="color:var(--strong)">${S.demoNote.text}</div>${S.demoNote.fn?`<button class="btn btn-p btn-sm mt8" onclick="(S.demoNote&&S.demoNote.fn)&&S.demoNote.fn()">${S.demoNote.label}</button>`:''}<button class="x" onclick="S.demoNote=null;demoRender()">${I('x',14)}</button></div>`:'';
   const list=(arr,key)=>arr.map((s,i)=>`<button class="${cur===key&&i===S.step?'cur':''}" onclick="A.step(${i},'${key}')"><span class="k">${i+1}</span><span>${s[0]}</span></button>`).join('');
   r.innerHTML=`${note}${S.demoOpen?`<div class="demo"><div class="dh"><b>Explore RAY Credit</b><div class="xs" style="margin-top:2px;opacity:.8">One intelligence layer, across every surface.</div><div class="col gap6 mt8"><button class="surf-b" onclick="A.surf('desk')">Open Desktop</button><button class="surf-b" onclick="A.surf('wa')">Open RAY on WhatsApp</button><button class="surf-b" onclick="A.surf('mob')">Open RAY Credit for Mobile</button></div><p class="mt8">Concept prototype for Razorpay Agent Studio · synthetic merchant data (Agarwal Distributors, Ludhiana). Not a live Razorpay product. <a class="link" style="color:inherit;text-decoration:underline" onclick="A.about()">About this demo</a></p></div>
-   <div class="ds"><h6>Try RAY Credit: Core Journey</h6>${list(CORE,'core')}
+   <div class="ds"><h6>Judge walkthrough · about 5 minutes</h6>${list(CORE,'core')}
    <h6>Explore all features</h6>${list(STEPS,'all')}
    <h6>Extras</h6><button class="sim" onclick="A.netToggle()"><span class="k">N</span><span>${S.ctl.net?'Turn off':'Turn on'} the Razorpay network</span></button><button class="sim" onclick="go('raahi/invoice/INV-2048')"><span class="k">K</span><span>Kirana payment link journey · Gupta Kirana Store</span></button><button class="sim" onclick="go('raahi/buyer/sethi')"><span class="k">L</span><span>Positive outcome · Sethi Mart increase rule</span></button><button class="sim" onclick="go('raahi/payment/citycare')"><span class="k">S</span><span>Salesperson cheque · City Mart</span></button><button class="sim" onclick="goSec('raahi/controls','inbox-ctl');setTimeout(A.inboxConnect,200)"><span class="k">I</span><span>Connect WhatsApp Business inbox</span></button><button class="sim" onclick="S.installed=false;rr();A.openMobile('apphome');setTimeout(()=>A.mobGo('products'),50)"><span class="k">P</span><span>Mobile discovery · Products → Agent Studio</span></button><button class="sim" onclick="A.behind()"><span class="k">B</span><span>Behind RAY · architecture</span></button>
-   <h6>Reset</h6><button onclick="A.reset()"><span class="k">${I('refresh',11,2.4)}</span><span>Reset demo to Monday 9 AM</span></button></div></div>`:''}`;
+   <h6>Reset</h6><button onclick="A.resetAsk()"><span class="k">${I('refresh',11,2.4)}</span><span>Reset demo to Monday 9 AM</span></button></div></div>`:''}`;
 }
 hooks.push(()=>demoRender());
 

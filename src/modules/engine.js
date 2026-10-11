@@ -20,6 +20,8 @@ const isToday = iso => iso===S.today;
 /* ---------- limits, terms, reference ---------- */
 function curLimitOf(id){ if(id==='gupta') return S.gupta.limit; if(id==='newlife') return S.newLife?(S.check.limit||0):0; const l=S.limits[id]; return typeof l==='number'?l:(BUY[id]?BUY[id].limit:0); }
 function curTermsOf(id){ if(id==='gupta') return S.gupta.curTerms; if(id==='newlife') return S.newLife?(S.check.terms||15):15; return (S.termsOf&&S.termsOf[id])||(BUY[id]?BUY[id].terms:30); }
+/* reference terms: the contract terms. They change only when you approve an increase, never on a reduction. */
+function refTermsOf(id){ const b=BUY[id]; const set=S.refTermsSet&&S.refTermsSet[id]; return set||(b&&(b.refTerms||b.terms))||30; }
 function refLimitOf(id){ const b=BUY[id]; if(!b) return 0; return Math.max(b.refLimit||0, (S.refRaise&&S.refRaise[id])||0); }
 function setLimitValue(id, limit, terms){ const prev=curLimitOf(id);
   if(id==='gupta'){ S.gupta.limit=limit; if(terms) S.gupta.curTerms=terms; }
@@ -43,9 +45,9 @@ const evOf = id => S.led.events.filter(e=>e.buyerId===id);
 
 /* ---------- recommendation (memoised per state signature) ---------- */
 let _recCache={}, _recSig='';
-function engSig(){ return [S.led.seq, S.led.events.length, S.ctl.net?1:0, S.stale?1:0, S.today, S._limv||0, S.newLife?1:0, JSON.stringify(S.verified), S.bank.st, Object.keys(S.req).filter(k=>S.req[k]).join(',')].join('|'); }
+function engSig(){ return [S.led.seq, S.led.events.length, S.ctl.net?1:0, S.stale?1:0, S.today, S._limv||0, JSON.stringify(S.refTermsSet||{}), S.newLife?1:0, JSON.stringify(S.verified), S.bank.st, Object.keys(S.req).filter(k=>S.req[k]).join(',')].join('|'); }
 function recordOf(id){ const b=BUY[id]; if(!b) return null;
-  return Object.assign({}, b, {limit:curLimitOf(id), terms:curTermsOf(id), refLimit:refLimitOf(id), gstVerified:!!S.verified[id]}); }
+  return Object.assign({}, b, {limit:curLimitOf(id), terms:curTermsOf(id), refLimit:refLimitOf(id), refTerms:refTermsOf(id), gstVerified:!!S.verified[id]}); }
 function engCtx(id){ const r=typeof creq==='function'?creq(id):null;
   return {today:S.today, now:new Date(simNowMs()).toISOString(), ledgerAgeHours:S.stale?31:1, bankConnected:S.bank.st==='on', request:r&&!S.req[id]?{amount:r.amt, terms:r.reqTerms||null}:null}; }
 function sigOf(id){ const rec=recordOf(id); if(!rec) return null; return RayPolicy.deriveBuyerSignals(rec, S.led, {today:S.today}); }
@@ -58,10 +60,10 @@ const snapOf = r => ({band:r.band, limit:r.recommendedLimit, terms:r.recommended
 function decOf(id){ S.dec=S.dec||{}; if(!S.dec[id]){ const r=recOf(id); if(!r) return null; S.dec[id]={status:'baseline', snap:snapOf(r), hist:[]}; } return S.dec[id]; }
 function engInit(){ S.dec={}; ['gupta','chawla','newlife','sethi','arora','mehta','jain','singh','bansal','goyal','citycare','guptak','sharma','kapoor','lifeline','verma','singhms'].forEach(decOf); engineSync(); }
 function recChanged(id){ const d=decOf(id), r=recOf(id); if(!d||!r) return false; const s=d.snap; return s.band!==r.band||s.limit!==r.recommendedLimit||s.terms!==r.recommendedTerms; }
-function decide(id, status, via){ const d=decOf(id), r=recOf(id); d.hist.unshift({at:simDateLabel()+', '+RayDates.fmtTime(simMin()), from:d.snap, to:snapOf(r), status, via:via||'Dashboard'}); d.snap=snapOf(r); d.status=status; d.by=M.owner; d.via=via; }
+function decide(id, status, via, applied){ const d=decOf(id), r=recOf(id); d.hist.unshift({at:simDateLabel()+', '+RayDates.fmtTime(simMin()), from:d.snap, to:snapOf(r), status, via:via||'Dashboard', applied:applied||null}); d.snap=snapOf(r); d.status=status; d.by=M.owner; d.via=via; }
 const seqNum = e => +(String(e.id).match(/^ev-(\d+)$/)||[0,0])[1];
 /* repayment and consent events recorded after the last decision snapshot */
-function eventsSince(id){ const d=decOf(id); return evOf(id).filter(e=>seqNum(e)>d.snap.seq); }
+function eventsSince(id){ const d=decOf(id); return evOf(id).filter(e=>seqNum(e)>d.snap.seq&&!['CREDIT_APPROVED','CREDIT_KEPT','CREDIT_REVERSED'].includes(e.type)); }
 
 /* derived values written back into legacy state so every existing screen reads the engine */
 function engineSync(){
@@ -118,28 +120,36 @@ function gateState(id, inv){ const due=inv?balOf(id,inv):outOf(id); const i=inv?
   const review=(typeof prPending==='function'&&prPending(id)) || (id==='verma'&&!S.vermaMatched);
   const disputed=inv?(i&&i.disputed||0):invsOf(id).reduce((a,x)=>a+(x.bal>0?(x.disputed||0):0),0);
   return {dueAmount:due, disputed, paid:due<=0, claimPending:claim, unmatchedPending:review, reviewText:review&&(PAYREV[id]||{}).kind!=='unmatched_credit'?((PAYREV[id]||{}).kind==='cheque_recorded'?'A salesperson recorded a cheque that is not in the bank yet. Review it before sending a reminder.':'Payment status is not confirmed yet. Review the payment before sending a reminder.'):null}; }
-function gateFor(id, channel='whatsapp', inv){
-  const b=BUY[id]||{id,name:id};
-  return RayGuards.sendGate({buyer:{id, name:b.name}, channel,
+function gateFor(id, channel='whatsapp', inv, o={}){
+  const b=BUY[id]||{id,name:id}, st=gateState(id, inv);
+  if(o.override==='unmatched'&&st.unmatchedPending&&!st.claimPending){ st.unmatchedPending=false; } /* a logged merchant override skips only the payment-review hold */
+  return RayGuards.sendGate({buyer:{id, name:b.name}, channel, requireApproval:o.requireApproval!==false, approvedBy:o.approvedBy===undefined?'merchant':o.approvedBy,
     controls:{paused:S.paused, wa:S.ctl.wa, sm:S.ctl.sm, dnc:S.ctl.dnc, maxPerWeek:parseInt(S.ctl.max)||2, quietFrom:S.ctl.qf, quietTo:S.ctl.qt},
-    ledger:{stale:S.stale, ageHours:31}, state:gateState(id, inv), sentLog:S.outbox, now:simNowMs()}); }
-function outboxAdd(e){ const o=Object.assign({id:'ob-'+(S.outbox.length+1), at:simNowMs()}, e); S.outbox.push(o); return o; }
-/* run a send through the gate; returns {ok, queued, blocked, reason} and records it */
-function trySend(id, {channel='whatsapp', kind='reminder', inv, msg, via, scheduleAt}={}){
-  if(scheduleAt){ const g=gateFor(id, channel, inv); if(g.action==='block') { logBlocked(id,g,channel); return {blocked:true, gate:g}; }
-    const o=outboxAdd({buyerId:id, channel, kind, inv, msg, status:'scheduled', sendAt:scheduleAt, via}); return {scheduled:true, item:o}; }
-  const g=gateFor(id, channel, inv);
-  if(g.action==='send'){ const o=outboxAdd({buyerId:id, channel, kind, inv, msg, status:'sent', via}); return {ok:true, item:o, gate:g}; }
-  if(g.action==='queue'){ const o=outboxAdd({buyerId:id, channel, kind, inv, msg, status:'queued', sendAt:g.queueUntil, via}); return {queued:true, item:o, gate:g}; }
+    ledger:{stale:S.stale, ageHours:31}, state:st, sentLog:S.outbox, now:simNowMs()}); }
+function outboxAdd(e){ const o=Object.assign({id:'ob-'+(S.outbox.length+1), at:simNowMs(), simulated:true}, e); S.outbox.push(o); return o; }
+/* run a send through the gate; returns {ok, queued, scheduled, blocked, gate} and records it. Delivery is simulated. */
+function trySend(id, {channel='whatsapp', kind='reminder', inv, msg, via, scheduleAt, override, approvedBy, payload}={}){
+  const go={override, approvedBy:approvedBy===undefined?(via||'merchant'):approvedBy};
+  if(scheduleAt){ const g=gateFor(id, channel, inv, go); if(g.action==='block') { logBlocked(id,g,channel); return {blocked:true, gate:g}; }
+    const o=outboxAdd({buyerId:id, channel, kind, inv, msg, status:'scheduled', sendAt:scheduleAt, via, override, approvedBy:go.approvedBy, payload}); return {scheduled:true, item:o, gate:g}; }
+  const g=gateFor(id, channel, inv, go);
+  if(g.action==='send'){ const o=outboxAdd({buyerId:id, channel, kind, inv, msg, status:'sent', via, override, approvedBy:go.approvedBy, payload}); return {ok:true, item:o, gate:g}; }
+  if(g.action==='queue'){ const o=outboxAdd({buyerId:id, channel, kind, inv, msg, status:'queued', sendAt:g.queueUntil, via, override, approvedBy:go.approvedBy, payload}); return {queued:true, item:o, gate:g}; }
   logBlocked(id,g,channel); return {blocked:true, gate:g}; }
+/* the one entry point for buyer-facing messages and salesperson tasks, from any surface */
+function sendMessage(id, o={}){
+  const r=trySend(id,{channel:o.channel||'whatsapp', kind:o.kind||'reminder', inv:o.inv, msg:o.msg, via:o.via||'Dashboard', scheduleAt:o.scheduleAt, override:o.override, approvedBy:o.via||'Dashboard', payload:o.payload});
+  if(r.blocked){ if(!o.quiet) toast('Not sent: '+gateNote(r.gate)); if(!o.quiet) rr(); return Object.assign(r,{ok:false}); }
+  return r; }
+const SIM_TAG = '<span class="badge b-n" title="No real message is delivered in this prototype">Simulated delivery</span>';
 function logBlocked(id,g,channel){ log({ic:'ban',ti:`Message to ${(BUY[id]||{}).name||id} not sent`,de:g.reasons[g.reasons.length-1].text,src:[],who:'RAY controls',chem:(BUY[id]||{}).name}); }
 const gateNote = g => g.reasons.length?g.reasons[g.reasons.length-1].text:'';
 /* deliver scheduled / queued messages whose time has come, re-checking every control at execution time */
 function runOutbox(){ const now=simNowMs(); let sent=0, blocked=0;
-  S.outbox.filter(o=>['scheduled','queued'].includes(o.status)&&o.sendAt<=now).forEach(o=>{ const g=gateFor(o.buyerId,o.channel,o.inv);
+  S.outbox.filter(o=>['scheduled','queued'].includes(o.status)&&o.sendAt<=now).forEach(o=>{ const g=gateFor(o.buyerId,o.channel,o.inv,{override:o.override, approvedBy:o.approvedBy});
     if(g.action==='send'){ o.status='sent'; o.at=now; sent++; if(S.chase[o.buyerId]&&['scheduled','queued'].includes(S.chase[o.buyerId].st)){ S.chase[o.buyerId].st='sent'; S.chase[o.buyerId].at=nowLabel(); }
-      log({ic:'send',ti:`Scheduled message sent to ${BUY[o.buyerId].name}`,de:`WhatsApp · controls re-checked at send time`,src:['conv'],who:'RAY · approved earlier by '+M.owner,chem:BUY[o.buyerId].name}); }
-    else if(g.action==='block'){ o.status='blocked'; o.reason=gateNote(g); blocked++; if(S.chase[o.buyerId]) S.chase[o.buyerId].st='draft'; logBlocked(o.buyerId,g,o.channel); } });
+      log({ic:'send',ti:`Scheduled message sent to ${BUY[o.buyerId].name}`,de:`WhatsApp · simulated delivery · controls re-checked at send time`,src:['conv'],who:'RAY · approved earlier by '+M.owner,chem:BUY[o.buyerId].name}); }
+    else if(g.action==='block'){ o.status='blocked'; o.reason=gateNote(g); blocked++; if(S.chase[o.buyerId]&&['scheduled','queued'].includes(S.chase[o.buyerId].st)) S.chase[o.buyerId].st='draft'; logBlocked(o.buyerId,g,o.channel); } });
   return {sent, blocked}; }
 const nowLabel = () => RayDates.fmtTime(simMin());
 A.advanceToMs=(ms)=>{ const p=RayDates.istParts(ms); if(RayDates.diffDays(p.date,S.today)>0) advanceDate(p.date); _clock=Math.max(_clock,p.min-9*60); const r=runOutbox(); rr(); toast(`Demo clock moved to ${simDateLabel()}, ${nowLabel()} IST${r.sent?` · ${r.sent} message${r.sent===1?'':'s'} sent`:''}${r.blocked?` · ${r.blocked} blocked at send time`:''}`); };
@@ -156,7 +166,7 @@ function claudeSample(){ if(_claudeP) return _claudeP;
 const claudeLive = () => !!AI.claude && !AI.claudeOff;
 function aiCheck(){ claudeSample(); if(AI.checked) return; AI.checked=true; if(location.protocol==='file:') return;
   fetch('/api/parse-promise',{method:'GET'}).then(r=>r.ok?r.json():null).then(j=>{ if(j&&typeof j.configured==='boolean'){ AI.reachable=true; AI.configured=j.configured; AI.provider=j.provider; AI.model=j.model; if(route().startsWith('raahi')) render(); } }).catch(()=>{}); }
-const aiLabel = () => claudeLive()?'Live AI · Claude':AI.configured?`Live AI · ${AI.model}`:AI.claudeOff?(UNAVAIL[AI.claudeOff]||'Live AI off'):!AI.claudeChecked?'Connecting to Claude…':AI.reachable?'AI not configured on this deployment':'Live AI off · open in Claude to use it';
+const aiLabel = () => claudeLive()?'Live AI · Claude (this page)':AI.configured?`Live AI · ${AI.model} (server)`:AI.claudeOff?(UNAVAIL[AI.claudeOff]||'Live AI off'):'Live AI off on this deployment · rule-based answers and templates';
 
 /* ---------- persistence (optional, per browser) ---------- */
 const PERSIST_KEY='ray-credit-demo-v2';
@@ -174,9 +184,7 @@ function persistClear(){ try{ localStorage.removeItem(PERSIST_KEY); }catch(e){} 
 hooks.push(()=>{ clearTimeout(window._psT); window._psT=setTimeout(persistSave,300); });
 
 function engBoot(){ if(!persistLoad()) engInit(); else engineSync(); syncChase(true); const dc=document.getElementById('datechip'); if(dc) dc.textContent=S.date; aiCheck(); }
-/* apply a verified payment to the ledger (clamped to the open balance, de-duplicated by reference) */
-function ledgerPay(id, inv, amt, o={}){ const i=(inv&&invOf(id,inv))||nextOpenInv(id); if(!i||i.bal<=0||!amt) return {ok:false};
-  return recordEvent({type:o.type||'PAYMENT_RECEIVED', buyerId:id, invoice:i.inv, amount:Math.min(amt,i.bal), verification:'verified', source:o.source||'Razorpay', actor:o.actor||'Razorpay', ref:o.ref||null, meta:o.meta||{}},{quiet:true}); }
+/* ledgerPay lives in payment-truth.js: exact amount ≤ balance, verified source, unique reference */
 /* 30-day collections forecast: rule-based, not a prediction model */
 function forecast30(){ const end=RayDates.addDays(S.today,30); let t=0; for(const b of RayData.ALL){ const r=recOf(b.id); if(!r||r.band!=='Reliable') continue; for(const i of invsOf(b.id)){ if(i.bal>0&&RayDates.diffDays(i.due,S.today)>=0&&RayDates.diffDays(end,i.due)>=0) t+=i.bal-(i.disputed||0); } }
   S.promises.filter(p=>p.status==='confirmed'&&p.buyerId!=='guptak').forEach(p=>{ if(p.later&&p.later.date&&RayDates.diffDays(end,p.later.date)>=0) t+=p.later.amt||0; }); return t; }

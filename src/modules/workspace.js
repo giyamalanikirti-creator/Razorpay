@@ -76,16 +76,7 @@ function runChecks(){
   ]);
   return G;
 }
-let _checks=null;
-function vChecks(){
-  if(!_checks) _checks={at:nowLabel(), groups:runChecks()};
-  const all=_checks.groups.flatMap(g=>g.cases), pass=all.filter(c=>c.pass).length;
-  return `${pageHead('Prototype checks','The rules behind RAY Credit, tested live in your browser on the current data. Nothing here changes your data.',`<button class="btn btn-s" onclick="_checks=null;rr();toast('Checks run again')">${I('refresh',15)} Run again</button>`)}
-   <div class="card pad-s mt16 row gap12" style="${pass===all.length?'border-color:#cfe9db;background:#f6fcf8':'border-color:#efcfcb;background:#fffaf9'}"><span class="badge ${pass===all.length?'b-g':'b-r'}">${pass} of ${all.length} pass</span><span class="small muted">Run at ${_checks.at} on ${S.planScan||0} buyers and ${pfStats().openInvoices.toLocaleString('en-IN')} open invoices.</span></div>
-   ${_checks.groups.map(g=>`<div class="card mt16" style="overflow:hidden"><div class="pad-s" style="border-bottom:1px solid var(--border-subtle)"><div class="row gap8"><span class="h3">${esc(g.name)}</span><span class="badge ${g.cases.every(c=>c.pass)?'b-g':'b-r'}">${g.cases.filter(c=>c.pass).length}/${g.cases.length}</span></div><div class="small muted mt4">${esc(g.about)}</div></div>
-     ${g.cases.map(c=>`<div class="row gap12" style="padding:11px 18px;border-top:1px solid var(--border-subtle);align-items:flex-start"><span style="color:${c.pass?'var(--g)':'var(--r)'};margin-top:1px">${I(c.pass?'check':'x',15,2.6)}</span><div class="grow"><div class="small" style="color:var(--strong);font-weight:500">${esc(c.name)}</div>${c.detail?`<div class="xs muted mt4 num">${esc(c.detail)}</div>`:''}</div></div>`).join('')}</div>`).join('')}
-   <div class="card pad mt16"><div class="h3">Known gaps</div><div class="small muted mt8">For replies in Devanagari script, the rule-based reader catches amounts written in digits but not dates or Hindi number words, so those replies rely on Claude. Network data, bank feed, Marg sync and WhatsApp delivery are simulated in this prototype. Claude’s own answers are checked by the guardrails above but cannot be tested here without a live call.</div></div>`;
-}
+/* vChecks lives in checks.js: policy checks, journey checks and recorded test runs, kept apart */
 
 /* ================= LEARNING LOOP: RAY proposes follow-up policy changes from outcomes; the owner approves ================= */
 const LEADS = {Watch:[3,7,10], Reliable:[0,1,3]};
@@ -163,12 +154,13 @@ function vHow(){
   </div>
   <div class="xs muted mt8">Blue boxes run in this page. Dashed boxes are simulated.</div>
   <div class="how-ai mt12"><span class="ai-tag">${clover(14)} Claude</span><span class="small">reads buyer replies, drafts reminders and answers questions. Every answer is checked by rules before you see it, and Claude never takes an action.</span></div>`;
-  const rows=[['Credit policy, daily plan, send rules, ledger events, policy versions','Built and running in this page','b-g'],['Claude reading replies, drafting reminders, Ask RAY','Live when opened in Claude; rule-based fallback otherwise','b-g'],[`Buyer data (${st.buyers} buyers, ${st.openInvoices.toLocaleString('en-IN')} invoices)`,'Synthetic','b-a'],['Marg sync, bank feed, WhatsApp delivery, mandates and debits','Simulated','b-a'],['Razorpay network repayment signal','Synthetic and aggregated; needs consent, privacy and legal review','b-a'],['Reminder outcome history behind policy suggestions','Synthetic','b-a'],['Lending through a regulated partner','Proposed, not built','b-n']];
+  const rows=[['Credit policy, daily plan, send rules, ledger events, policy versions','Built and running in this page','b-g'],['Reading replies, drafting reminders, Ask RAY',AI.configured?`Live AI on (${AI.model}, server-side). Rule-based checks still apply`:claudeLive()?'Live AI on (Claude, this page). Rule-based checks still apply':'Live AI off on this deployment. Rule-based reader, templates and answers from your data',AI.configured||claudeLive()?'b-g':'b-n'],[`Buyer data (${st.buyers} buyers, ${st.openInvoices.toLocaleString('en-IN')} invoices)`,'Synthetic','b-a'],['Marg sync, bank feed, WhatsApp delivery, mandates and debits','Simulated','b-a'],['Razorpay network repayment signal','Synthetic and aggregated; needs consent, privacy and legal review','b-a'],['Reminder outcome history behind policy suggestions','Synthetic','b-a'],['Lending through a regulated partner','Proposed, not built','b-n']];
   return `${pageHead('How it works','What RAY Credit reads, how it decides, what you approve, and what is real in this prototype.')}
    <div class="card pad mt16">${flow}</div>
    <div class="card mt16" style="overflow:hidden"><div class="pad-s" style="border-bottom:1px solid var(--border-subtle)"><span class="h3">Real and simulated</span></div><table class="table"><tbody>${rows.map(r=>`<tr><td class="small" style="color:var(--strong)">${r[0]}</td><td><span class="badge ${r[2]}">${r[1]}</span></td></tr>`).join('')}</tbody></table></div>
    <div class="card pad mt16"><div class="h3">Where to look</div><div class="small muted mt8">Actions shows today’s plan and its ranking. A buyer profile shows every signal and the rule it triggered. Activity shows what RAY did and learned. Controls holds your limits, consent and policy versions. Checks runs the rules live.</div>
    <div class="row gap8 mt12 wrap"><button class="btn btn-s btn-sm" onclick="go('raahi/actions')">Actions</button><button class="btn btn-s btn-sm" onclick="go('raahi/buyer/gupta')">Example buyer</button><button class="btn btn-s btn-sm" onclick="go('raahi/controls')">Controls</button><button class="btn btn-s btn-sm" onclick="go('raahi/checks')">Checks</button></div></div>
+   ${pilotBox(true)}
    <div class="xs muted mt12">Network evidence is used only with ${N.minCoverage}+ participating distributors and signals under ${N.maxRecencyDays} days old.</div>`;
 }
 function complianceSection(){
@@ -183,9 +175,20 @@ function complianceSection(){
       <div class="row gap8" style="align-items:flex-start">${I('check',14,2.4)}<span><b style="color:var(--strong)">Claude.</b> Receives only what a task needs: the reply being read, the amounts in a reminder, or the facts behind a question. Phone numbers and GSTINs are not sent.</span></div>
       <div class="row gap8" style="align-items:flex-start">${I('lock',14,2)}<span><b style="color:var(--strong)">Before launch.</b> Network sharing needs review under India’s DPDP Act and credit-information rules. Financing stays with a regulated lending partner, through its own consent journey.</span></div>
     </div></div></div>`; }
-function pilotBox(){ const N=POL.network;
-  return `<div class="card pad-s mt16" style="background:#fbfbfc"><div class="small" style="font-weight:600;color:var(--strong)">Pilot defaults for the first 8 weeks</div>
-    <div class="col gap4 mt8 xs muted"><span>Review first · weekly limit ${parseInt(S.ctl.max)||2} messages per buyer · quiet hours ${S.ctl.qf}–${S.ctl.qt}</span><span>Network signal only where consent and ${N.minCoverage}+ distributors exist · follow-up policy v${S.pol.v}</span><span>After 8 weeks RAY reports on-time collection against your previous 8 weeks, recommendations approved, opt-outs and “already paid” complaints.</span><span>Stop or rethink if you override most recommendations or on-time collection does not improve.</span></div></div>`; }
+/* the eight-week pilot: unchanged defaults, explicit success measures. No pilot has run; nothing here is a result. */
+const PILOT_MEASURES = [
+  ['On-time collection','Share of invoices paid by the due date, against your previous 8 weeks','Better than your baseline'],
+  ['Days to pay','Median days from invoice to payment, against your previous 8 weeks','Shorter than your baseline'],
+  ['Failed collections recovered','Share of failed Autopay or eNACH debits fully recovered within 7 days','Tracked from week 1'],
+  ['Recommendations acted on','Approved, edited, kept (with reason) or undone, per decision','Most approved or edited, not overridden'],
+  ['“Already paid” complaints','Reminders that reached a buyer who had already paid','Zero; each one is reviewed'],
+  ['Opt-outs','Buyers added to Do not contact after a RAY message','Watched weekly'],
+];
+function pilotBox(full){ const N=POL.network;
+  return `<div class="card ${full?'pad':'pad-s'} mt16" id="pilot-plan" style="background:#fbfbfc"><div class="row between wrap gap8"><div class="small" style="font-weight:600;color:var(--strong)">Eight-week pilot plan</div><span class="badge b-n">Proposed · not yet run</span></div>
+    <div class="col gap4 mt8 xs muted"><span><b style="color:var(--strong)">Defaults</b> · Review first · weekly limit ${parseInt(S.ctl.max)||2} messages per buyer · quiet hours ${S.ctl.qf}–${S.ctl.qt} IST · network signal only where consent and ${N.minCoverage}+ distributors exist · follow-up policy v${S.pol.v} · delivery and payments simulated until the pilot is approved.</span></div>
+    <table class="table mt8" style="font-size:12.5px"><thead><tr><th>Success measure</th><th>How it is measured</th><th>What counts as success</th></tr></thead><tbody>${PILOT_MEASURES.map(m=>`<tr><td style="font-weight:600;color:var(--strong);white-space:nowrap">${m[0]}</td><td>${m[1]}</td><td>${m[2]}</td></tr>`).join('')}</tbody></table>
+    <div class="xs muted mt8">All measures come from the ledger and the Activity log, compared with the merchant’s own previous 8 weeks. <b style="color:var(--strong)">Stop or rethink</b> if most recommendations are overridden, on-time collection does not improve, or an “already paid” complaint is traced to a payment source RAY did not check.</div></div>`; }
 function sendNote(c){ if(c.ch!=='wa') return null; const st=S.chase[c.id]; if(st&&st.st!=='draft') return null;
   const g=gateFor(c.id,'whatsapp',chaseInv(c.id)); if(g.action!=='block'||['paused','stale','unmatched','claim'].includes(g.code)) return null;
   if(g.code==='frequency'&&g.nextEligibleAt){ const p=RayDates.istParts(g.nextEligibleAt); return `weekly limit reached, can send ${RayDates.fmtDay(p.date)}`; }
@@ -273,9 +276,9 @@ function vProfileGeneric(id){
   ${noGst}
   ${netVsYou(c.id)}
   ${whatChangedCard(c.id)}
-  ${FAILS[c.id]?`<div class="alert ${failOpen(c.id)?'risk':'neutral'} mt16"><span class="ic">${I('alert',17)}</span><div class="grow"><div class="row gap8 wrap">${stage('RECOVER')}<h4>${FAILS[c.id].m} debit failed on ${FAILS[c.id].on.split(' · ')[0]} · ${inr(FAILS[c.id].amt)}</h4></div><div class="small muted mt4">${FAILS[c.id].reason}. ${failOpen(c.id)?FAILS[c.id].rec:recStatus(c.id).replace(/<[^>]+>/g,'')}</div></div><button class="btn btn-s btn-sm" onclick="go('raahi/recover/${c.id}')">${failOpen(c.id)?'Review retry':'View'}</button></div>`:''}
+  ${recoveryAlert(c.id)}
   <div class="grid g-21 mt16"><div class="card pad"><div class="row between"><span class="h2" style="font-size:18px">${c.band==='Reliable'&&!gstBad?'Repayment behaviour':'Why RAY is concerned'}</span><span class="ai-tag">${clover(14)} RAY</span></div><div class="mt16">${sig.map((x,i)=>`<div class="signal"><span class="n" style="${c.band==='Reliable'&&!gstBad?'background:var(--g-bg);color:var(--g)':''}${x[2]==='gst'?';background:var(--r-bg);color:var(--r)':''}">${i+1}</span><div class="grow"><h5>${x[0]}</h5><div class="small muted mt4">${esc(x[1])}</div></div><span class="src ${srcN[x[2]][0]}">${srcN[x[2]][1]}</span></div>`).join('')}</div></div>
-   <div class="card pad rec"><span class="lbl">Recommended</span><div class="say mt12">${say}</div>${p.rec&&p.rec<lim?overLimitNote(c.out,p.rec):''}<div class="mt16">${lines}</div>${btns?`<div class="row gap8 mt20 wrap">${btns}</div>`:''}<div class="xs muted mt12 row gap4">${I('lock',12)} RAY never changes a limit or pauses supply without your approval.</div></div></div>
+   <div class="card pad rec"><span class="lbl">Recommended</span><div class="say mt12">${say}</div>${p.rec&&p.rec<lim?overLimitNote(c.out,p.rec,c.name):''}<div class="mt16">${lines}</div>${btns?`<div class="row gap8 mt20 wrap">${btns}</div>`:''}${undoBar(c.id)}<div class="xs muted mt12 row gap4">${I('lock',12)} RAY never changes a limit or pauses supply without your approval.</div></div></div>
   ${howPanel(c.id)}
   ${c.id==='guptak'?`<div class="alert info mt16"><span class="ic">${I('receipt',17)}</span><div class="grow"><h4>INV-2048 · ${inr(balOf('guptak','INV-2048'))} · ${Math.max(0,RayDates.diffDays(S.today,'2026-10-02'))} days overdue</h4><div class="small muted">${kirS().kind?COMMIT_ST[kirS().commit]+' · '+PAY_ST[kirS().pay]:'RAY recommends a payment link with a payment-plan option.'}</div></div><button class="btn btn-p btn-sm" onclick="go('raahi/invoice/INV-2048')">Open invoice</button></div>`:''}
   ${PLAN[c.id]?`<div class="mt16">${planCard(c.id)}</div>`:''}
@@ -286,7 +289,7 @@ function vProfileGeneric(id){
   ${chemActivity(c.name)}`;
 }
 function unmatchedAlert(){
-  return `<div class="alert warn mt16"><span class="ic">${I('pause',17)}</span><div class="grow"><div class="row gap8"><span class="badge b-a">REMINDER PAUSED</span><span class="xs muted">Verma Retail · ₹26,500 due today</span></div><div class="small mt8" style="color:var(--strong)">We found a recent ₹26,500 credit that may belong to Verma Retail. Confirm it before sending a reminder.</div><div class="xs muted mt4">Checked: Razorpay payments · bank feed · unidentified credits · salesperson collections</div></div><button class="btn btn-p btn-sm" onclick="go('raahi/payment/verma')">Review payment</button><button class="btn btn-s btn-sm" onclick="A.sendAnyway('verma')">Send reminder anyway</button></div>`;
+  return `<div class="alert warn mt16"><span class="ic">${I('pause',17)}</span><div class="grow"><div class="row gap8"><span class="badge b-a">REMINDER PAUSED</span><span class="xs muted">Verma Retail · ₹26,500 due today</span></div><div class="small mt8" style="color:var(--strong)">We found a recent ₹26,500 credit that may belong to Verma Retail. Confirm it before sending a reminder.</div><div class="xs muted mt4">${sourcesLine('verma','INV-24655')}</div></div><button class="btn btn-p btn-sm" onclick="go('raahi/payment/verma')">Review payment</button><button class="btn btn-s btn-sm" onclick="A.sendAnyway('verma')">Send reminder anyway</button></div>`;
 }
 
 /* ---------- New buyer check ---------- */
@@ -381,7 +384,7 @@ const doneLine = t => `<span class="state-line" style="color:var(--g)">${I('chec
 function creditActionRows(){
   const g=S.gupta, ck=['result','approved'].includes(S.check.step);
   return [
-   ...CREQ.map((r,k)=>{const c=chemView(chem(r.id)), d=S.req[r.id]; return aRow(k,{id:'act-req-'+r.id,name:c.name,band:c.band,area:reqSrc(),amt:inr(r.amt),kind:'Credit request',kc:'k-credit',reason:(v=>`${v.verdict==='EXTEND'?'Extend':v.verdict==='REVIEW TERMS'?'Review terms':'Do not extend yet'} · ${(v.reasons[0]||'').toLowerCase()}`)(reqV(r)),chan:'WhatsApp request',chanIc:'chat',right:d?doneLine(REQ_DONE[d]):`<button class="btn btn-s btn-sm" onclick="go('raahi/request/${r.id}')">Review decision</button>`});}),
+   ...CREQ.map((r,k)=>{const c=chemView(chem(r.id)), d=S.req[r.id]; return aRow(k,{id:'act-req-'+r.id,name:c.name,band:c.band,area:reqSrc(),amt:inr(r.amt),kind:'Credit request',kc:'k-credit',reason:(v=>`${v.verdict==='EXTEND'?'Extend':v.verdict==='REVIEW TERMS'?'Review terms':'Do not extend yet'} · ${(v.reasons[0]||'').toLowerCase()}`)(reqV(r)),chan:'WhatsApp request',chanIc:'chat',right:d?doneLine(reqDone(d,r.id)):`<button class="btn btn-s btn-sm" onclick="go('raahi/request/${r.id}')">Review decision</button>`});}),
    aRow(3,{name:'New Life Stores',band:ck?'Reliable':null,area:ck?'New buyer · checked':'New buyer · Unrated',amt:inr(nlLimit()),kind:'New credit',kc:'k-credit',reason:ck?`Credit check complete · ${inr(nlLimit())} on ${nlTerms()}-day terms`:`Starter ${inr(recOf('newlife').recommendedLimit)} · ${recOf('newlife').recommendedTerms} days · network check needs consent · not final until you approve`,chan:'Credit decision',chanIc:'shield',
      right:S.newLife?doneLine('Credit terms approved'):`<button class="btn btn-s btn-sm" onclick="go('raahi/check')">${ck?'Review credit terms':'Run credit check'}</button>`}),
   ].join('');
@@ -412,7 +415,7 @@ function vChase(){
   ${grp('grp-credit','APPROVE','Credit Decisions','Incoming buyer requests and new credit decisions. Every recommendation shows its reasons.',reqOpen()+(S.newLife?0:1),creditActionRows())}
   ${grp('grp-upcoming','COLLECT','Upcoming Collections','Automatic collections within authorised mandates, manual collections due this week, and payment commitments you confirmed.',autoN+openIn(up),upcomingRows()+up.map((c,k)=>chaseRow(c,k+upKeys().length)).join('')+planMoreRow('upcoming')+commitRows(upKeys().length+up.length))}
   ${grp('grp-failed','RECOVER','Failed Collections','Failed automatic debits and missed payments. RAY recommends a staged recovery, never an automatic block.',failCount()+openIn(missed)+(kirS().kind?0:1),failedRows()+kirActionRow(Object.keys(FAILS).length)+missed.map((c,k)=>chaseRow(c,k+Object.keys(FAILS).length+1)).join('')+planMoreRow('recover'))}
-  ${grp('grp-check','RECONCILE','Payment Review','Confirm payment first, chase second. RAY checks Razorpay, your bank account, unmatched credits and salesperson collections.',pendingMatches(),matchRows()+claimRows(9))}
+  ${grp('grp-check','RECONCILE','Payment Review',`Confirm payment first, chase second. RAY checks ${paySources().filter(x=>x.ok).map(x=>x.label.replace(/ \(.*\)$/,'')).join(', ')}${paySources().some(x=>!x.ok)?`; not checked: ${paySources().filter(x=>!x.ok).map(x=>x.label.replace(/ \(.*\)$/,'').toLowerCase()+' ('+x.fresh+')').join(', ')}`:''}.`,pendingMatches(),matchRows()+claimRows(9))}
   ${grp('grp-early','MONITOR','Early Warnings','Buyers whose repayment is starting to slip, before any invoice is overdue.',openIn(early),early.map(chaseRow).join('')+planMoreRow('early'))}`;
 }
 

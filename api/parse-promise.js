@@ -146,3 +146,5 @@ module.exports.handler = handler;
 module.exports.providerConfig = providerConfig;
 module.exports.schemaErrors = schemaErrors;
 module.exports._resetRateLimit = () => hits.clear();
+module.exports.send = send;
+module.exports.readBody = readBody;

@@ -244,7 +244,7 @@ async function planDraftAI(){
 /* ================= STATE ================= */
 const S0 = () => ({
   date:'Mon, 5 Oct', time:'9:12 AM', today:RayData.TODAY,
-  led:RayData.baseLedger(), dec:{}, interp:{}, promises:[], termsOf:{}, refRaise:{}, _limv:0, persist:true,
+  led:RayData.baseLedger(), dec:{}, interp:{}, promises:[], termsOf:{}, refRaise:{}, refTermsSet:{}, creditOps:[], opKeys:{}, _limv:0, persist:true,
   outbox:[{id:'ob-seed-1', buyerId:'singh', channel:'whatsapp', kind:'reminder', status:'sent', at:RayDates.istMs('2026-10-01',10*60+30), via:'Dashboard'},{id:'ob-seed-2', buyerId:'singh', channel:'whatsapp', kind:'reminder', status:'sent', at:RayDates.istMs('2026-10-03',11*60), via:'RAY on WhatsApp'}],
   gupta:{band:'Watch', out:78400, oldest:38400, rec:'open', limitRec:60000, terms:14, limit:100000, curTerms:30, promise:null, alert:false, kept:false, paidVia:null},
   mand:{}, coll:{arora:'scheduled', mehta:'scheduled'}, rec:{gupta:{st:null, paid:0}, singhms:{st:null}}, learnG:false, sethiSeen:false,
@@ -283,13 +283,14 @@ function toast(msg, action){
   const r=document.getElementById('toasts'); const el=document.createElement('div'); el.className='toast';
   el.innerHTML=`<span class="ok">${I('check',13,2.6)}</span><span>${msg}</span>${action?`<a>${action.label}</a>`:''}`;
   if(action) el.querySelector('a').onclick=()=>{el.remove();action.fn()};
-  r.appendChild(el); setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300)},4200);
+  r.appendChild(el); while(r.children.length>3) r.firstChild.remove(); /* toasts never pile up over buttons */
+  setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300)},4200);
 }
 function modal({title, body, actions=[], wide, onclose}){
   const had=!!document.getElementById('modal'); closeModal();
   const b=document.createElement('div'); b.className='backdrop'; b.id='modal';
   b.innerHTML=`<div class="modal ${wide?'wide':''} ${title?'':'notitle'}" role="dialog"><div class="modal-h"><h3>${title}</h3><button class="x" data-x>${I('x',18)}</button></div><div class="modal-b">${body}</div><div class="modal-f">${actions.map((a,i)=>`<button class="btn ${a.cls||'btn-s'}" data-a="${i}" ${a.disabled?'disabled':''} ${a.id?`id="${a.id}"`:''}>${a.label}</button>`).join('')}</div></div>`;
-  b.addEventListener('click',e=>{ if(e.target===b||e.target.closest('[data-x]')){closeModal();onclose&&onclose()} const a=e.target.closest('[data-a]'); if(a){const f=actions[+a.dataset.a].fn; if(f) f(); else closeModal()} });
+  b.addEventListener('click',e=>{ if(e.target===b||e.target.closest('[data-x]')){closeModal();onclose&&onclose()} const a=e.target.closest('[data-a]'); if(a){const f=actions[+a.dataset.a].fn; if(a.disabled) return; if(f) f(a); else closeModal()} });
   if(had){ b.style.animation='none'; b.querySelector('.modal').style.animation='none'; }
   document.body.appendChild(b);
 }

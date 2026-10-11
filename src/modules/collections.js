@@ -54,17 +54,16 @@ function syncLists(){
   PAY_SIGNALS.forEach(sg=>{ const i=invOf(sg.buyerId, sg.inv); if(!i) return; const bal=i.bal-(i.disputed||0), d=planDays(i.due);
     PAYREV[sg.buyerId]=Object.assign({kind:sg.kind, inv:sg.inv, open:bal>0, amt:bal>0?bal:i.amt, due:dueYear(i.due), dueTxt:d===0?'Due today':d<0?`${-d} day${d===-1?'':'s'} overdue`:`Due in ${d} days`, note:prNote(sg), cands:sg.cands||[]},
       sg.possible?{possible:sg.possible}:{}, sg.sp?{sp:sg.sp}:{}); });
-  /* failed automatic debits: every AUTOPAY_FAILED event whose invoice is still open (or already in recovery) */
-  const kept=Object.fromEntries(Object.entries(FAILS).filter(([id])=>S.rec&&S.rec[id]&&S.rec[id].st));
+  /* failed automatic debits: every AUTOPAY_FAILED event. An unpaid recovery wins over a completed one; completed
+     recoveries stay (as history) but drop out of every active list through recoveryOf(). */
   for(const k of Object.keys(FAILS)) delete FAILS[k];
   S.led.events.filter(e=>e.type==='AUTOPAY_FAILED').forEach(e=>{ const i=invOf(e.buyerId, e.invoice); if(!i||!BUY[e.buyerId]) return;
-    if(i.bal<=0&&!kept[e.buyerId]) return;
+    const cur=FAILS[e.buyerId]; if(cur){ const ci=invOf(e.buyerId,cur.inv); if(ci&&ci.bal>0&&i.bal<=0) return; }
     const s=sigOf(e.buyerId), part=((s.promises&&s.promises.partial)||0)>0||(s.partialPayments||0)>0, nm=BUY[e.buyerId].name;
-    FAILS[e.buyerId]={inv:e.invoice, amt:e.amount||i.amt, due:dueYear(i.due), m:/enach/i.test(e.source||'')?'eNACH':collMethod(e.buyerId).m, on:`${RayDates.fmtDay(e.date)} · ${(e.meta&&e.meta.time)||'10:02 AM'}`,
-      reason:(e.meta&&e.meta.reason)||'Debit did not go through',
+    FAILS[e.buyerId]={inv:e.invoice, amt:e.amount||i.amt, date:e.date, due:dueYear(i.due), m:/enach/i.test(e.source||'')?'eNACH':collMethod(e.buyerId).m, on:`${RayDates.fmtDay(e.date)} · ${(e.meta&&e.meta.time)||'10:02 AM'}`,
+      reason:(e.meta&&e.meta.reason)||'Debit did not go through', partialHistory:part,
       rec:part?'Send a payment link and allow partial payment.':'Retry the debit once and send a payment link.',
       why:part?`${nm} has paid in parts before. A partial-payment link lets them start paying now instead of waiting until the full amount is available.`:`${nm} usually pays on time. One retry after they add balance, plus a link to pay now, is enough.`}; });
-  Object.keys(kept).forEach(id=>{ if(!FAILS[id]) FAILS[id]=kept[id]; });
   /* scheduled automatic collections: next invoice due within 7 days for every buyer with an active mandate */
   const keepUp=Object.fromEntries(Object.entries(UPCOMING).filter(([id])=>['received','progress','paidbank'].includes(S.coll&&S.coll[id])));
   for(const k of Object.keys(UPCOMING)) delete UPCOMING[k];
@@ -82,14 +81,13 @@ function upKeys(){ const all=upKeysAll(); const acted=all.filter(id=>['received'
 function upMoreRow(){ const shown=new Set(upKeys()), rest=Object.keys(UPCOMING).filter(id=>!shown.has(id)); if(!rest.length) return '';
   return `<div class="chase"><div class="chase-h" style="cursor:default;grid-template-columns:28px minmax(0,1fr) auto"><span class="rank">+</span><div class="small muted">${rest.length} more automatic collection${rest.length===1?'':'s'} this week · ${lakhs(rest.reduce((a,id)=>a+UPCOMING[id].amt,0))} · each runs only inside the buyer’s authorised mandate. RAY steps in only if a debit fails.</div><button class="btn btn-g btn-sm" onclick="go('raahi/portfolio')">View portfolio</button></div></div>`; }
 const recS = id => (S.rec[id]=S.rec[id]||{st:null});
-const failOpen = id => !!FAILS[id] && !recS(id).st;
+/* status comes from the ledger through recoveryOf(): a fully paid invoice is a completed recovery everywhere */
+const failOpen = id => { const r=recoveryOf(id); return !!r&&r.needsAction; };
 const failCount = () => Object.keys(FAILS).filter(failOpen).length;
-function recStatus(id){ const r=recS(id);
-  if(id==='gupta'){ const paid=FAILS.gupta.amt-balOf('gupta',FAILS.gupta.inv); if(r.st==='part'||r.st==='learned') return `<span class="badge b-b">${inr(paid)} received · ${inr(balOf('gupta',FAILS.gupta.inv))} remaining</span>`; if(r.st==='sent') return `<span class="badge b-b">Payment link sent · watching</span>`; if(r.st==='later') return `<span class="badge b-n">Follow-up scheduled</span>`; }
-  if(id==='singhms'&&r.st==='retry') return `<span class="badge b-b">Retry scheduled · 7 Oct</span>`;
-  if(r.st==='later') return `<span class="badge b-n">Follow-up scheduled</span>`;
-  if(r.st==='link') return `<span class="badge b-b">Payment link sent</span>`;
-  return `<span class="badge b-r">${FAILS[id].m==='eNACH'?'eNACH debit failed':'Autopay failed'}</span>`; }
+function recStatus(id){ const r=recoveryOf(id); if(!r) return '';
+  const cls={open:'b-r', action:'b-b', partial:'b-b', claimed:'b-a', completed:'b-g'}[r.status];
+  const t=r.status==='open'?(r.method==='eNACH'?'eNACH debit failed':'Autopay failed'):r.status==='completed'?`${I('check',11,2.6)} Recovered in full`:r.label;
+  return `<span class="badge ${cls}">${t}</span>`; }
 /* ---------- underwriting: broader but explainable signals, never a score ---------- */
 function uwData(id){
   const c=chemView(chem(id)), on=netOn(), s=sigOf(id), r=recOf(id), n=BUY[id].network;
@@ -208,68 +206,112 @@ A.collRun=(id)=>{ const u=UPCOMING[id], c=chem(id), cm=collMethod(id); S.coll[id
 
 /* ---------- SMART RECOVERY (failed automatic collections) ---------- */
 function dunning(id){
-  const f=FAILS[id], r=recS(id), routine=S.ctl.auto==='routine'&&chemView(chem(id)).band==='Reliable';
-  const base=id==='gupta'?3:2; const d=k=>`${base+k} Oct`;
-  const cur = id==='gupta' ? (r.st==='part'||r.st==='learned'?2:r.st==='sent'?1:1) : (r.st==='retry'?1:1);
+  const f=FAILS[id], r=recoveryOf(id), routine=S.ctl.auto==='routine'&&chemView(chem(id)).band==='Reliable';
+  const d=k=>RayDates.fmtShort(RayDates.addDays(f.date,k));
+  const cur = r.status==='completed'?99 : r.status==='partial'?2 : 1;
   const stages=[[d(0),'Due date',`${f.m==='eNACH'?'eNACH debit':'Autopay attempt'} · failed: ${f.reason.toLowerCase()}`],[d(1),'Day +1','WhatsApp reminder + payment link'],[d(3),'Day +3','Second reminder · allow partial payment'],[d(5),'Day +5','Salesperson follow-up'],[d(7),'Day +7','RAY recommends: review credit exposure']];
-  return `<div class="dun mt12">${stages.map((s,i)=>`<div class="dun-i ${i===0?'ko':i<cur?'done':i===cur?'cur':''}"><span class="dun-k">${s[1]}</span><span class="dun-d">${s[0]}</span><span class="dun-t">${s[2]}</span>${i===cur?`<span class="dun-now">${id==='gupta'&&r.st==='sent'?'Link sent':id==='gupta'&&(r.st==='part'||r.st==='learned')?'₹15,000 left':routine?'Automatic':'Needs approval'}</span>`:''}</div>`).join('')}</div>
-   <div class="xs muted mt8">${routine?'Routine account: automatic follow-up within your configured limits.':'Review first: RAY prepares each step and you approve before anything is sent. Routine accounts can use automatic follow-up within your limits.'}</div>`;
+  const now=r.status==='action'?(r.step||'In progress'):r.status==='partial'?`${inr(r.balance)} left`:r.status==='claimed'?'Verify claim first':routine?'Automatic':'Needs approval';
+  return `<div class="dun mt12">${stages.map((s,i)=>`<div class="dun-i ${i===0?'ko':r.status==='completed'?'done':i<cur?'done':i===cur?'cur':''}"><span class="dun-k">${s[1]}</span><span class="dun-d">${s[0]}</span><span class="dun-t">${s[2]}</span>${i===cur?`<span class="dun-now">${now}</span>`:''}</div>`).join('')}</div>
+   <div class="xs muted mt8">${r.status==='completed'?'Recovery complete. The remaining steps were stopped automatically: no further messages, retries or visits for this invoice.':routine?'Routine account: automatic follow-up within your configured limits.':'Review first: RAY prepares each step and you approve before anything is sent. Routine accounts can use automatic follow-up within your limits.'}</div>`;
 }
+const payRefFor = (id,inv) => `pay_${inv.replace(/\W/g,'')}_${S.led.seq}_${(S.rec[id]&&S.rec[id].n)||0}`; /* fixed per rendered button: a double click repeats the same reference and is rejected */
+function recPayList(r){ if(!r.pays.length) return '';
+  return `<div class="col gap6 mt12">${r.pays.map(e=>`<div class="event"><span class="ic">${I('rupee',17,2)}</span><div class="grow"><div style="font-weight:600;color:var(--strong)">${inr(e.amount)} received <span class="xs muted" style="font-weight:500">· ${esc(e.source)} · ${RayDates.fmtShort(e.date)}</span></div><div class="small">Verified · matched to <b>${e.invoice}</b> · balance ${inr(e.meta.balanceBefore)} → <b class="num">${inr(e.meta.balanceAfter)}</b></div></div><span class="badge b-g">Ledger updated</span></div>`).join('')}</div>`; }
 function recBody(id,mob){
-  const f=FAILS[id], c=chemView(chem(id)), r=recS(id);
-  const btn=(cls,lbl,fn)=>mob?`<button class="mbtn ${cls==='btn-p'?'p':cls==='btn-g'?'g':''}" onclick="${fn}">${lbl}</button>`:`<button class="btn ${cls}" onclick="${fn}">${lbl}</button>`;
+  const f=FAILS[id], c=chemView(chem(id)), r=recoveryOf(id), rs=recS(id);
+  const btn=(cls,lbl,fn,bid)=>mob?`<button class="mbtn ${cls==='btn-p'?'p':cls==='btn-g'?'g':''}" ${bid?`id="${bid}${mob?'-m':''}"`:''} onclick="${fn}">${lbl}</button>`:`<button class="btn ${cls}" ${bid?`id="${bid}"`:''} onclick="${fn}">${lbl}</button>`;
   const fail=`<div class="fail-box mt12"><div class="row between wrap gap8"><span class="fail-k">${f.m==='eNACH'?'eNACH DEBIT FAILED':'AUTOPAY FAILED'}</span><span class="xs muted">${f.on}</span></div><div class="mob-amt mt4" style="font-size:22px;color:var(--strong)">${inr(f.amt)}</div><div class="small mt4"><span class="muted">Reason:</span> <b style="color:var(--strong)">${f.reason}</b></div><div class="xs muted mt8">Not marked as defaulted. A failed debit starts a recovery plan, not a block on the buyer.</div></div>`;
-  let main='';
-  if(id==='gupta'&&r.st==='sent') main=`<div class="pr-res"><div class="row gap8"><span class="badge b-b">Payment link sent</span><span class="xs muted">${r.at||'10:05 AM'} · WhatsApp via RAY</span></div><div class="small mt8" style="color:var(--strong)">₹20,000 · partial payment allowed · minimum ₹5,000</div><div class="mt8">${thinking('Watching Razorpay for a payment against INV-24790…')}</div>${btn('btn-s','Prototype: buyer pays ₹5,000',`A.recPay('gupta')`)}</div>`;
-  else if(id==='gupta'&&(r.st==='part'||r.st==='learned')) main=`<div class="event mt12"><span class="ic">${I('rupee',17,2)}</span><div class="grow"><div style="font-weight:600;color:var(--strong)">₹5,000 received <span class="xs muted" style="font-weight:500">· Razorpay Payment Link · ${r.paidAt||'11:20 AM'}</span></div><div class="small">Matched automatically to <b>INV-24790</b>. Remaining <b class="num">₹15,000</b>.</div></div><span class="badge b-g">Invoice updated</span></div>
-    <div class="small mt8" style="color:var(--strong)">${I('shield',13,2)} Credit decision kept under review. Gupta Traders is not blocked.</div>
-    ${mob?'':whatChangedCard(id)}
-    <div class="row gap6 mt12 wrap"><span class="xs muted">Next outcome (simulated):</span>${btn('btn-g',`Next ${f.m} attempt fails`,`A.ocFail('${id}')`)}${openPromise(id)?btn('btn-g','Promise date passes unpaid',`A.ocMiss('${id}')`):''}${btn('btn-g','Balance paid',`A.ocPay('${id}')`)}</div>`;
-  else if(id==='singhms'&&r.st==='retry') main=`<div class="pr-res"><span class="badge b-b">Retry scheduled · 7 Oct</span><div class="small mt8" style="color:var(--strong)">One retry of ${inr(f.amt)} within the ${inr(collMethod(id).max)} eNACH mandate. If it fails again, RAY moves to a payment link.</div></div>`;
-  else if(r.st==='later') main=`<div class="pr-res"><span class="badge b-n">Follow-up scheduled · ${r.when||'8 Oct'}</span><div class="xs muted mt8">Internal reminder. The buyer has not been contacted.</div></div>`;
-  const acts = r.st ? '' : id==='gupta'
-    ? `<div class="pr-acts ${mob?'mob':''}" style="grid-template-columns:${mob?'1fr':'repeat(3,minmax(0,1fr))'}">${btn('btn-p','Send payment link',`A.recLink('gupta')`)}${btn('btn-s','Remind later',`A.recLater('gupta')`)}${btn('btn-g','Assign to salesperson',`A.recAssign('gupta')`)}</div>`
-    : `<div class="pr-acts ${mob?'mob':''}" style="grid-template-columns:${mob?'1fr':'repeat(3,minmax(0,1fr))'}">${btn('btn-p','Schedule retry',`A.recRetry('${id}')`)}${btn('btn-s','Send payment link',`A.recLink('${id}')`)}${btn('btn-g','Remind later',`A.recLater('${id}')`)}</div>`;
-  return `<div class="pr-kv ${mob?'mob':''}"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Invoice</span><b>${f.inv}</b></div><div><span>Amount</span><b class="num">${inr(f.amt)}</b></div><div><span>Method</span><b>${f.m}</b></div></div>
-   <div class="row gap8 mt12 wrap"><span class="xs muted" style="font-weight:600">Status</span>${recStatus(id)}${bandBadge(c.band)}</div>
+  let main='', acts='';
+  const ref=payRefFor(id,f.inv);
+  if(r.status==='completed'){
+    const nx=r.next;
+    main=`<div class="alert ok mt12" id="rec-done-${id}"><span class="ic">${I('check',17,2.4)}</span><div class="grow"><h4>Recovered in full${r.completedAt?` on ${RayDates.fmtShort(r.completedAt)}`:''}</h4><div class="small muted mt4">${inr(r.received)} received against ${f.inv} in ${r.pays.length} verified payment${r.pays.length===1?'':'s'}. Balance ${inr(0)}. Collection steps for this invoice are stopped and nothing more will be sent for it.</div></div></div>
+     ${recPayList(r)}
+     <div class="small mt12" style="color:var(--strong)">${nx?`Next unpaid invoice: <b>${nx.inv}</b> · ${inr(nx.bal)} · due ${RayDates.fmtShort(nx.due)} · ${collMethod(id).m}. It is handled in today’s plan, not in this recovery.`:`${c.name} has nothing else outstanding.`}</div>`;
+  } else if(r.status==='claimed'){
+    const cl=invOf(id,f.inv).claim;
+    main=`<div class="pr-res"><span class="badge b-a">Buyer says paid · not verified</span><div class="small mt8" style="color:var(--strong)">${c.name} says ${inr(cl.amount)} was paid. The balance stays ${inr(r.balance)} until a payment is found, and reminders stay paused.</div></div>${recPayList(r)}`;
+    acts=`<div class="pr-acts ${mob?'mob':''}" style="grid-template-columns:${mob?'1fr':'repeat(2,minmax(0,1fr))'}">${btn('btn-p','Verify the claim',`A.claimCheck('${id}','${f.inv}')`,'rec-verify')}${btn('btn-g','Not found · close claim',`A.claimVerify('${id}','${f.inv}',false)`)}</div>`;
+  } else if(r.status==='partial'||r.status==='action'){
+    const L=r.link;
+    main=`${L?`<div class="pr-res" id="rec-link-${id}"><div class="row gap8 wrap"><span class="badge b-b">Payment link sent</span><span class="badge b-n">Simulated delivery</span><span class="xs muted">${L.at} · WhatsApp via RAY</span></div><div class="small mt8" style="color:var(--strong)" id="rec-link-terms-${id}">${inr(L.amount)} · ${L.partial?`partial payment allowed · minimum ${inr(L.min)}`:'full amount only'}</div><div class="xs muted mt4">“${esc(L.msg)}”</div></div>`:r.step?`<div class="pr-res"><span class="badge b-n">${esc(r.step)}${rs.when&&rs.when!=='Salesperson visit'?` · ${rs.when}`:''}</span><div class="xs muted mt8">${rs.st==='later'?'Internal reminder. The buyer has not been contacted.':rs.st==='retry'?`One retry within the authorised mandate. If it fails again, RAY moves to a payment link.`:''}</div></div>`:''}
+     ${recPayList(r)}
+     ${r.status==='partial'?`<div class="small mt8" style="color:var(--strong)">${I('shield',13,2)} ${inr(r.balance)} still due on ${f.inv}. Credit decision kept under review. ${c.name} is not blocked.</div>${mob?'':whatChangedCard(id)}`:''}`;
+    const payMin=L?Math.min(L.partial?L.min:r.balance, r.balance):null;
+    acts=`<div class="row gap6 mt12 wrap"><span class="xs muted">Prototype outcome (simulated):</span>${L&&payMin<r.balance?btn('btn-s',`Buyer pays ${inr(payMin)}`,`A.recPay('${id}',${payMin},'${ref}')`,'rec-pay-min'):''}${btn('btn-s',`Buyer pays the remaining ${inr(r.balance)}`,`A.recPay('${id}',${r.balance},'${ref}-full')`,'rec-pay-full')}${btn('btn-g','Buyer says they paid',`A.ocClaim('${id}','${f.inv}')`)}${btn('btn-g',`Next ${f.m} attempt fails`,`A.ocFail('${id}')`)}</div>
+     ${!L?`<div class="pr-acts ${mob?'mob':''} mt8" style="grid-template-columns:${mob?'1fr':'repeat(2,minmax(0,1fr))'}">${btn('btn-p','Send payment link',`A.recLink('${id}')`,'rec-link-btn')}${btn('btn-g','Assign to salesperson',`A.recAssign('${id}')`)}</div>`:''}`;
+  } else {
+    const retry=f.m==='eNACH'||!f.partialHistory;
+    acts=`<div class="pr-acts ${mob?'mob':''}" style="grid-template-columns:${mob?'1fr':'repeat(3,minmax(0,1fr))'}">${retry?btn('btn-p','Schedule retry',`A.recRetry('${id}')`)+btn('btn-s','Send payment link',`A.recLink('${id}')`,'rec-link-btn'):btn('btn-p','Send payment link',`A.recLink('${id}')`,'rec-link-btn')+btn('btn-s','Remind later',`A.recLater('${id}')`)}${btn('btn-g','Assign to salesperson',`A.recAssign('${id}')`)}</div>`;
+  }
+  return `<div class="pr-kv ${mob?'mob':''}"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Invoice</span><b>${f.inv}</b></div><div><span>Failed amount</span><b class="num">${inr(f.amt)}</b></div><div><span>Balance now</span><b class="num" id="rec-bal-${id}">${inr(r.balance)}</b></div></div>
+   <div class="row gap8 mt12 wrap"><span class="xs muted" style="font-weight:600">Status</span><span id="rec-status-${id}">${recStatus(id)}</span>${bandBadge(c.band)}</div>
    ${fail}
-   ${r.st?'':`<div class="pr-note mt12"><span class="ai-tag">${clover(13)} RAY</span><div><div class="small" style="color:var(--strong);font-weight:600">${f.rec}</div><div class="xs muted mt4">${f.why}</div></div></div>`}
+   ${r.status==='open'?`<div class="pr-note mt12"><span class="ai-tag">${clover(13)} RAY</span><div><div class="small" style="color:var(--strong);font-weight:600">${f.rec}</div><div class="xs muted mt4">${f.why}</div></div></div>`:''}
    ${main}${acts}
    <div class="lbl mt16">Recovery sequence</div>${dunning(id)}
-   <div class="xs muted mt12 row gap4">${I('shield',12)} Before every step RAY checks Razorpay, your bank account and salesperson collections, so no one is chased after paying.</div>`;
+   ${r.status==='completed'?'':`<div class="xs muted mt12 row gap4" style="align-items:flex-start" id="rec-src-${id}">${I('shield',12)} <span>${sourcesLine(id,f.inv)}</span></div>`}`;
 }
-function vRecover(id){ if(!FAILS[id]) return '<div class="empty">Not found</div>';
+function vRecover(id){ if(!FAILS[id]) return '<div class="empty">No failed collection for this buyer</div>';
   return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('raahi/actions','grp-failed')">${I('arrowL',14,2)} Failed collections</a></div><div style="max-width:920px">${pageHead('Smart recovery','A failed automatic collection, with a staged plan to recover it.')}<div class="card pad mt16">${recBody(id,false)}</div></div>`; }
 
-A.recLink=(id,edit)=>{ const f=FAILS[id], c=chem(id), first=c.name.split(' ')[0], r=recS(id);
-  const msg=r.msg||`Hi ${first} ji, the scheduled payment for ${inr(f.amt)} could not be completed. You can pay part or all of the amount using this link.`;
+/* ---------- partial-payment link: the minimum is validated and bound to the payload, preview, record and audit ---------- */
+function recLinkDraft(id){ const r=recoveryOf(id), rs=recS(id), c=chem(id), first=c.name.split(' ')[0];
+  const v=RayGuards.linkMinimum(rs.draftMin!=null?rs.draftMin:RayGuards.LINK_RULES.defaultMin, r.balance);
+  return {bal:r.balance, minRaw:rs.draftMin!=null?rs.draftMin:String(RayGuards.LINK_RULES.defaultMin), v,
+    msg:rs.draftMsg||`Namaste ${first} ji, ${inr(r.amount)} ka scheduled payment (${FAILS[id].inv}) nahi ho paya. Is link se poora ya thoda thoda pay kar sakte hain.`}; }
+function recLinkTerms(bal, v){ return !v.ok?'':v.partial?`Pay ${inr(bal)} · partial allowed · minimum ${inr(v.value)}`:`Pay ${inr(bal)} · full amount`; }
+A.recLink=(id,edit)=>{ const f=FAILS[id], c=chem(id), r=recoveryOf(id); if(!r||r.balance<=0) return toast(`${f.inv} is already paid in full. No link needed.`);
+  const d=recLinkDraft(id), small=d.bal<RayGuards.LINK_RULES.partialFrom, g=gateFor(id,'whatsapp',f.inv);
   prOpen(`<div class="pr-sh"><h3>Create Razorpay Payment Link</h3>
-   <div class="pr-kv"><div><span>Invoice</span><b>${f.inv}</b></div><div><span>Amount</span><b class="num">${inr(f.amt)}</b></div><div><span>To</span><b>${c.name}</b></div></div>
-   <div class="setrow mt12" style="padding:10px 0;border-top:1px solid var(--border-subtle)"><div class="t"><b>Allow partial payment</b><span>The buyer can pay any amount above the minimum</span></div><span class="badge b-g">YES</span></div>
-   <div class="field mt8"><label>Minimum amount</label><input class="input num" id="rl-min" value="₹5,000" style="max-width:160px"></div>
+   <div class="pr-kv"><div><span>Invoice</span><b>${f.inv}</b></div><div><span>Link amount</span><b class="num">${inr(d.bal)}</b></div><div><span>To</span><b>${c.name}</b></div></div>
+   ${small?`<div class="ol-note mt12"><span style="color:var(--link);flex-shrink:0">${I('info',15,2)}</span><span>${esc(d.v.note)}</span></div>`
+   :`<div class="setrow mt12" style="padding:10px 0;border-top:1px solid var(--border-subtle)"><div class="t"><b>Allow partial payment</b><span>The buyer can pay any amount from the minimum up to the balance</span></div><span class="badge b-g">YES</span></div>
+   <div class="field mt8"><label for="rl-min">Minimum amount (₹)</label><input class="input num" id="rl-min" inputmode="numeric" value="${esc(d.minRaw)}" style="max-width:180px" oninput="recLinkValidate('${id}')"><div class="xs mt4" id="rl-err" role="alert" style="color:var(--r);font-weight:600">${d.v.ok?'':esc(d.v.error)}</div><div class="xs muted mt4" id="rl-note">${d.v.ok&&d.v.note?esc(d.v.note):''}</div></div>`}
    <div class="xs muted mt12" style="font-weight:600">Message</div>
-   ${edit?`<textarea class="textarea mt4" id="rl-msg" rows="3">${esc(msg)}</textarea>`:`<div class="wa-preview mt4"><div class="wa-bubble">${esc(msg)}<span class="lnk">rzp.io/i/AMA-${f.inv.slice(4)}</span></div></div>`}
-   <div class="xs muted mt8">RAY checked Razorpay payments, your bank account, unmatched credits and salesperson collections. No payment found for ${f.inv}.</div>
-   <div class="pr-btns mt16"><button class="btn btn-g" onclick="prClose()">Cancel</button>${edit?`<button class="btn btn-s" onclick="recS('${id}').msg=document.getElementById('rl-msg').value;A.recLink('${id}')">Save message</button>`:`<button class="btn btn-s" onclick="A.recLink('${id}',true)">Edit message</button>`}<button class="btn btn-p" onclick="${edit?`recS('${id}').msg=document.getElementById('rl-msg').value;`:''}A.recSend('${id}')">${I('chat',14,2.2)} Send on WhatsApp</button></div></div>`); };
-A.recSend=(id)=>{ const f=FAILS[id], c=chem(id), r=recS(id); r.st=id==='gupta'?'sent':'link'; r.at=nowT();
-  log({ic:'link',ti:`Partial-payment link sent to ${c.name}`,de:`${inr(f.amt)} · ${f.inv} · minimum ₹5,000 · Razorpay Payment Link · WhatsApp via RAY`,src:['rzp','conv'],who:'Approved by '+prWho(),chem:c.name});
-  prClose(); prRefresh(); toast('Payment link sent to '+c.name); };
-A.recPay=(id)=>{ const r=recS(id); if(r.st!=='sent') return; const f=FAILS[id];
-  const res=ledgerPay(id, f.inv, 5000, {type:'PAYMENT_RECEIVED', source:'Razorpay Payment Link', actor:'Razorpay', ref:'plink-'+f.inv+'-1'}); if(!res.ok) return toast('Payment not recorded');
-  r.st='part'; r.paidAt=nowT();
-  log({ic:'rupee',ti:`₹5,000 received from ${chem(id).name}`,de:`Razorpay Payment Link · matched to ${f.inv} · verified · ${inr(balOf(id,f.inv))} remaining · partial payments never add risk`,src:['rzp'],who:'Razorpay',chem:chem(id).name});
-  prRefresh(); toast(`₹5,000 received · ${f.inv} updated`); };
+   ${edit?`<textarea class="textarea mt4" id="rl-msg" rows="3" maxlength="600">${esc(d.msg)}</textarea>`:`<div class="wa-preview mt4"><div class="wa-bubble" id="rl-preview">${esc(d.msg)}<span class="lnk">rzp.io/i/AMA-${f.inv.slice(4)}</span><span class="xs" id="rl-terms" style="display:block;margin-top:6px;color:#1d6b55;font-weight:600">${recLinkTerms(d.bal,d.v)}</span></div></div>`}
+   <div class="xs muted mt8">${sourcesLine(id,f.inv)}</div>
+   ${g.action==='block'?`<div class="alert warn mt12" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('ban',15)}</span><div class="small grow"><b style="color:var(--strong)">Can’t send this now.</b> ${esc(gateNote(g))}</div></div>`:g.action==='queue'?`<div class="xs mt8" style="color:#9a5b00;font-weight:600">${esc(gateNote(g))}</div>`:''}
+   <div class="xs muted mt8">${I('info',12)} Delivery is simulated in this prototype. No real message is sent and no real link is created.</div>
+   <div class="pr-btns mt16"><button class="btn btn-g" onclick="prClose()">Cancel</button>${edit?`<button class="btn btn-s" id="rl-save" onclick="recLinkKeep('${id}');A.recLink('${id}')">Save message</button>`:`<button class="btn btn-s" id="rl-edit" onclick="recLinkKeep('${id}');A.recLink('${id}',true)">Edit message</button>`}<button class="btn btn-p" id="rl-send" ${d.v.ok&&g.action!=='block'?'':'disabled'} onclick="recLinkKeep('${id}');A.recSend('${id}')">${I('chat',14,2.2)} ${g.action==='queue'?'Queue for WhatsApp':'Send on WhatsApp'}</button></div></div>`); };
+/* keep what the merchant typed (minimum and message) across preview, edit and send */
+function recLinkKeep(id){ const rs=recS(id), m=document.getElementById('rl-min'), t=document.getElementById('rl-msg');
+  if(m) rs.draftMin=m.value; if(t){ const v=t.value.trim(); rs.draftMsg=v||rs.draftMsg; } }
+function recLinkValidate(id){ const r=recoveryOf(id), m=document.getElementById('rl-min'); if(!m) return;
+  const v=RayGuards.linkMinimum(m.value, r.balance), e=document.getElementById('rl-err'), n=document.getElementById('rl-note'), b=document.getElementById('rl-send'), t=document.getElementById('rl-terms');
+  if(e) e.textContent=v.ok?'':v.error; if(n) n.textContent=v.ok&&v.note?v.note:''; if(b) b.disabled=!v.ok||gateFor(id,'whatsapp',FAILS[id].inv).action==='block'; if(t) t.textContent=recLinkTerms(r.balance,v);
+  m.setAttribute('aria-invalid', v.ok?'false':'true'); recS(id).draftMin=m.value; }
+A.recSend=(id)=>{ const f=FAILS[id], c=chem(id), r=recoveryOf(id), rs=recS(id);
+  const d=recLinkDraft(id); if(!d.v.ok){ toast(d.v.error); return A.recLink(id); }
+  const payload={amount:d.bal, min:d.v.value, partial:d.v.partial, msg:d.msg, inv:f.inv, ref:`plink_${f.inv.replace(/\W/g,'')}_${(rs.n||0)+1}`};
+  const res=sendMessage(id,{kind:'payment_link', inv:f.inv, msg:payload.msg, via:prWho(), payload});
+  if(!res.ok&&!res.queued) return;
+  rs.n=(rs.n||0)+1; rs.st='link'; rs.at=nowT(); rs.link=Object.assign({at:rs.at, status:res.queued?'queued':'sent'},payload); rs.draftMin=null; rs.draftMsg=null;
+  log({ic:'link',ti:`${payload.partial?'Partial-payment':'Payment'} link ${res.queued?'queued':'sent'} to ${c.name}`,de:`${inr(payload.amount)} · ${f.inv} · ${payload.partial?`minimum ${inr(payload.min)}`:'full amount only'} · Razorpay Payment Link · WhatsApp via RAY · simulated delivery · message: “${payload.msg.slice(0,90)}${payload.msg.length>90?'…':''}”`,src:['rzp','conv'],who:'Approved by '+prWho(),chem:c.name});
+  prClose(); prRefresh(); toast(`${res.queued?'Queued':'Sent (simulated)'}: ${inr(payload.amount)} link · ${payload.partial?'minimum '+inr(payload.min):'full amount'}`); };
+/* simulated buyer payment through the link: the amount must respect the link minimum and the balance */
+A.recPay=(id, amt, ref)=>{ const f=FAILS[id], r=recoveryOf(id), L=r&&r.link;
+  if(!r||r.balance<=0) return toast(`${f.inv} is already paid in full. Nothing recorded.`);
+  if(L&&L.partial&&amt<Math.min(L.min,r.balance)) return toast(`The link minimum is ${inr(L.min)}. Nothing recorded.`);
+  const res=ledgerPay(id, f.inv, amt, {type:'PAYMENT_RECEIVED', source:L?'Razorpay Payment Link':'Razorpay payment', actor:'Razorpay', ref:ref||payRefFor(id,f.inv)});
+  if(!res.ok) return toast(res.error||'Payment not recorded');
+  const e=res.event, after=recoveryOf(id);
+  if(typeof promiseProgress==='function') promiseProgress(id, amt, e);
+  log({ic:'rupee',ti:`${inr(amt)} received from ${chem(id).name}`,de:`${e.source} (simulated) · matched to ${f.inv} · verified · balance ${inr(e.meta.balanceBefore)} → ${inr(e.meta.balanceAfter)}${after.status==='completed'?' · recovery completed, remaining steps stopped':' · partial payments never add risk'}`,src:['rzp'],who:'Razorpay',chem:chem(id).name});
+  prRefresh(); toast(after.status==='completed'?`${f.inv} paid in full · recovery completed`:`${inr(amt)} received · ${inr(after.balance)} remaining`); };
 
-A.recRetry=(id)=>{ const f=FAILS[id], c=chem(id);
-  prOpen(`<div class="pr-sh"><h3>Retry the debit on 7 Oct?</h3><div class="pr-kv"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Amount</span><b class="num">${inr(f.amt)}</b></div><div><span>Mandate</span><b>eNACH · up to ${inr(collMethod(id).max)}</b></div></div><p class="small muted mt12">One retry within the authorised mandate. The buyer gets a pre-debit notice. If it fails again, RAY recommends a payment link.</p><div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="A.recRetryDo('${id}')">Schedule retry</button></div></div>`); };
-A.recRetryDo=(id)=>{ const f=FAILS[id], c=chem(id); recS(id).st='retry';
-  log({ic:'refresh',ti:`eNACH retry scheduled for ${c.name}`,de:`${inr(f.amt)} · ${f.inv} · 7 Oct · within the authorised mandate`,src:['rzp'],who:'Approved by '+prWho(),chem:c.name}); prClose(); prRefresh(); toast('Retry scheduled for 7 Oct'); };
-A.recLater=(id)=>{ const c=chem(id);
-  prOpen(`<div class="pr-sh"><h3>Remind you when?</h3><div class="col gap8 mt12">${[['Tomorrow','6 Oct'],['In 3 days','8 Oct'],['On the Day +5 step','8 Oct']].map((o,i)=>`<div role="button" class="radio-card rl-opt ${i===0?'on':''}" data-d="${o[1]}" style="padding:11px 14px" onclick="document.querySelectorAll('.rl-opt').forEach(x=>x.classList.remove('on'));this.classList.add('on')"><span class="radio"></span><span class="grow">${o[0]}</span><span class="xs muted">${o[1]}</span></div>`).join('')}</div><p class="small mt12" style="color:var(--strong)">${I('lock',12)} RAY will not contact the buyer yet.</p><div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="A.recLaterDo('${id}')">Set reminder</button></div></div>`); };
-A.recLaterDo=(id)=>{ const o=document.querySelector('.rl-opt.on'), d=o?o.dataset.d:'6 Oct', r=recS(id); r.st='later'; r.when=d;
+A.recRetry=(id)=>{ const f=FAILS[id], c=chem(id), r=recoveryOf(id), d=RayDates.fmtShort(RayDates.addDays(S.today,2));
+  prOpen(`<div class="pr-sh"><h3>Retry the debit on ${d}?</h3><div class="pr-kv"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Amount</span><b class="num">${inr(r.balance)}</b></div><div><span>Mandate</span><b>${f.m}${collMethod(id).max?` · up to ${inr(collMethod(id).max)}`:''}</b></div></div><p class="small muted mt12">One retry within the authorised mandate. The buyer gets a pre-debit notice. If it fails again, RAY recommends a payment link. The retry is cancelled automatically if the invoice is paid first.</p><div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="A.recRetryDo('${id}','${d}')">Schedule retry</button></div></div>`); };
+A.recRetryDo=(id,d)=>{ const f=FAILS[id], c=chem(id), rs=recS(id); if(recoveryOf(id).balance<=0){ prClose(); return toast('Already paid. Retry not needed.'); } rs.st='retry'; rs.when=d;
+  log({ic:'refresh',ti:`${f.m} retry scheduled for ${c.name}`,de:`${inr(recoveryOf(id).balance)} · ${f.inv} · ${d} · within the authorised mandate`,src:['rzp'],who:'Approved by '+prWho(),chem:c.name}); prClose(); prRefresh(); toast(`Retry scheduled for ${d}`); };
+A.recLater=(id)=>{ const c=chem(id), o=[1,3,5].map(k=>RayDates.fmtShort(RayDates.addDays(S.today,k)));
+  prOpen(`<div class="pr-sh"><h3>Remind you when?</h3><div class="col gap8 mt12">${[['Tomorrow',o[0]],['In 3 days',o[1]],['In 5 days',o[2]]].map((x,i)=>`<div role="button" class="radio-card rl-opt ${i===0?'on':''}" data-d="${x[1]}" style="padding:11px 14px" onclick="document.querySelectorAll('.rl-opt').forEach(x=>x.classList.remove('on'));this.classList.add('on')"><span class="radio"></span><span class="grow">${x[0]}</span><span class="xs muted">${x[1]}</span></div>`).join('')}</div><p class="small mt12" style="color:var(--strong)">${I('lock',12)} RAY will not contact the buyer yet.</p><div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="A.recLaterDo('${id}')">Set reminder</button></div></div>`); };
+A.recLaterDo=(id)=>{ const o=document.querySelector('.rl-opt.on'), d=o?o.dataset.d:RayDates.fmtShort(RayDates.addDays(S.today,1)), r=recS(id); r.st='later'; r.when=d;
   log({ic:'cal',ti:`Follow-up scheduled for ${d}`,de:`${chem(id).name} · ${FAILS[id].inv} · failed collection · internal reminder · buyer not contacted`,src:[],who:'Set by '+prWho(),chem:chem(id).name}); prClose(); prRefresh(); toast(`Reminder scheduled for ${d}`); };
-A.recAssign=(id)=>{ const f=FAILS[id], c=chem(id); recS(id).st='later'; recS(id).when='Salesperson visit';
-  log({ic:'truck',ti:`Recovery visit assigned to ${SP[0]}`,de:`${c.name} · ${inr(f.amt)} · ${f.inv} · failed ${f.m} collection`,src:['led'],who:'Approved by '+prWho(),chem:c.name}); prRefresh(); toast('Assigned to '+SP[0]); };
+A.recAssign=(id)=>{ const f=FAILS[id], c=chem(id), g=gateFor(id,'sm',f.inv);
+  if(g.action==='block'){ logBlocked(id,g,'sm'); prRefresh(); return toast(gateNote(g)); }
+  recS(id).st='later'; recS(id).when='Salesperson visit';
+  log({ic:'truck',ti:`Recovery visit assigned to ${SP[0]}`,de:`${c.name} · ${inr(recoveryOf(id).balance)} · ${f.inv} · failed ${f.m} collection · salesperson app (simulated)`,src:['led'],who:'Approved by '+prWho(),chem:c.name}); prRefresh(); toast('Assigned to '+SP[0]); };
 
 /* ---------- learning from collection outcomes ---------- */
 function outcomesCard(){
@@ -290,7 +332,10 @@ function outcomesCard(){
 /* ---------- Overview + Actions blocks ---------- */
 function upcomingRows(){ return upKeys().map((id,i)=>{ const u=UPCOMING[id], c=chemView(chem(id)), s=collSt(id);
   return aRow(i,{id:'act-up-'+id,name:c.name,band:c.band,area:u.inv,amt:inr(u.amt),kind:collMethod(id).m,kc:'k-credit',reason:s==='paidbank'?'Paid by NEFT before the attempt · autopay cancelled':s==='received'?'Collected · matched automatically':`${u.when} · ${collMethod(id).m} active`,chan:'Automatic collection',chanIc:collMethod(id).m==='eNACH'?'bank':'refresh',right:s==='received'||s==='paidbank'?doneLine(s==='received'?'Received':'Paid · matched')+`<button class="btn btn-g btn-sm" onclick="go('raahi/collect/${id}')">View</button>`:`<button class="btn btn-s btn-sm" onclick="go('raahi/collect/${id}')">View</button>`}); }).join('')+upMoreRow(); }
-function failedRows(){ return Object.keys(FAILS).map((id,i)=>{ const f=FAILS[id], c=chemView(chem(id)), open=failOpen(id);
-  return aRow(i,{id:'act-fail-'+id,name:c.name,band:c.band,area:f.inv,amt:inr(f.amt),kind:f.m==='eNACH'?'eNACH failed':'Autopay failed',kc:'k-held',reason:open?`${f.reason} · ${f.rec}`:recStatus(id).replace(/<[^>]+>/g,''),chan:'Smart recovery',chanIc:'alert',right:open?`<button class="btn btn-p btn-sm" onclick="go('raahi/recover/${id}')">${id==='gupta'?'Start recovery':'Review retry'}</button>`:`<button class="btn btn-g btn-sm" onclick="go('raahi/recover/${id}')">View</button>`}); }).join(''); }
+function failedRows(){ const act=recoveriesActive(), done=recoveriesDone();
+  const rows=act.map((id,i)=>{ const f=FAILS[id], c=chemView(chem(id)), r=recoveryOf(id), open=r.needsAction;
+    return aRow(i,{id:'act-fail-'+id,name:c.name,band:c.band,area:f.inv,amt:inr(r.balance),kind:f.m==='eNACH'?'eNACH failed':'Autopay failed',kc:'k-held',reason:open?`${f.reason} · ${f.rec}`:r.label,chan:'Smart recovery',chanIc:'alert',right:open?`<button class="btn btn-p btn-sm" onclick="go('raahi/recover/${id}')">Start recovery</button>`:`<button class="btn btn-g btn-sm" onclick="go('raahi/recover/${id}')">View</button>`}); });
+  if(done.length) rows.push(`<div class="chase"><div class="chase-h" style="cursor:default;grid-template-columns:28px minmax(0,1fr) auto"><span class="rank" style="color:var(--g)">${I('check',13,2.6)}</span><div class="small muted">Completed: ${done.map(id=>`${chem(id).name} · ${FAILS[id].inv} recovered in full`).join(' · ')}. No further steps.</div><button class="btn btn-g btn-sm" onclick="go('raahi/recover/${done[0]}')">View</button></div></div>`);
+  return rows.join(''); }
 
 /* ---------- buyer lifecycle position (Gupta Traders) ---------- */

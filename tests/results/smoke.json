@@ -1,0 +1,126 @@
+{
+ "suite": "Browser smoke and guided demos (Playwright)",
+ "file": "tests/ui_smoke.py",
+ "ranAt": "2026-10-11T18:43:37+00:00",
+ "build": "9bb5410e05",
+ "total": 23,
+ "passed": 23,
+ "failed": 0,
+ "cases": [
+  {
+   "name": "App opens on Agent Studio",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Overview KPIs come from 642 synthetic records",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Gupta profile shows the ₹60,000 network-adjusted recommendation",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Network off recalculates to ₹75,000 · 21 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Rejoining with permission restores ₹60,000 · 14 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "How RAY decided shows engine rules and policy version",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Recording an outcome does not change the limit by itself",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Approved limit applied only after confirmation",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Verified partial payment reduces INV-24790 to ₹15,000",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Interpreter extracts ₹10,000 now and the balance by month end",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Fallback is labelled as not AI",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Edited values are what gets saved",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Editing a saved promise updates it and records PROMISE_EDITED",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Confirmed commitment appears in collections",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Do Not Contact blocks sending",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Send button is disabled with the reason",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Reset restores the baseline",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "All routes render without errors",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Daily plan is computed for every buyer",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Built-in Checks page: every check passes",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Ask RAY falls back honestly without Claude",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "CORE demo (9 steps) runs without errors",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "STEPS demo (25 steps) runs without errors",
+   "pass": true,
+   "detail": ""
+  }
+ ]
+}
