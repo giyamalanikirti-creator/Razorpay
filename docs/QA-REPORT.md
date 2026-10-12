@@ -64,7 +64,7 @@ Other fixes in this pass: read-only network preview (participation only in Contr
 | Unit (`npm test`) | 62 | 62 | 0 | 0 |
 | Mocked-provider API | 17 | 17 | 0 | 0 |
 | Live provider | 0 | 0 | 0 | 1 (no key) |
-| Browser journeys (Playwright) | 175 | 175 | 0 | 0 |
+| Browser journeys (Playwright) | 187 | 187 | 0 | 0 |
 | Smoke + demos | 24 | 24 | 0 | 0 |
 | Responsive (1440, 1280, 768, 390) | 56 | 56 | 0 | 0 |
 | Live Checks page | 18 journeys + 36 policy | 54 | 0 | 0 |

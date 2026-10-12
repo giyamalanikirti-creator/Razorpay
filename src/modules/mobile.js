@@ -209,10 +209,28 @@ A.mobFollow=(id)=>{ const c=chaseOf(id), ch=chem(id), it=S.chase[id]; if(!it||it
 A.mobMatch=()=>{ S.mob.sheet=null; A.prMatchRzp('verma'); mobRender(); };
 
 /* ---------- prototype surface switcher (demo navigation only) ---------- */
+/* bottom bar: three surfaces, then reference pages, then presenter tools. Each button does one obvious thing:
+   Desktop always lands on a desktop screen (the last one you used, never Checks or How it works). */
+const SURF_PAGES = ['raahi/checks','raahi/how'];
+let _lastDesk = 'raahi/overview';
+window.addEventListener('hashchange',()=>{ const r=route(); if(!SURF_PAGES.includes(r)&&!r.startsWith('pay/')) _lastDesk=r; });
 function surfRender(){
   const r=document.getElementById('surf-root'); if(!r) return;
-  const wa=!!document.getElementById('wa-root').innerHTML, mob=!!S.mob, cur=mob?'mob':wa?'wa':'desk';
-  r.innerHTML=`<div class="surf"><span class="surf-l" onclick="A.about()" title="What is real, synthetic, simulated or proposed">Concept prototype · what’s real ${I('info',11,2.2)}</span><button class="${cur==='desk'&&!['raahi/checks','raahi/how'].includes(route())?'on':''}" onclick="A.surf('desk')">Desktop</button><button class="${cur==='wa'?'on':''}" onclick="A.surf('wa')">RAY on WhatsApp</button><button class="${cur==='mob'?'on':''}" onclick="A.surf('mob')">RAY Credit for Mobile</button><button class="${cur==='desk'&&route()==='raahi/how'?'on':''}" onclick="A.surf('desk');go('raahi/how')">How it works</button><button class="${cur==='desk'&&route()==='raahi/checks'?'on':''}" onclick="A.surf('desk');S.installed=true;go('raahi/checks')">Checks</button><button class="surf-x" id="surf-walk" onclick="S.demoList='core';S.demoOpen=!S.demoOpen;demoRender()" title="Guided judge walkthrough (Shift+D)">Walkthrough</button><button class="surf-x" id="surf-reset" onclick="A.resetAsk()" title="Reset the demo">${I('refresh',12,2.4)}</button></div>`;
+  const wa=!!document.getElementById('wa-root').innerHTML, mob=!!S.mob, rt=route(), page=SURF_PAGES.includes(rt)?rt:null;
+  const cur=mob?'mob':wa?'wa':page?page:'desk';
+  const b=(k,ic,label,fn,title,id)=>`<button class="${cur===k?'on':''}" ${id?`id="${id}"`:''} aria-pressed="${cur===k}" title="${title}" onclick="${fn}">${I(ic,13,2.2)}<span>${label}</span></button>`;
+  r.innerHTML=`<div class="surf" role="toolbar" aria-label="Prototype navigation"><span class="surf-l" onclick="A.about()" title="What is real, synthetic, simulated or proposed" aria-label="What is real in this prototype"><span class="surf-lt">Concept prototype · what’s real</span> ${I('info',11,2.2)}</span>
+   <span class="surf-g">${b('desk','grid','Desktop',"A.surf('desk')",'Razorpay dashboard on desktop','surf-desk')}${b('wa','chat','WhatsApp',"A.surf('wa')",'RAY on WhatsApp','surf-wa')}${b('mob','phone','Mobile',"A.surf('mob')",'RAY Credit for Mobile','surf-mob')}</span>
+   <span class="surf-g">${b('raahi/how','doc','How it works',"A.surf('how')",'What RAY reads, decides and what is real','surf-how')}${b('raahi/checks','shield','Checks',"A.surf('checks')",'Tests run live and recorded','surf-checks')}</span>
+   <span class="surf-g">${`<button class="surf-x ${S.demoOpen?'on':''}" id="surf-walk" aria-pressed="${!!S.demoOpen}" onclick="S.demoList='core';S.demoOpen=!S.demoOpen;demoRender();surfRender()" title="Guided walkthrough (Shift+D)">${I('play',12,2.4)}<span>Walkthrough</span></button>`}<button class="surf-x" id="surf-reset" onclick="A.resetAsk()" title="Reset the demo" aria-label="Reset the demo">${I('refresh',12,2.4)}</button></span></div>`;
 }
-A.surf=(k)=>{ if(k==='desk'){ A.closeWA(); A.closeMobile(); } else if(k==='wa') A.openWA(); else { if(!S.installed){ S.installed=true; ensureBank(); rr(); } A.openMobile('rc'); } surfRender(); };
+/* one switch for every bar button: close whatever overlay is open, then show the chosen place */
+A.surf=(k)=>{ S.demoOpen=false; if(typeof demoRender==='function') demoRender();
+  if(k==='wa'){ if(S.mob) A.closeMobile(); A.openWA(); }
+  else if(k==='mob'){ A.closeWA(); if(!S.installed){ S.installed=true; ensureBank(); rr(); } A.openMobile('rc'); }
+  else { A.closeWA(); if(S.mob) A.closeMobile(); closeModal();
+    if(k==='how') go('raahi/how');
+    else if(k==='checks'){ S.installed=true; go('raahi/checks'); }
+    else if(SURF_PAGES.includes(route())) go(_lastDesk&&!SURF_PAGES.includes(_lastDesk)?_lastDesk:'raahi/overview'); }
+  surfRender(); };
 hooks.push(()=>surfRender());

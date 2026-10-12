@@ -1,10 +1,10 @@
 {
  "suite": "Browser journeys (Playwright, Chromium)",
  "file": "tests/e2e_journeys.py",
- "ranAt": "2026-10-12T08:35:36+00:00",
- "build": "e2c3fa012e",
- "total": 175,
- "passed": 175,
+ "ranAt": "2026-10-12T08:47:30+00:00",
+ "build": "8badc5daec",
+ "total": 187,
+ "passed": 187,
  "failed": 0,
  "cases": [
   {
@@ -1048,6 +1048,78 @@
   {
    "journey": "MOCK-AI",
    "name": "Ask RAY: a discarded model answer falls back with an honest label",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "#surf-checks → raahi/checks",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "#surf-desk → raahi/buyer/gupta",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "#surf-how → raahi/how",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "#surf-desk → raahi/buyer/gupta",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "#surf-wa → WhatsApp",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "#surf-checks → raahi/checks",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "#surf-mob → Mobile",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "#surf-desk → raahi/buyer/gupta",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "Walkthrough button opens the story panel",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "…and closes it",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "Reset button asks before resetting",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "BAR",
+   "name": "'What’s real' opens the disclosure",
    "pass": true,
    "detail": ""
   },

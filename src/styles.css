@@ -1245,3 +1245,13 @@ body.paymode .pay-root{display:block}
 .ip-miss{border-left:3px solid #f0b24a;background:#fffaf0;border-radius:6px;padding:8px 10px}
 @media (max-width:600px){.pr-kv{grid-template-columns:minmax(0,1fr)!important}.pr-kv b{overflow-wrap:anywhere}.modal .pr-btns{flex-wrap:wrap}}
 .pr-kv b{overflow-wrap:anywhere}
+/* bottom bar: clearer groups and labels */
+.surf{gap:4px;padding:4px}
+.surf-g{display:inline-flex;align-items:center;gap:2px;padding-left:4px;margin-left:2px;border-left:1px solid rgba(255,255,255,.16)}
+.surf button{height:30px;padding:0 12px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.surf button svg{opacity:.85;flex-shrink:0}
+.surf button:focus-visible{outline:2px solid #9fd9c1;outline-offset:1px}
+.surf .surf-x{border-left:0;margin-left:0;border-radius:999px}
+.surf #surf-walk.on{background:#9fd9c1;color:#10241c}
+@media (max-width:900px){.surf button{padding:0 10px}}
+@media (max-width:600px){.surf-lt{display:none}.surf-l{padding:0 6px}}

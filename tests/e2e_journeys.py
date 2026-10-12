@@ -605,6 +605,18 @@ async def main():
         check("Ask RAY: a discarded model answer falls back with an honest label", c.startswith("AI unavailable · Rule-based fallback") and "discarded" in c, c[:200])
         await p2.close(); srv.shutdown()
 
+        # ---------------- BAR: every bottom-bar button does what its label says, from any place ----------------
+        current["id"] = "BAR"
+        await reset("raahi/buyer/gupta")
+        bar = "JSON.stringify({r:route(),wa:!!document.getElementById('wa-root').innerHTML,mob:!!S.mob,on:[...document.querySelectorAll('.surf button.on')].map(x=>x.id)})"
+        for sel, want in [("#surf-checks", ("raahi/checks", False, False, "surf-checks")), ("#surf-desk", ("raahi/buyer/gupta", False, False, "surf-desk")), ("#surf-how", ("raahi/how", False, False, "surf-how")), ("#surf-desk", ("raahi/buyer/gupta", False, False, "surf-desk")), ("#surf-wa", (None, True, False, "surf-wa")), ("#surf-checks", ("raahi/checks", False, False, "surf-checks")), ("#surf-mob", (None, False, True, "surf-mob")), ("#surf-desk", ("raahi/buyer/gupta", False, False, "surf-desk"))]:
+            await page.click(sel); await wait(250); o = json.loads(await ev(bar))
+            check(f"{sel} → {want[0] or ('WhatsApp' if want[1] else 'Mobile')}", (want[0] is None or o["r"] == want[0]) and o["wa"] == want[1] and o["mob"] == want[2] and o["on"] == [want[3]], o)
+        await page.click("#surf-walk"); await wait(200); check("Walkthrough button opens the story panel", await ev("S.demoOpen"))
+        await page.click("#surf-walk"); await wait(200); check("…and closes it", not await ev("S.demoOpen"))
+        await page.click("#surf-reset"); await wait(200); check("Reset button asks before resetting", await ev("!!document.getElementById('reset-confirm')")); await ev("closeModal()")
+        await page.click(".surf-l"); await wait(200); check("'What’s real' opens the disclosure", await ev("!!document.getElementById('modal')")); await ev("closeModal()")
+
         # ---------------- uncaught errors across routes ----------------
         current["id"] = "ROUTES"
         await reset("raahi/overview")
