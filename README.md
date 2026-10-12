@@ -66,13 +66,13 @@ All payments in the prototype are simulated and labelled as such. No money moves
 
 ## AI: honestly scoped
 
-Questions on every surface are answered first by rules, from the current ledger: buyer, invoice, balance, credit and payment status. Ambiguous names get a clarifying question; anything else gets "I won’t guess" with examples. Only those unmatched questions go to live AI, and only when it is really configured. The LLM is also used for reading replies: reading unstructured buyer replies such as *"Aadha abhi bhej raha hoon, baaki Monday pakka"* and returning structured JSON (intent, amounts, dates, conditionality, evidence). Deterministic checks then remove any amount or date the message does not support, resolve relative dates from the message date (IST), route disputes and payment claims separately, and block confirmation of ambiguous promises. The merchant always reviews, can edit, and confirms before anything is saved. When no API key is configured the app says so and uses a clearly labelled **rule-based demo parser (not AI)**. Credit limits are never set by the LLM.
+Questions on every surface are answered first by rules, from the current ledger: buyer, invoice, balance, credit and payment status. Ambiguous names get a clarifying question; anything else gets "I won’t guess" with examples. Only those unmatched questions go to live AI, and only when it is really configured. The LLM is also used for reading replies: reading unstructured buyer replies such as *"Aadha abhi bhej raha hoon, baaki Monday pakka"* and returning structured JSON (intent, amounts, dates, conditionality, evidence). Deterministic checks then remove any amount or date the message does not support, resolve relative dates from the message date (IST), route disputes and payment claims separately, and block confirmation of ambiguous promises. The merchant always reviews, can edit, and confirms before anything is saved. It reads English, Hinglish and common Devanagari ("मैंने 5000 भेज दिए हैं, बाकी सोमवार को दूँगा।" → an unverified ₹5,000 claim plus a promise of the rest by Monday). Every result carries one of four labels: **Live AI · provider/model**, **Rule-based demo · AI not configured**, **AI unavailable · Rule-based fallback**, and **Needs merchant confirmation** until you confirm. Credit limits are never set by the LLM: LLMs interpret language and explain; the deterministic policy recommends; the merchant approves; only verified payment events change balances.
 
 ## Running it
 
 No install needed. Open `index.html` in a browser, or visit the deployed link. On Vercel with `OPENAI_API_KEY` set, the interpreter runs on the live model.
 
-**Judge walkthrough** (the **Walkthrough** button in the bottom bar, or `Shift` + `D`), about five minutes: install or continue without a bank → your ledger vs the network → explainable approval → undo with an audit trail → failed collection and a partial payment → balance paid, recovery completes everywhere → reconcile before any follow-up → the same status on WhatsApp and mobile → what ran on Checks. **Explore all features** (25 steps) is still there. Navigating a step never approves, sends or records money on its own; simulated outcomes are explicit buttons. **Concept prototype · what’s real** opens the disclosure (logic running here, synthetic data, simulated integrations, optional live AI, proposed). The reset icon asks before resetting. The eight-week pilot plan and its success measures are on **How it works**. Script and fix list: [`docs/QA-REPORT.md`](docs/QA-REPORT.md).
+**Judge walkthrough** (the **Walkthrough** button in the bottom bar, or `Shift` + `D`), nine steps, about five minutes: the merchant's problem → why the network matters (your ledger ₹75,000 · 21 days vs eligible network ₹60,000 · 14 days) → explainable recommendation → approve and undo → failed collection and a partial payment → full recovery, with an optional payment reversal → reconcile before chasing → the same intelligence on WhatsApp and mobile, plus a Hinglish/Devanagari reply → what is real, simulated and tested. Each step has Previous, Next and Exit. **Explore all features** (25 steps) is still there. Navigating a step never approves, sends or records money on its own; simulated outcomes are explicit buttons. **Concept prototype · what’s real** opens the disclosure (logic running here, synthetic data, simulated integrations, optional live AI, proposed). The reset icon asks before resetting. The eight-week pilot plan and its success measures are on **How it works**. Script and fix list: [`docs/QA-REPORT.md`](docs/QA-REPORT.md).
 
 
 **Presenter controls**
@@ -105,11 +105,12 @@ The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **R
 │   ├── template.html · styles.css · assets/
 │   └── modules/                # screens (core, engine bridge, explain, workspace, ...)
 ├── tests/
-│   ├── engine.test.js · journeys.test.js · interpreter.test.js · api.test.js · ask-api.test.js   # node --test
-│   ├── e2e_journeys.py         # Playwright: the 12 reported journeys with real clicks
+│   ├── engine · journeys · interpreter · reversal · network · api · ask-api · live-provider .test.js   # node --test
+│   ├── e2e_journeys.py         # Playwright: journeys with real clicks, reversal, mocked live-AI UI, repeatability
+│   ├── responsive.py           # Playwright: 1440, 1280, 768 and 390 px layout checks
 │   ├── ui_smoke.py             # Playwright: smoke, every route, both guided demos
 │   └── results/                # last recorded run of every suite (embedded in the Checks page)
-│   └── eval/                   # 40 labelled Hinglish messages + RESULTS.md
+│   └── eval/                   # 54 labelled Hinglish and Devanagari messages + RESULTS.md
 ├── scripts/
 │   ├── build.py                # bundles lib/ + src/ into index.html
 │   ├── eval_interpreter.js     # interpreter evaluation
@@ -126,6 +127,7 @@ python3 scripts/build.py        # writes index.html
 npm test                        # unit, journey and API tests (Node 18+)
 npm run test:e2e                # browser journeys (pip install playwright)
 npm run test:ui                 # browser smoke + guided demos
+npm run test:responsive         # layout at 1440, 1280, 768 and 390 px
 npm run test:all                # all suites, results embedded into the Checks page
 npm run eval                    # interpreter evaluation; live model only with an API key
 ```

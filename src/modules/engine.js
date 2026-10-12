@@ -166,7 +166,7 @@ function claudeSample(){ if(_claudeP) return _claudeP;
 const claudeLive = () => !!AI.claude && !AI.claudeOff;
 function aiCheck(){ claudeSample(); if(AI.checked) return; AI.checked=true; if(location.protocol==='file:') return;
   fetch('/api/parse-promise',{method:'GET'}).then(r=>r.ok?r.json():null).then(j=>{ if(j&&typeof j.configured==='boolean'){ AI.reachable=true; AI.configured=j.configured; AI.provider=j.provider; AI.model=j.model; if(route().startsWith('raahi')) render(); } }).catch(()=>{}); }
-const aiLabel = () => claudeLive()?'Live AI · Claude (this page)':AI.configured?`Live AI · ${AI.model} (server)`:AI.claudeOff?(UNAVAIL[AI.claudeOff]||'Live AI off'):'Live AI off on this deployment · rule-based answers and templates';
+const aiLabel = () => claudeLive()?'Live AI · anthropic/Claude (this page)':AI.configured?(AI._failed?'AI unavailable · Rule-based fallback':`Live AI · ${AI.provider}/${AI.model}`):AI.claudeOff?'Rule-based demo · AI not configured':'Rule-based demo · AI not configured';
 
 /* ---------- persistence (optional, per browser) ---------- */
 const PERSIST_KEY='ray-credit-demo-v2';

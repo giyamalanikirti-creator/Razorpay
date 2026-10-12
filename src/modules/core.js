@@ -31,7 +31,7 @@ const P = {
   lock:'M5 11h14v10H5zM7 11V7a5 5 0 0 1 10 0v4',
   pause:'M6 4h4v16H6zM14 4h4v16h-4z',
   play:'M6 3l14 9-14 9z',
-  refresh:'M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16M16 16h5v5',
+  undo:'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',refresh:'M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16M16 16h5v5',
   mic:'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3',
   clip:'m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48',
   tup:'M22 7 13.5 15.5 8.5 10.5 2 17M16 7h6v6', tdown:'M22 17l-8.5-8.5-5 5L2 7M16 17h6v-6',
@@ -299,7 +299,7 @@ function thinking(text){return `<div class="thinking">${clover(18)}<span class="
 
 /* ================= ROUTER ================= */
 function go(h){ if(location.hash==='#'+h) render(); else location.hash=h; }
-window.addEventListener('hashchange',()=>{render(true)});
+window.addEventListener('hashchange',()=>{document.body.classList.remove('side-open');render(true)});
 let lastRoute='';
 function route(){ return (location.hash||'#home').slice(1) }
 

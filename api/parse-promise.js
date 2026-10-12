@@ -13,6 +13,8 @@
  *
  * GET returns { configured, provider, model } so the UI can say honestly whether live AI is available.
  * Buyer messages and amounts are never logged.
+ * Rate limit: 20 requests/minute per IP, in memory per warm serverless instance (best-effort: instances do not
+ * share counts and a cold start resets them). Production needs a shared store such as Redis/KV.
  */
 const rules = require('../lib/promise-rules.js');
 

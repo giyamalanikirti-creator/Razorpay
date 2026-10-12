@@ -1,270 +1,383 @@
 {
- "suite": "Unit and API tests (node --test)",
- "file": "tests/*.test.js",
- "ranAt": "2026-10-11T18:42:15+00:00",
- "build": "9bb5410e05",
- "total": 52,
- "passed": 52,
+ "suite": "Unit tests: policy, ledger, reversal, network, interpreter (node --test)",
+ "file": "tests/engine.test.js, tests/interpreter.test.js, tests/journeys.test.js, tests/network.test.js, tests/reversal.test.js",
+ "ranAt": "2026-10-12T06:55:59+00:00",
+ "build": "4c89bc4324",
+ "total": 62,
+ "passed": 62,
  "failed": 0,
+ "skipped": 0,
  "cases": [
-  {
-   "name": "GET reports configuration honestly, without exposing the key",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "Missing API key → 503 AI_NOT_CONFIGURED (never pretends the model ran)",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "Valid model output is validated and returned with mode \"ai\"",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "Fabricated amounts from the model are removed by deterministic checks",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "Invalid JSON, timeouts, rate limits and upstream errors fail safely",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "Input validation and size limits",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "Anthropic provider (optional) uses forced tool output",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "ask: GET reports configuration without exposing the key",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "ask: no key → 503 AI_NOT_CONFIGURED, so the page uses its rule-based answer",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "ask: invalid requests are rejected before any provider call",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "ask: model output is cleaned (allowed actions only, length capped) and never changes state",
-   "pass": true,
-   "detail": ""
-  },
-  {
-   "name": "ask: provider timeout → 504 with an honest message",
-   "pass": true,
-   "detail": ""
-  },
   {
    "name": "1. Gupta Traders, own data only: Watch, ₹75,000, 21-day terms",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "2. Gupta Traders with eligible network data: ₹60,000, 14-day terms, from the reusable −20% rule",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "3. Network disabled, or buyer consent revoked: network evidence is excluded and the decision recalculates",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "4. Chawla Enterprises: Reliable on own data, Watch with network, limit held (uncorroborated rule)",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "5. New Life Stores, first credit without consent: starter ₹50,000, 15 days, Unrated",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "6. New Life Stores with valid consent: ₹1,50,000, 21 days; revocation reverts to starter",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "7. Positive repayment history improves the recommendation within policy limits",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "8. A failed Autopay updates collection state without marking a default",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "9. A verified partial payment reduces the invoice outstanding and never adds risk",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "10. An unverified payment claim does not count as received",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "11. An existing unmatched payment blocks an inappropriate reminder",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "12. A Do Not Contact buyer cannot be messaged on WhatsApp (salesperson tasks still allowed)",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "13. Quiet hours queue the message for the next permitted window (IST)",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "14. The weekly reminder limit is enforced with the next eligible time",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "16. A dispute is routed to review and is not classified as default or a missed promise",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "17. Stale data blocks unsafe execution and lowers confidence",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "18. Consequential changes are proposals that need merchant approval",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "20. Portfolio aggregates are internally consistent",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Featured scenarios match their expected bands; no buyer is special-cased",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Feedback loop: failed Autopay + partial payment + missed promise moves Gupta to Risky, ₹40,000, 7 days",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Requests: verdicts come from the same decision",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Example 1: \"Aadha abhi bhej raha hoon, baaki Monday pakka.\" → ₹19,200 now, ₹19,200 on Mon 12 Oct (inferred)",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Example 2: \"Kal 5 hazaar bhejunga, baaki Friday.\" → ₹5,000 tomorrow, remainder Friday",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Example 3: \"Monday tak try karunga.\" → tentative, no invented amount, clarification",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Example 4: \"Bhai maal short aaya, pehle adjust karo.\" → dispute, verification suggested",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Example 5: \"Payment kar diya, UTR bhej raha hoon.\" → payment claim, unverified, reconcile",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Example 6: \"Abhi 5000 de sakta hoon, baki agle hafte.\" → ₹5,000 now, balance date needs clarification",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Instructions inside a buyer message are treated as data",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Model output checks: fabricated amounts and dates are removed, past dates rejected, sums capped",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "Request validation",
    "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Hinglish examples resolve amounts and IST dates from the demo clock (Mon 5 Oct 2026)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Claims, vague dates, conditions and disputes are never confirmable",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Devanagari: claim of ₹5,000 plus a promise of the rest on Monday; evidence stays in the original script",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Self-corrections and alternative dates need clarification",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Model output: an unstated claimed amount and contradictory dates are caught by validation",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "The model never sees the buyer name (data minimisation)",
+   "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J1. The recommendation is ₹60,000 on 14 days, and approving it leaves the recommendation at exactly those values",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J2. No compounding: re-evaluating any number of times after approval never shortens terms or lowers the limit",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J2b. The old failure mode is gone: current terms of 14 used to step down to 7",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J3. Undo: a reversed increase no longer counts toward the 90-day increase cooldown",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J5. Failed ₹20,000 collection, then ₹5,000 partial: ₹15,000 remains and the invoice is not settled",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J6. Paying the remaining ₹15,000 settles the invoice; the next unpaid invoice is INV-24891",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J8. Overpayment and duplicate payments are rejected and leave the ledger unchanged",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J8b. A payment claim alone never verifies a payment",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J9. Recovery-link minimum: invalid inputs rejected with a reason, valid edits accepted, small balances paid in full",
    "pass": true,
+   "skipped": false,
    "detail": ""
   },
   {
    "name": "J12. Send safeguards: claim, unmatched review, paid, dispute, DNC, weekly limit, quiet hours, pause, stale, channel and approval",
    "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Gupta Traders: own ledger ₹75,000 · 21d; with eligible network ₹60,000 · 14d (corroborated)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Chawla Enterprises: reliable on own data, network disagrees → Watch, limit held (no cut on uncorroborated evidence)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "New Life Stores: conservative starter without eligible evidence, raised by rule with it",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Consent states: requested and declined/revoked exclude evidence; granted includes it",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Insufficient coverage, stale signals and disputes are excluded with a stated reason, and restore cleanly",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Participation off: no network evidence for anyone, and the reason says so",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Shared logic: the same record under a different id and name gets the same decision (no special-casing)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Valid reversal restores the balance and keeps the original payment in the log",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Duplicate reversal is rejected and changes nothing",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Unknown payment, non-payment events, wrong amount, wrong invoice and a missing reason are rejected",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Partial payment reversal and multiple payments on one invoice: only the reversed one comes back",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "A reversal can never take an invoice above its amount (stale or conflicting state is rejected)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "A reference becomes reusable only after its payment is reversed (correction = reverse + re-record)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "A payment split across invoices is one reversal group",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Policy ignores reversed payments: a reversed settlement is not on-time evidence",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "A promise \"kept\" outcome reopened by a reversal no longer counts as kept",
+   "pass": true,
+   "skipped": false,
    "detail": ""
   }
  ]

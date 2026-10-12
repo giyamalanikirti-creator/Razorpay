@@ -114,4 +114,4 @@ A.reviewJain=()=>modal({title:'Review Jain Traders’ promise',body:`<div class=
 
 /* ---- simulations ---- */
 A.toggleStale=()=>{S.stale=!S.stale; if(S.stale) log({ic:'refresh',ti:'Marg ERP sync delayed',de:'Last synced 31 hours ago · new reminders and approvals paused until refreshed',src:['led'],who:'RAY'}); rr();};
-A.reset=()=>{S=S0();_clock=12;if(typeof _wat!=='undefined')_wat=2;persistClear();engInit();A.closeWA();A.aaClose();closeModal();document.getElementById('datechip').textContent='Mon, 5 Oct';go('home');toast('Demo reset')};
+A.reset=()=>{S=S0();_clock=12;if(typeof _wat!=='undefined')_wat=2;persistClear();engInit();A.closeWA();A.aaClose();closeModal();document.getElementById('datechip').textContent=S.date;go('home');toast('Demo reset')};

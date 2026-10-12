@@ -1,9 +1,11 @@
-/* ================= PROTOTYPE CHECKS: only tests that actually ran, policy separate from journeys =================
- *  1. Policy checks       pure rules on synthetic inputs (runChecks in workspace.js), run now in this browser
- *  2. Journey checks      the 12 reported journeys, run now in this browser through the same commands the
- *                         buttons call, on a sandboxed copy of the demo state (your state is restored after)
- *  3. Recorded runs       node unit tests and Playwright browser journeys, run in development; embedded at
- *                         build time with their date and build id. Shown as recorded, never as live.
+/* ================= PROTOTYPE CHECKS: only tests that actually ran, each kind shown separately =================
+ *  1. Live in-browser     journey checks (same commands the buttons call, sandboxed) and policy checks, run now
+ *  2. Recorded unit       node --test suites, recorded in development with their build id
+ *  3. Recorded Playwright browser journeys, smoke/demos and responsive layout, recorded in development
+ *  4. Mock-provider API   the AI endpoints tested with a mocked provider (no network, no key)
+ *  5. Live provider       runs only when a provider key is configured; otherwise shown as not run
+ *  6. Not executed        what no test here covers
+ * Counts are never typed in: they come from the runs themselves, and failures are listed, not hidden.
  */
 const TEST_RUNS = __TESTRUNS__;
 const J = {};
@@ -45,16 +47,29 @@ function journeyChecks(){
       S.ctl.dnc=[]; S.paused=true; const pz=sendMessage('chawla',{msg:'x',quiet:true}).gate.code, cp=creditApprove(holdProposal(creditProposal('gupta')),'Checks',{setup:false}).ok;
       S.paused=false; S.stale=true; const st=sendMessage('chawla',{msg:'x',quiet:true}).gate.code; S.stale=false; _clock=21*60-9*60; const q=sendMessage('chawla',{msg:'x',quiet:true}).queued;
       return ok(a==='dnc'&&b==='none'&&kc==='dnc'&&pz==='paused'&&cp===false&&st==='stale'&&q===true, `dnc ${a} · link ${b} · retailer ${kc} · paused ${pz}/${cp} · stale ${st} · quiet ${q?'queued':'sent'}`); });
+    fresh();
+    run('J13','Reversing a recorded payment restores the balance, keeps the original, and recovery recalculates',()=>{ A.recSend('gupta'); A.recPay('gupta',5000,'chk-rev-1'); A.recPay('gupta',15000,'chk-rev-2');
+      const done=recoveryOf('gupta').status, e=recordedPayments('gupta')[0].e, r1=payReverse(e.id,'Amount entered incorrectly','Checks'), r2=payReverse(e.id,'Duplicate entry','Checks'), rec=recoveryOf('gupta');
+      return ok(done==='completed'&&r1.ok&&!r2.ok&&balOf('gupta','INV-24790')===5000&&rec.status==='partial'&&S.led.events.some(x=>x.id===e.id)&&S.led.events.filter(x=>x.type==='PAYMENT_REVERSED').length===1, `before ${done} · reverse ${r1.ok?'ok':r1.error} · again: ${r2.error} · balance ${inr(balOf('gupta','INV-24790'))} · ${rec.label}`); });
+    run('J14','Network off, consent revoked and a stale signal each remove network evidence; restoring brings it back',()=>{ const lim=()=>recOf('gupta').recommendedLimit; const a=lim(); S.ctl.net=false; const b=lim(); S.ctl.net=true;
+      recordEvent({type:'CONSENT_REVOKED',buyerId:'gupta',source:'Checks',actor:'Checks'}); const c=lim(); recordEvent({type:'CONSENT_GRANTED',buyerId:'gupta',source:'Checks',actor:'Checks'});
+      recordEvent({type:'NETWORK_SIGNAL_UPDATED',buyerId:'gupta',source:'Checks',actor:'Checks',meta:{recencyDays:60}}); const d=lim(); recordEvent({type:'NETWORK_SIGNAL_UPDATED',buyerId:'gupta',source:'Checks',actor:'Checks',meta:{reset:true}}); const e=lim();
+      return ok(a===60000&&b===75000&&c===75000&&d===75000&&e===60000, `with ${inr(a)} · off ${inr(b)} · revoked ${inr(c)} · stale ${inr(d)} · restored ${inr(e)}`); });
+    run('J15','Ambiguous buyer names ask which buyer instead of guessing',()=>{ const a=ruleAnswer('Gupta ka payment kya hua?','checks'); return ok(a.kind==='clarify'&&/Gupta Traders/.test(ansText(a))&&/Gupta Kirana Store/.test(ansText(a)), ansText(a).slice(0,120)); });
+    run('J16','A Devanagari reply is read but nothing is recorded until the merchant confirms',()=>{ const m='मैंने 5000 भेज दिए हैं, बाकी सोमवार को दूँगा।', n0=S.led.events.length; const input={message:m,outstanding:balOf('gupta','INV-24891'),messageDate:S.today};
+      const v=RayPromise.validateInterpretation(RayPromise.demoParse(m,input),input), i=v.interpretation;
+      return ok(i.intent==='payment_claim'&&i.claimedAmount===5000&&i.promisedDate===RayDates.addDays(S.today,7)&&!v.canConfirm&&!v.paymentVerified&&S.led.events.length===n0, `${i.intent} · claimed ${inr(i.claimedAmount||0)} · rest ${i.promisedAmountLater!=null?inr(i.promisedAmountLater):'—'} by ${i.promisedDate} · ledger events unchanged`); });
   } finally {
     S=JSON.parse(saved); _clock=savedClock; Object.assign(window, keep); _recCache={}; _recSig=''; engineSync(); syncChase(true);
   }
   return out; }
 
 let _checks=null;
+const notRecorded = cmd => `<div class="card pad mt12 small muted">No recorded run is embedded in this build. Run <code>${cmd}</code> or <code>npm run test:all</code> to record one.</div>`;
 function recRunCard(r){ if(!r) return '';
   const same=r.build===BUILD_ID, when=r.ranAt?new Date(r.ranAt).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'unknown time';
   const fails=(r.cases||[]).filter(c=>!c.pass);
-  return `<div class="card mt12" style="overflow:hidden"><div class="pad-s row gap8 wrap" style="border-bottom:1px solid var(--border-subtle)"><span class="h3">${esc(r.suite)}</span><span class="badge ${r.failed?'b-r':'b-g'}">${r.passed} of ${r.total} passed</span><span class="badge ${same?'b-g':'b-a'}">${same?'Same build as this page':'Recorded on an earlier build'}</span><span class="xs muted" style="margin-left:auto">Ran ${esc(when)} IST · build ${esc(r.build||'?')} · ${esc(r.file)}</span></div>
+  return `<div class="card mt12" style="overflow:hidden"><div class="pad-s row gap8 wrap" style="border-bottom:1px solid var(--border-subtle)"><span class="h3">${esc(r.suite)}</span><span class="badge ${r.failed?'b-r':'b-g'}">${r.passed} of ${r.total} passed</span>${r.skipped?`<span class="badge b-n">${r.skipped} skipped (not run)</span>`:''}<span class="badge ${same?'b-g':'b-a'}">${same?'Same build as this page':'Recorded on an earlier build'}</span><span class="xs muted" style="margin-left:auto">Ran ${esc(when)} IST · build ${esc(r.build||'?')} · ${esc(r.file)}</span></div>
     ${fails.length?fails.map(c=>`<div class="row gap12" style="padding:10px 18px;border-top:1px solid var(--border-subtle)"><span style="color:var(--r)">${I('x',15,2.6)}</span><div class="grow small"><b style="color:var(--strong);font-weight:500">${c.journey?`[${esc(c.journey)}] `:''}${esc(c.name)}</b>${c.detail?`<div class="xs muted">${esc(c.detail)}</div>`:''}</div></div>`).join(''):`<div class="pad-s small muted">No failures in this run.${r.groups?' '+r.groups.map(g=>`${esc(g.name)} ${g.passed}/${g.total}`).join(' · '):''}</div>`}
     <details class="pad-s" style="border-top:1px solid var(--border-subtle)"><summary class="small" style="cursor:pointer;font-weight:600">All ${r.total} cases</summary><div class="mt8">${(r.cases||[]).map(c=>`<div class="xs row gap6" style="padding:3px 0"><span style="color:${c.pass?'var(--g)':'var(--r)'}">${I(c.pass?'check':'x',12,2.6)}</span><span>${c.journey?`[${esc(c.journey)}] `:''}${esc(c.name)}</span></div>`).join('')}</div></details></div>`; }
 function vChecks(){
@@ -64,12 +79,18 @@ function vChecks(){
   const runs=TEST_RUNS||{};
   return `${pageHead('Prototype checks','Only tests that actually ran are shown. Policy checks and journey checks run now in your browser; development suites show their last recorded run.',`<button class="btn btn-s" id="checks-rerun" onclick="_checks=null;rr();toast('Checks run again')">${I('refresh',15)} Run again</button>`)}
    <div class="card pad-s mt16 row gap12 wrap"><span class="small"><b style="color:var(--strong)">Run in this browser at ${_checks.at} IST</b> · ${_checks.ms} ms</span>${badge(pp,pc.length)}<span class="xs muted">policy checks</span>${badge(jp,_checks.jr.length)}<span class="xs muted">journey checks</span><span class="xs muted" style="margin-left:auto">Build ${BUILD_ID}</span></div>
-   <div class="h2 mt24" style="font-size:18px">1 · Journey checks <span class="xs muted" style="font-weight:500">run now · same commands the buttons call · on a copy of your demo state, which is restored afterwards</span></div>
+   <div class="h2 mt24" style="font-size:18px">1 · Live in-browser journey checks <span class="xs muted" style="font-weight:500">run now · same commands the buttons call · on a copy of your demo state, which is restored afterwards</span></div>
    <div class="card mt12" style="overflow:hidden" id="checks-journeys">${_checks.jr.map(c=>`<div class="row gap12" style="padding:11px 18px;border-top:1px solid var(--border-subtle);align-items:flex-start"><span style="color:${c.pass?'var(--g)':'var(--r)'};margin-top:1px">${I(c.pass?'check':'x',15,2.6)}</span><div class="grow"><div class="small" style="color:var(--strong);font-weight:500"><span class="xs muted">${c.id}</span> ${esc(c.name)}</div>${c.detail?`<div class="xs muted mt4 num">${esc(c.detail)}</div>`:''}</div></div>`).join('')}</div>
-   <div class="h2 mt24" style="font-size:18px">2 · Policy checks <span class="xs muted" style="font-weight:500">run now · pure rules on synthetic inputs</span></div>
+   <div class="h2 mt24" style="font-size:18px">2 · Live in-browser policy checks <span class="xs muted" style="font-weight:500">run now · pure rules on synthetic inputs</span></div>
    ${_checks.pol.map(g=>`<div class="card mt12" style="overflow:hidden"><div class="pad-s" style="border-bottom:1px solid var(--border-subtle)"><div class="row gap8"><span class="h3">${esc(g.name)}</span><span class="badge ${g.cases.every(c=>c.pass)?'b-g':'b-r'}">${g.cases.filter(c=>c.pass).length}/${g.cases.length}</span></div><div class="small muted mt4">${esc(g.about)}</div></div>
      ${g.cases.map(c=>`<div class="row gap12" style="padding:11px 18px;border-top:1px solid var(--border-subtle);align-items:flex-start"><span style="color:${c.pass?'var(--g)':'var(--r)'};margin-top:1px">${I(c.pass?'check':'x',15,2.6)}</span><div class="grow"><div class="small" style="color:var(--strong);font-weight:500">${esc(c.name)}</div>${c.detail?`<div class="xs muted mt4 num">${esc(c.detail)}</div>`:''}</div></div>`).join('')}</div>`).join('')}
-   <div class="h2 mt24" style="font-size:18px">3 · Recorded development runs <span class="xs muted" style="font-weight:500">not run in your browser · shown as last recorded</span></div>
-   ${runs.unit||runs.e2e||runs.smoke?[runs.unit,runs.e2e,runs.smoke].map(recRunCard).join(''):'<div class="card pad mt12 small muted">No recorded runs are embedded in this build. Run <code>npm run test:all</code> to record them.</div>'}
-   <div class="card pad mt16"><div class="h3">Not tested here</div><div class="small muted mt8">Live AI answers and live AI reading of replies (no provider key on this deployment, so the live path did not run). Real WhatsApp delivery, real bank feeds, Marg sync, mandates and debits (all simulated). Replies in Devanagari script: the rule-based reader catches digits and buyer names but not dates or Hindi number words. Visual layout is checked by eye, not by these tests.</div></div>`;
+   <div class="h2 mt24" style="font-size:18px">3 · Recorded unit tests <span class="xs muted" style="font-weight:500">not run in your browser · last recorded run</span></div>
+   ${runs.unit?recRunCard(runs.unit):notRecorded('npm test')}
+   <div class="h2 mt24" style="font-size:18px">4 · Recorded Playwright browser tests <span class="xs muted" style="font-weight:500">real clicks in Chromium · last recorded run</span></div>
+   ${[runs.e2e,runs.smoke,runs.responsive].filter(Boolean).map(recRunCard).join('')||notRecorded('npm run test:e2e')}
+   <div class="h2 mt24" style="font-size:18px">5 · AI endpoint tests with a mocked provider <span class="xs muted" style="font-weight:500">no network, no key · these do not show that a real model works</span></div>
+   ${runs.api?recRunCard(runs.api):notRecorded('npm test')}
+   <div class="h2 mt24" style="font-size:18px">6 · Live AI provider test</div>
+   ${runs.live&&runs.live.total?recRunCard(runs.live):`<div class="card pad mt12" id="checks-live"><span class="badge b-n">Not run</span> <span class="small">No OpenAI or Anthropic key was configured when tests were recorded, so no real model was tested.${runs.live?` Recorded ${esc(new Date(runs.live.ranAt).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}))} · ${runs.live.skipped||0} skipped.`:''} This page: ${esc(aiLabel())}.</span></div>`}
+   <div class="card pad mt16" id="checks-not-run"><div class="h3">7 · Not executed by any test here</div><div class="small muted mt8">A real AI model (unless section 6 shows a recorded live run). Real WhatsApp delivery, bank feeds, Marg sync, Payment Links, mandates and debits (all simulated). A real cross-distributor network (synthetic data only). Concurrency across several users or devices. Accessibility with a screen reader. Visual quality beyond the layout checks in section 4. User testing with distributors (none run; see the evaluation template in How it works).</div></div>`;
 }

@@ -64,7 +64,7 @@ async def main():
         await ev("go('raahi/buyer/kapoor')"); await page.wait_for_timeout(300)
         await page.fill("#ipq-kapoor", "Aaj 10k bhej raha hu baki month end"); await page.click("#ip-card-kapoor button:has-text('Interpret')"); await page.wait_for_timeout(900)
         check("Interpreter extracts ₹10,000 now and the balance by month end", await ev("JSON.stringify(S.interp['msg:kapoor'].fields)") == '{"firstAmt":10000,"firstDate":"2026-10-05","laterAmt":36500,"laterDate":"2026-10-31"}')
-        check("Fallback is labelled as not AI", "not AI" in await page.inner_text("#ip-card-kapoor"))
+        check("Fallback is labelled as rule-based, not AI", "Rule-based demo · AI not configured" in await page.inner_text("#ip-card-kapoor"))
         await ev("document.getElementById('ip-msg:kapoor-laterAmt').value='30000'"); await page.click("#ip-card-kapoor button:has-text('Confirm commitment')"); await page.wait_for_timeout(300)
         check("Edited values are what gets saved", await ev("JSON.stringify(S.promises.filter(p=>p.buyerId==='kapoor').map(p=>[p.first.amt,p.later.amt,p.edited]))") == "[[10000,30000,true]]")
         await page.click("#ip-card-kapoor button:has-text('Edit commitment')"); await page.wait_for_timeout(300)

@@ -345,7 +345,159 @@ async def main():
         wa = await wa_ask("INV-24891 status")
         check("Invoice question answered from the ledger", "₹38,400 outstanding" in wa, wa[:200])
         lbl = await ev("aiLabel()")
-        check("AI status label is honest when no provider is configured", "off" in lbl.lower() and "Claude" not in lbl, lbl)
+        check("AI status label is honest when no provider is configured", lbl == "Rule-based demo · AI not configured", lbl)
+
+
+        # ---------------- REV: reverse a recorded payment from the UI ----------------
+        current["id"] = "REV"
+        await reset("raahi/recover/gupta")
+        await page.click("#rec-link-btn"); await wait(200); await page.click("#rl-send"); await wait(300)
+        await page.click("#rec-pay-min"); await wait(300)
+        await page.click("#rec-pay-full"); await wait(300)
+        check("Setup: ₹5,000 then ₹15,000 recorded, recovery completed", await ev("recoveryOf('gupta').status") == "completed" and await ev("balOf('gupta','INV-24790')") == 0)
+        first = await ev("recordedPayments('gupta')[0].e.id")
+        n_ev = await ev("S.led.events.length")
+        await page.click(f"#rev-{first}"); await wait(250)
+        mt = await page.inner_text("#modal")
+        check("Confirmation shows reference, amount, invoice and the balance after correction", "Reverse recorded payment?" in mt and "INV-24790" in mt and "₹5,000" in mt and "After correction" in mt and "not a refund" in mt, mt[:300])
+        check("Opening the confirmation changes nothing", await ev("S.led.events.length") == n_ev)
+        await page.click("#rev-confirm"); await wait(300)
+        check("Balance restored to ₹5,000 and recovery is partial again", await ev("balOf('gupta','INV-24790')") == 5000 and await ev("recoveryOf('gupta').status") == "partial", await ev("recoveryOf('gupta').label"))
+        check("Original payment kept; one PAYMENT_REVERSED added", await ev(f"S.led.events.some(e=>e.id==='{first}')") and await ev("S.led.events.filter(e=>e.type==='PAYMENT_REVERSED').length") == 1)
+        t = await main_text()
+        check("Recovery page shows the reversed payment and the new status", "Reversed" in t and "₹15,000 received · ₹5,000 remaining" in t)
+        r2 = await ev(f"payReverse('{first}','Duplicate entry','test')")
+        check("Second reversal of the same payment is rejected", not r2["ok"] and "already reversed" in r2["error"], r2)
+        await ev("go('raahi/activity')"); await wait(250)
+        t = await main_text()
+        check("Activity shows the correction with its reason and 'not a refund'", "Payment reversed · Gupta Traders" in t and "not a refund" in t)
+        wa = await wa_ask("Gupta Traders ka payment kya hua?")
+        check("WhatsApp answer reflects the corrected ledger", "₹5,000 still due" in wa and "reversed by you" in wa, wa[:300])
+        mb = await mob_ask("Gupta Traders ka payment kya hua?")
+        check("Mobile answer reflects the corrected ledger", "₹5,000 still due" in mb, mb[:300])
+        await ev("go('raahi/overview')"); await wait(250)
+        t = await main_text()
+        check("Overview shows recovery in progress again (not completed)", "Gupta Traders: ₹15,000 received · ₹5,000 remaining" in t or "₹5,000 remaining" in t, t[:200])
+
+        # ---------------- AI: interpreter in rule-based mode (no provider on file://) ----------------
+        current["id"] = "AI-RULE"
+        await reset("raahi/buyer/gupta")
+        n_ev = await ev("S.led.events.length")
+        await page.fill("#ipq-gupta", "Aadha aaj aur baaki Friday.")
+        await page.select_option("#ipi-gupta", "INV-24891")
+        await page.click("#ipr-gupta"); await wait(500)
+        card = await page.inner_text("#ip-card-gupta")
+        check("Rule-based result is labelled as such, never as AI", "Rule-based demo · AI not configured" in card and "Live AI" not in card, card[:200])
+        check("Shows 'Needs merchant confirmation' before anything is recorded", "Needs merchant confirmation" in card and await ev("S.led.events.length") == n_ev)
+        check("Amounts and IST dates derived from the demo clock", await ev("[S.interp['msg:gupta'].fields.firstAmt,S.interp['msg:gupta'].fields.laterAmt,S.interp['msg:gupta'].fields.laterDate].join()") == "19200,19200,2026-10-09")
+        await page.click("#ip-card-gupta button:has-text('Confirm commitment')"); await wait(300)
+        check("Confirming records PROMISE_RECORDED and the commitment appears in Actions", await ev("S.led.events.slice(-1)[0].type") == "PROMISE_RECORDED" and await ev("S.promises.some(p=>p.key==='msg:gupta'&&p.status==='confirmed')"))
+        await ev("S.interp['msg:gupta']={status:'idle',input:{inv:'INV-24790'}};rr()"); await wait(150)
+        await page.fill("#ipq-gupta", "मैंने 5000 भेज दिए हैं, बाकी सोमवार को दूँगा।"); await page.select_option("#ipi-gupta", "INV-24790")
+        n_ev = await ev("S.led.events.length")
+        await page.click("#ipr-gupta"); await wait(500)
+        card = await page.inner_text("#ip-card-gupta")
+        check("Devanagari reply: claim of ₹5,000 shown as unverified, balance commitment derived", "₹5,000 · unverified" in card and await ev("S.interp['msg:gupta'].fields.laterAmt") == 15000, card[:300])
+        check("A claim never changes the balance or records anything by itself", await ev("S.led.events.length") == n_ev and await ev("balOf('gupta','INV-24790')") == 20000)
+        await page.click("#ip-card-gupta button:has-text('Send claim to payment review')"); await wait(250)
+        check("Sending the claim to review records PAYMENT_CLAIMED (unverified) without touching the balance", await ev("S.led.events.slice(-1)[0].type") == "PAYMENT_CLAIMED" and await ev("balOf('gupta','INV-24790')") == 20000)
+        gate = await ev("gateFor('gupta','whatsapp','INV-24790').code")
+        check("Reminders for that invoice are held while the claim is unverified", gate == "claim", gate)
+
+        # ---------------- NET: consent and evidence quality through the UI ----------------
+        current["id"] = "NET"
+        await reset("raahi/buyer/gupta")
+        lim = lambda: ev("[recOf('gupta').recommendedLimit,recOf('gupta').recommendedTerms].join()")
+        t = await page.inner_text("#net")
+        check("Side-by-side shows ₹75,000 · 21 days (your ledger) and ₹60,000 · 14 days (network)", "₹75,000" in t and "21 days" in t and "₹60,000" in t and "14 days" in t, t[:300])
+        check("Causal chain and regulatory boundary are visible", "Corroboration" in t and "Policy rule" in t and "Regulatory and feasibility boundary" in t)
+        for btn, exp, label in [("Buyer revokes consent", "75000,21", "revoked"), ("Request consent", "75000,21", "requested"), ("Buyer grants consent", "60000,14", "granted"), ("Signal goes stale", "75000,21", "stale"), ("Restore signal", "60000,14", "restored"), ("Coverage drops", "75000,21", "insufficient coverage"), ("Restore signal", "60000,14", "restored"), ("Buyer disputes", "75000,21", "disputed"), ("Close buyer review", "60000,14", "resolved"), ("Turn network participation off", "75000,21", "participation off")]:
+            await page.click(f"#net button:has-text('{btn}')"); await wait(200)
+            check(f"{label}: recommendation recomputes to {exp}", await lim() == exp, await lim())
+        t = await page.inner_text("#net")
+        check("Explains why evidence is excluded", "excluded" in t.lower(), t[:200])
+        await ev("go('raahi/buyer/chawla')"); await wait(200); await ev("S.ctl.net=true;rr()"); await wait(200)
+        t = await page.inner_text("#net")
+        check("Chawla: disagreement flagged, limit held (no cut)", "Disagrees" in t and await ev("recOf('chawla').recommendedLimit") == await ev("recAlt('chawla',false).recommendedLimit"))
+
+        # ---------------- WALK: the judge walkthrough never acts by navigating ----------------
+        current["id"] = "WALK"
+        await reset("raahi/overview")
+        snap = "JSON.stringify([S.led.events.length,(S.creditOps||[]).length,S.outbox.length,S.promises.length])"
+        before = await ev(snap)
+        await page.click("#surf-walk"); await wait(200)
+        await page.click(".demo .ds button:has-text('The merchant’s problem')"); await wait(400)
+        for k in range(8):
+            await page.click("#demo-next"); await wait(500)
+            await ev("closeModal();A.closeWA&&A.closeWA();S.mob&&A.closeMobile()"); await wait(100)
+        check("Nine steps reachable with Next; navigation alone records no event, approval, send or promise", await ev("S.step") == 8 and await ev(snap) == before, [await ev("S.step"), before, await ev(snap)])
+        await page.click("#demo-prev"); await wait(300)
+        check("Previous goes back one step", await ev("S.step") == 7)
+        await ev("closeModal();A.closeWA&&A.closeWA()"); await wait(100)
+        await page.click("#demo-exit"); await wait(200)
+        check("Exit closes the walkthrough and keeps progress", not await ev("S.demoNote") and await ev(snap) == before)
+
+        # ---------------- REPEAT: the main journey twice from a clean reset gives identical results ----------------
+        current["id"] = "REPEAT"
+        outcomes = []
+        for run_no in (1, 2):
+            await reset("raahi/buyer/gupta")
+            await ev("A.approveGupta()"); await wait(200); await page.click("#set-limit"); await wait(400); await ev("closeModal()"); await wait(100)
+            await ev("go('raahi/recover/gupta')"); await wait(200)
+            await page.click("#rec-link-btn"); await wait(200); await page.click("#rl-send"); await wait(300)
+            await page.click("#rec-pay-min"); await wait(250); await page.click("#rec-pay-full"); await wait(250)
+            await ev("go('raahi/payment/verma')"); await wait(200)
+            outcomes.append(await ev("JSON.stringify({lim:curLimitOf('gupta'),terms:curTermsOf('gupta'),appr:evOf('gupta').filter(e=>e.type==='CREDIT_APPROVED').length,pays:S.led.events.filter(e=>['PAYMENT_RECEIVED','PAYMENT_PARTIALLY_RECEIVED'].includes(e.type)).length,bal:balOf('gupta','INV-24790'),out:outOf('gupta'),rec:recoveryOf('gupta').status,refs:Object.keys(S.led.refs).length})"))
+        check("Run 1 and run 2 from reset produce identical state (no hidden stale state)", outcomes[0] == outcomes[1], outcomes)
+        o = json.loads(outcomes[1])
+        check("No duplicate approvals or payments: 1 approval, 2 payments, balance ₹0, recovery completed", o["appr"] == 1 and o["pays"] == 2 and o["bal"] == 0 and o["rec"] == "completed", o)
+        wa = await wa_ask("Gupta Traders ka payment kya hua?"); mb = await mob_ask("Gupta Traders ka payment kya hua?")
+        check("Surfaces agree after the repeated run", "recovered in full" in wa and "recovered in full" in mb, [wa[:120], mb[:120]])
+
+
+        # ---------------- MOCK-AI: the live-AI UI path with a MOCKED endpoint over http (not a real model) ----------------
+        current["id"] = "MOCK-AI"
+        import http.server, socketserver, threading, functools
+        handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(ROOT))
+        handler.log_message = lambda *a, **k: None
+        srv = socketserver.TCPServer(("127.0.0.1", 0), handler); port = srv.server_address[1]
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        mode = {"fail": False}
+        good = {"ok": True, "mode": "ai", "provider": "openai", "model": "gpt-4o-mini", "canConfirm": True, "paymentVerified": False, "requiresMerchantConfirmation": True, "checks": [],
+                "interpretation": {"intent": "promise", "promisedAmountNow": 19200, "firstPaymentDate": "2026-10-05", "promisedAmountLater": 19200, "promisedDate": "2026-10-09", "claimedAmount": None, "currency": "INR", "isConditional": False, "amountInferred": True, "dateInferred": True, "needsClarification": False, "confidenceLabel": "medium", "evidenceSpans": ["Aadha aaj", "baaki Friday"], "reasoningSummary": "Half today, rest Friday.", "suggestedNextAction": "confirm_commitment"}}
+        async def api_route(route):
+            req = route.request
+            if req.method == "GET": return await route.fulfill(status=200, content_type="application/json", body=json.dumps({"configured": True, "provider": "openai", "model": "gpt-4o-mini"}))
+            if mode["fail"]: return await route.fulfill(status=504, content_type="application/json", body=json.dumps({"ok": False, "code": "TIMEOUT"}))
+            return await route.fulfill(status=200, content_type="application/json", body=json.dumps(good))
+        async def ask_route(route):
+            if route.request.method == "GET": return await route.fulfill(status=200, content_type="application/json", body=json.dumps({"configured": True, "provider": "openai", "model": "gpt-4o-mini"}))
+            if mode["fail"]: return await route.fulfill(status=502, content_type="application/json", body=json.dumps({"ok": False, "code": "UNSUPPORTED_AMOUNT", "message": "The model cited amounts that are not in your data, so its answer was discarded."}))
+            return await route.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "mode": "ai", "provider": "openai", "model": "gpt-4o-mini", "answer": "Your weekly rhythm looks steady.", "answerable": True, "actions": [], "changesState": False}))
+        p2 = await browser.new_page(viewport={"width": 1440, "height": 900})
+        await p2.route("**/api/parse-promise", api_route); await p2.route("**/api/ask", ask_route)
+        await p2.goto(f"http://127.0.0.1:{port}/index.html"); await p2.wait_for_timeout(800)
+        await p2.evaluate("()=>{A.reset();S.installed=true;go('raahi/buyer/gupta')}"); await p2.wait_for_timeout(400)
+        check("Status label says Live AI with provider/model when the endpoint reports a key", await p2.evaluate("aiLabel()") == "Live AI · openai/gpt-4o-mini")
+        n_ev = await p2.evaluate("S.led.events.length")
+        await p2.fill("#ipq-gupta", "Aadha aaj aur baaki Friday."); await p2.select_option("#ipi-gupta", "INV-24891"); await p2.click("#ipr-gupta"); await p2.wait_for_timeout(700)
+        card = await p2.inner_text("#ip-card-gupta")
+        check("Mocked model result labelled 'Live AI · openai/gpt-4o-mini' and still needs confirmation", "Live AI · openai/gpt-4o-mini" in card and "Needs merchant confirmation" in card and await p2.evaluate("S.led.events.length") == n_ev, card[:200])
+        await p2.evaluate("S.interp['msg:gupta']={status:'idle',input:{inv:'INV-24891'}};rr()"); await p2.wait_for_timeout(150)
+        mode["fail"] = True
+        await p2.fill("#ipq-gupta", "Kal 10 hazaar bhej dunga."); await p2.click("#ipr-gupta"); await p2.wait_for_timeout(700)
+        card = await p2.inner_text("#ip-card-gupta")
+        check("A failed live call is labelled 'AI unavailable · Rule-based fallback' with the reason", "AI unavailable · Rule-based fallback" in card and "timed out" in card, card[:250])
+        check("The fallback still reads the message (₹10,000 by 6 Oct)", await p2.evaluate("[S.interp['msg:gupta'].fields.laterAmt,S.interp['msg:gupta'].fields.laterDate].join()") == "10000,2026-10-06")
+        mode["fail"] = False
+        a = await p2.evaluate("answerAny('how is my weekly rhythm looking overall?','ray').then(a=>a.label+' | '+a.lines.join(' '))")
+        check("Ask RAY: an unsupported question goes to the (mocked) model and is labelled as a model explanation", a.startswith("Live AI · openai/gpt-4o-mini"), a[:160])
+        b = await p2.evaluate("answerAny('Gupta Traders ka payment kya hua?','ray').then(a=>a.mode+' | '+a.label)")
+        check("Ask RAY: ledger questions stay deterministic even with live AI on", b.startswith("rule |"), b)
+        mode["fail"] = True
+        c = await p2.evaluate("answerAny('how is my weekly rhythm looking overall?','ray').then(a=>a.label+' | '+(a.note||''))")
+        check("Ask RAY: a discarded model answer falls back with an honest label", c.startswith("AI unavailable · Rule-based fallback") and "discarded" in c, c[:200])
+        await p2.close(); srv.shutdown()
 
         # ---------------- uncaught errors across routes ----------------
         current["id"] = "ROUTES"

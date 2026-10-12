@@ -18,6 +18,7 @@ MODULES = [
     "core.js",                 # icons, formatting, display records, state, router, shell
     "engine.js",               # bridge: recommendations, ledger, controls, AI status, persistence
     "payment-truth.js",        # balances, recovery status and payment-source checks from the ledger
+    "payment-reversal.js",     # reverse a recorded payment with a compensating PAYMENT_REVERSED event
     "credit-decisions.js",     # one command path for approvals, overrides and undo (exact values, once)
     "identity.js",             # GSTIN / business identity lookups
     "dashboard.js",            # Razorpay dashboard pages and Agent Studio
@@ -54,7 +55,7 @@ def build() -> Path:
     js = lib + "\n" + js.replace("__BUILD__", build_id)
     # recorded test runs are embedded AFTER the build id is computed, so recording results never changes the build id
     runs = {}
-    for k in ("unit", "e2e", "smoke"):
+    for k in ("unit", "api", "live", "e2e", "smoke", "responsive"):
         f = ROOT / "tests" / "results" / f"{k}.json"
         if f.exists():
             runs[k] = __import__("json").loads(f.read_text())
@@ -66,6 +67,7 @@ def build() -> Path:
     html = (html.replace("__CAL__", svg("M3 5h18v16H3zM16 3v4M8 3v4M3 10h18", 15))
                 .replace("__SEARCH__", svg("M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM21 21l-4.3-4.3", 17))
                 .replace("__PULSE__", svg("M22 12h-4l-3 9L9 3l-3 9H2", 18))
+                .replace("__MENU__", svg("M4 6h16M4 12h16M4 18h16", 20))
                 .replace("__MEGA__", svg("M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1zM16 9a3 3 0 0 1 0 6M19 6a7 7 0 0 1 0 12", 18)))
 
     out = ROOT / "index.html"

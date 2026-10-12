@@ -1,0 +1,114 @@
+{
+ "suite": "API tests with a mocked AI provider (no network, no key)",
+ "file": "tests/api.test.js, tests/ask-api.test.js",
+ "ranAt": "2026-10-12T06:55:59+00:00",
+ "build": "4c89bc4324",
+ "total": 17,
+ "passed": 17,
+ "failed": 0,
+ "skipped": 0,
+ "cases": [
+  {
+   "name": "GET reports configuration honestly, without exposing the key",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Missing API key → 503 AI_NOT_CONFIGURED (never pretends the model ran)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Valid model output is validated and returned with mode \"ai\"",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Fabricated amounts from the model are removed by deterministic checks",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Invalid JSON, timeouts, rate limits and upstream errors fail safely",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Input validation and size limits",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Anthropic provider (optional) uses forced tool output",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Mocked provider: Devanagari message, prompt injection and hallucinated claim amounts",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Mocked provider: body over the size limit and wrong types are rejected before any call",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: GET reports configuration without exposing the key",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: no key → 503 AI_NOT_CONFIGURED, so the page uses its rule-based answer",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: invalid requests are rejected before any provider call",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: model output is cleaned (allowed actions only, length capped) and never changes state",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: provider timeout → 504 with an honest message",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: an answer that cites rupee amounts not in the data is discarded (502 UNSUPPORTED_AMOUNT)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: 429 and 5xx from the provider are reported, never answered",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: per-IP rate limit (in-memory, best-effort per instance)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  }
+ ]
+}

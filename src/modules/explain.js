@@ -8,7 +8,7 @@
 const SRC_CLS = s => /network/i.test(s)?'net':/Razorpay/.test(s)?'rzp':/ledger|Policy/i.test(s)?'led':/conversation/i.test(s)?'conv':'';
 const EV_LABEL = {
   CREDIT_APPROVED:'Limit change approved', CREDIT_KEPT:'Current limit kept', CREDIT_REVERSED:'Decision undone', PROMISE_RECORDED:'Payment promise confirmed', PROMISE_EDITED:'Payment promise edited', PROMISE_KEPT:'Promise kept', PROMISE_PARTIALLY_KEPT:'Promise part-kept', PROMISE_MISSED:'Promise missed',
-  PAYMENT_RECEIVED:'Payment received (verified)', PAYMENT_PARTIALLY_RECEIVED:'Partial payment received (verified)', PAYMENT_CLAIMED:'Buyer claims payment (unverified)', PAYMENT_RECONCILED:'Payment reconciled', CLAIM_REJECTED:'Claimed payment not found',
+  PAYMENT_RECEIVED:'Payment received (verified)', PAYMENT_PARTIALLY_RECEIVED:'Partial payment received (verified)', PAYMENT_CLAIMED:'Buyer claims payment (unverified)', PAYMENT_REVERSED:'Payment reversed (ledger correction)', PROMISE_REOPENED:'Promise reopened after a payment reversal', PAYMENT_RECONCILED:'Payment reconciled', CLAIM_REJECTED:'Claimed payment not found',
   AUTOPAY_FAILED:'Automatic debit failed', AUTOPAY_SUCCEEDED:'Automatic debit collected', DISPUTE_OPENED:'Dispute opened', DISPUTE_RESOLVED:'Dispute resolved',
   CONSENT_REQUESTED:'Network consent requested', CONSENT_GRANTED:'Network consent granted', CONSENT_DENIED:'Network consent declined', CONSENT_REVOKED:'Network consent revoked', NETWORK_DISPUTED:'Buyer disputed network information', NETWORK_DISPUTE_RESOLVED:'Network review closed', GST_VERIFIED:'GST status verified'};
 const evLine = e => `${EV_LABEL[e.type]||e.type}${e.amount?` · ${inr(e.amount)}`:''}${e.invoice?` · ${e.invoice}`:''} · ${RayDates.fmtShort(e.date)}`;
@@ -134,7 +134,7 @@ function advanceDate(iso){ if(RayDates.diffDays(iso,S.today)<=0) return; const f
 
 /* ---------- commitments ---------- */
 const openPromise = id => S.promises.filter(p=>p.buyerId===id&&p.status==='confirmed').slice(-1)[0];
-function promiseProgress(id, amt, ev){ const p=openPromise(id); if(!p||!ev) return; if(p.first&&p.first.amt&&!p.first.paid&&ev.invoice===p.inv&&amt>=p.first.amt-1){ p.first.paid=true; } }
+function promiseProgress(id, amt, ev){ const p=openPromise(id); if(!p||!ev) return; if(p.first&&p.first.amt&&!p.first.paid&&ev.invoice===p.inv&&amt>=p.first.amt-1){ p.first.paid=true; p.first.paidEv=ev.id; } }
 function commitRows(offset=0){ return S.promises.filter(p=>p.status==='confirmed').map((p,i)=>{ const c=chemView(chem(p.buyerId));
   const due=p.later&&p.later.amt?`${inr(p.later.amt)} by ${RayDates.fmtDay(p.later.date)}`:`${inr(p.first.amt)} ${p.first.date===S.today?'today':'on '+RayDates.fmtDay(p.first.date)}`;
   return aRow(i+offset,{id:'act-pc-'+p.buyerId,name:c.name,band:c.band,area:p.inv,amt:inr((p.first&&!p.first.paid?p.first.amt||0:0)+((p.later&&p.later.amt)||0)),kind:'Commitment',kc:'k-credit',reason:`${due} · confirmed by you · ${p.source==='ai'?'extracted by AI':p.source==='rule'?'read by rule-based parser':'entered manually'}${p.first&&p.first.paid?' · first payment received':''}`,chan:'Payment commitment',chanIc:'cal',right:`<button class="btn btn-g btn-sm" onclick="go('raahi/buyer/${p.buyerId}')">View</button>`}); }).join(''); }
@@ -163,7 +163,7 @@ async function interpretMessage(key, input){
   if(!res&&!cs&&location.protocol!=='file:'&&!(AI.checked&&!AI.reachable&&AI._failed)){
     try{
       const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),15000);
-      const r=await fetch('/api/parse-promise',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:input.message, outstanding:input.outstanding, invoiceId:input.inv, buyerName:input.buyerName, messageDate:input.messageDate, currentDate:S.today}),signal:ctl.signal});
+      const r=await fetch('/api/parse-promise',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:input.message, outstanding:input.outstanding, invoiceId:input.inv, messageDate:input.messageDate, currentDate:S.today}),signal:ctl.signal});
       clearTimeout(t); const j=await r.json().catch(()=>null);
       if(r.ok&&j&&j.ok&&j.mode==='ai') res=j; else why=(j&&j.code)||('HTTP_'+r.status);
     }catch(e){ why=e.name==='AbortError'?'TIMEOUT':'NETWORK_ERROR'; AI._failed=true; }
@@ -176,17 +176,26 @@ async function interpretMessage(key, input){
   rr(); if(document.getElementById('wa-root').innerHTML) waRender();
   return st;
 }
-const UNAVAIL = {NO_CLAUDE:'Live AI is not available here', AI_NOT_GRANTED:'You chose not to let this page use Claude', SAMPLING_DISABLED:'Claude is not available for this account', SESSION_EXPIRED:'Sign in to Claude again to use live AI', SCENARIO:'Presenter shortcut: scenario loaded without a live call', AI_NOT_CONFIGURED:'Live AI off on this deployment · rule-based reader used', NO_SERVER:'Opened without the API server', NETWORK_ERROR:'AI endpoint not reachable from here', TIMEOUT:'AI request timed out', RATE_LIMITED:'AI provider is rate limiting', INVALID_MODEL_OUTPUT:'Model returned invalid output', UPSTREAM_ERROR:'AI provider error', HTTP_404:'No AI endpoint on this host', HTTP_405:'No AI endpoint on this host'};
+const UNAVAIL = {NO_CLAUDE:'No AI provider is available here', AI_NOT_GRANTED:'You chose not to let this page use Claude', SAMPLING_DISABLED:'Claude is not available for this account', SESSION_EXPIRED:'Sign in to Claude again to use live AI', SCENARIO:'Presenter shortcut: scenario loaded without a live call', AI_NOT_CONFIGURED:'No AI provider key is set on this deployment', NO_SERVER:'Opened without the API server', NETWORK_ERROR:'AI endpoint not reachable from here', TIMEOUT:'AI request timed out', RATE_LIMITED:'AI provider is rate limiting', INVALID_MODEL_OUTPUT:'Model returned invalid output', UPSTREAM_ERROR:'AI provider error', HTTP_404:'No AI endpoint on this host', HTTP_405:'No AI endpoint on this host'};
 const INTENT_LABEL = {promise:'Payment promise', payment_claim:'Payment claim', dispute:'Dispute', extension_request:'Extension request', general_query:'General query', unclear:'Unclear'};
-function modeBadge(st){ return st.mode==='ai'?`<span class="badge b-b">${clover(11)} AI · ${esc(st.model||'model')}</span>`:`<span class="badge b-n" title="${esc(UNAVAIL[st.unavailable]||st.unavailable||'')}">Rule-based demo parser · not AI</span>`; }
+/* the four interpreter states, labelled exactly; rule-based output is never presented as AI */
+const AI_OFF_CODES=['AI_NOT_CONFIGURED','NO_SERVER','HTTP_404','HTTP_405','NO_CLAUDE','AI_NOT_GRANTED','SAMPLING_DISABLED'];
+function interpMode(st){
+  if(st.mode==='ai') return {cls:'b-b', label:`Live AI · ${st.provider?String(st.provider).toLowerCase()+'/':''}${st.model||'model'}`, note:'A model read this message. Deterministic checks then validated every amount, date and evidence span.'};
+  if(st.unavailable==='SCENARIO') return {cls:'b-n', label:AI.configured?'Rule-based demo · presenter shortcut':'Rule-based demo · AI not configured', note:'Loaded by the walkthrough without a model call. Rule-based parser, not AI.'};
+  if(!st.unavailable||AI_OFF_CODES.includes(st.unavailable)) return {cls:'b-n', label:'Rule-based demo · AI not configured', note:`${UNAVAIL[st.unavailable]||'No AI provider is configured here'}. The deterministic parser read this message; it is not an AI model.`};
+  return {cls:'b-a', label:'AI unavailable · Rule-based fallback', note:`${UNAVAIL[st.unavailable]||st.unavailable}. The deterministic parser was used instead; nothing was sent to a model.`};
+}
+function modeBadge(st){ const m=interpMode(st); return `<span class="badge ${m.cls}" data-ai-mode="${st.mode==='ai'?'live':st.unavailable&&!AI_OFF_CODES.includes(st.unavailable)&&st.unavailable!=='SCENARIO'?'failed':'rule'}">${st.mode==='ai'?clover(11)+' ':''}${esc(m.label)}</span>`; }
 function highlight(msg, spans){ let h=esc(msg); (spans||[]).slice().sort((a,b)=>b.length-a.length).forEach(sp=>{ const re=new RegExp(esc(sp).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'); h=h.replace(re,m=>`<mark>${m}</mark>`); }); return h; }
 function interpPanel(key, opts={}){
   const st=S.interp[key]; const id=opts.buyerId||(st&&st.input.buyerId);
   if(!st||st.status==='idle'){ return opts.idle||''; }
-  if(st.status==='loading') return `<div style="padding:16px 0">${thinking(claudeLive()?'Reading the message with Claude…':AI.configured?`Interpreting with ${AI.model}…`:'Interpreting the message…')}</div>`;
-  const it=st.interpretation, f=st.fields, inp=st.input, prom=S.promises.find(p=>p.key===key&&p.status!=='replaced');
-  const status=prom?(prom.status==='kept'?'<span class="badge b-g">Kept · payment verified</span>':prom.status==='missed'?'<span class="badge b-r">Promise missed</span>':'<span class="badge b-g">'+I('check',11,2.6)+' Confirmed by you</span>'):st.routed?`<span class="badge b-b">${esc(st.routed)}</span>`:'<span class="badge b-a">Extracted · not confirmed</span>';
+  if(st.status==='loading') return `<div style="padding:16px 0">${thinking(claudeLive()?'Reading the message with Claude…':AI.configured?`Sending to ${AI.provider}/${AI.model}…`:'Reading with the rule-based parser (AI not configured)…')}</div>`;
+  const it=st.interpretation, f=st.fields, inp=st.input, prom=S.promises.find(p=>p.key===key&&p.status!=='replaced'&&p.message===inp.message); /* a new message is a new interpretation */
+  const status=prom?(prom.status==='kept'?'<span class="badge b-g">Kept · payment verified</span>':prom.status==='missed'?'<span class="badge b-r">Promise missed</span>':'<span class="badge b-g">'+I('check',11,2.6)+' Confirmed by you</span>'):st.routed?`<span class="badge b-b">${esc(st.routed)}</span>`:'<span class="badge b-a">Needs merchant confirmation</span>';
   const fld=(k,lbl,type)=>`<div class="field"><label>${lbl}</label>${type==='date'?`<input type="date" class="input" id="ip-${key}-${k}" min="${S.today}" value="${f[k]||''}" ${prom?'disabled':''} oninput="A.ipEdit('${key}')">`:`<input class="input num" id="ip-${key}-${k}" value="${f[k]!=null?f[k]:''}" placeholder="Not stated" ${prom?'disabled':''} oninput="A.ipEdit('${key}')">`}</div>`;
+  const claimRest=it.intent==='payment_claim'&&(it.promisedAmountLater!=null||it.promisedDate);
   const showFields=['promise','extension_request'].includes(it.intent)||(it.intent==='dispute'&&(f.firstAmt||f.laterAmt));
   const flags=[it.amountInferred?'Amount inferred from the invoice':'' , it.dateInferred?'Date resolved from a relative expression':'', it.isConditional?'Tentative wording':'' , it.needsClarification?'Needs clarification':''].filter(Boolean);
   const err=st.err?`<div class="xs mt8" style="color:var(--r);font-weight:600">${esc(st.err)}</div>`:'';
@@ -194,15 +203,16 @@ function interpPanel(key, opts={}){
   if(prom) acts=`<button class="btn btn-s btn-sm" onclick="A.ipReopen('${key}')">${I('edit',13)} Edit commitment</button>`;
   else if(it.intent==='promise'||it.intent==='extension_request') acts=`<button class="btn btn-p btn-sm" onclick="A.ipConfirm('${key}')" ${blocked()?'disabled':''}>Confirm commitment</button>${it.needsClarification||!st.canConfirm?`<button class="btn btn-s btn-sm" onclick="A.ipClarify('${key}')">Ask buyer to clarify</button>`:''}`;
   else if(it.intent==='dispute') acts=`<button class="btn btn-p btn-sm" onclick="A.ipDispute('${key}')">Open dispute review</button><button class="btn btn-g btn-sm" onclick="A.ipClarify('${key}')">Ask for details</button>`;
-  else if(it.intent==='payment_claim') acts=`<button class="btn btn-p btn-sm" onclick="A.ipClaim('${key}')">Send to payment review</button><button class="btn btn-g btn-sm" onclick="A.ipClarify('${key}')">Ask for UTR</button>`;
+  else if(it.intent==='payment_claim') acts=`<button class="btn btn-p btn-sm" id="ip-claim-${key.replace(/[^a-z0-9]/gi,'')}" onclick="A.ipClaim('${key}')">Send claim to payment review</button>${claimRest?`<button class="btn btn-s btn-sm" onclick="A.ipConfirm('${key}')" ${blocked()||it.needsClarification?'disabled':''}>Confirm balance commitment</button>`:''}<button class="btn btn-g btn-sm" onclick="A.ipClarify('${key}')">Ask for UTR</button>`;
   else acts=`<button class="btn btn-s btn-sm" onclick="A.ipClarify('${key}')">Ask buyer to clarify</button>`;
   if(st.routed) acts='';
   return `<div class="ip ${opts.compact?'ip-c':''}">
    <div class="row gap8 wrap">${modeBadge(st)}${status}<span class="badge ${it.intent==='promise'?'b-b':it.intent==='dispute'?'b-a':it.intent==='payment_claim'?'b-n':'b-n'}">${INTENT_LABEL[it.intent]}</span><span class="xs muted">Confidence: ${it.confidenceLabel}</span></div>
-   ${st.mode!=='ai'?`<div class="xs muted mt4">${esc(UNAVAIL[st.unavailable]||'Live AI unavailable')}. Showing the deterministic fallback so the demo still works; it is not an AI model.</div>`:''}
+   <div class="xs muted mt4">${esc(interpMode(st).note)}</div>
    <div class="ip-msg mt8">“${highlight(inp.message, it.evidenceSpans)}”<span class="xs muted"> · ${esc(inp.buyerName||'')} · ${inp.inv} · ${inr(inp.outstanding)} outstanding</span></div>
    <div class="small mt8" style="color:var(--strong)">${esc(it.reasoningSummary)}</div>
-   ${showFields?`<div class="ip-g mt12">${fld('firstAmt','First payment (₹)')}${fld('firstDate','On','date')}${fld('laterAmt','Balance (₹)')}${fld('laterDate','By','date')}</div>`:''}
+   ${it.intent==='payment_claim'?`<div class="kvline mt8" style="border:0"><span>Buyer says already paid</span><b class="num">${it.claimedAmount!=null?inr(it.claimedAmount):'Amount not stated'} · unverified</b></div>`:''}
+   ${showFields?`<div class="ip-g mt12">${fld('firstAmt','First payment (₹)')}${fld('firstDate','On','date')}${fld('laterAmt','Balance (₹)')}${fld('laterDate','By','date')}</div>`:claimRest?`<div class="ip-g mt12">${fld('laterAmt','Promised balance (₹)')}${fld('laterDate','By','date')}</div>`:''}
    ${flags.length?`<div class="row gap6 mt8 wrap">${flags.map(x=>`<span class="badge b-n">${x}</span>`).join('')}</div>`:''}
    ${st.checks.length?`<div class="xs muted mt8">${I('shield',11)} Checks: ${st.checks.map(esc).join(' · ')}</div>`:''}
    ${it.intent==='payment_claim'?'<div class="xs mt8" style="color:var(--strong);font-weight:500">A claim is not a verified payment. Nothing is marked as paid until it is reconciled.</div>':''}
@@ -211,9 +221,10 @@ function interpPanel(key, opts={}){
    <div class="row gap8 mt12 wrap">${acts}<span class="grow"></span><span class="xs muted">Extracted ≠ confirmed ≠ received</span></div></div>`;
 }
 A.ipEdit=(key)=>{ const st=S.interp[key]; if(!st) return; st.edited=true; st.err=null; };
-function ipRead(key){ const st=S.interp[key], g=k=>{const e=document.getElementById(`ip-${key}-${k}`); return e?e.value.trim():''}; const n=v=>v===''?null:parseInt(v.replace(/[^\d]/g,''),10);
-  const f={firstAmt:n(g('firstAmt')), firstDate:g('firstDate')||null, laterAmt:n(g('laterAmt')), laterDate:g('laterDate')||null};
-  if(!document.getElementById(`ip-${key}-firstAmt`)) return st.fields; return f; }
+function ipRead(key){ const st=S.interp[key], el=k=>document.getElementById(`ip-${key}-${k}`); const n=v=>v===''?null:parseInt(v.replace(/[^\d]/g,''),10);
+  const claim=st.interpretation&&st.interpretation.intent==='payment_claim';
+  const pick=(k,num)=>{ const e=el(k); if(!e) return claim&&(k==='firstAmt'||k==='firstDate')?null:st.fields[k]; const v=e.value.trim(); return num?n(v):(v||null); };
+  return {firstAmt:pick('firstAmt',true), firstDate:pick('firstDate'), laterAmt:pick('laterAmt',true), laterDate:pick('laterDate')}; }
 function ipValidate(f, out){ const errs=[];
   if([f.firstAmt,f.laterAmt].some(v=>v!=null&&(isNaN(v)||v<0))) errs.push('Amounts must be positive numbers.');
   if(!f.firstAmt&&!f.laterAmt) errs.push('Enter at least one amount the buyer committed to.');
@@ -253,7 +264,8 @@ A.ipClarify=(key)=>{ const st=S.interp[key]; const inp=st.input, id=inp.buyerId,
 A.ipDispute=(key)=>{ const st=S.interp[key], inp=st.input; const amt=balOf(inp.buyerId,inp.inv); if(!amt) return toast('Nothing outstanding on '+inp.inv);
   const r=recordEvent({type:'DISPUTE_OPENED', buyerId:inp.buyerId, invoice:inp.inv, amount:amt, source:'Buyer message', actor:M.owner}); if(!r.ok) return;
   st.routed='Dispute review opened'; log({ic:'receipt',ti:`Dispute review opened · ${BUY[inp.buyerId].name}`,de:`${inp.inv} · “${inp.message.slice(0,60)}” · reminders paused · not a default`,src:['conv'],who:M.owner,chem:BUY[inp.buyerId].name}); rr(); toast('Dispute review opened · reminders paused'); };
-A.ipClaim=(key)=>{ const st=S.interp[key], inp=st.input; const amt=st.interpretation.promisedAmountNow||balOf(inp.buyerId,inp.inv);
+A.ipClaim=(key)=>{ const st=S.interp[key], inp=st.input; if(st.routed==='In payment review') return toast('Already in payment review');
+  const amt=st.interpretation.claimedAmount||balOf(inp.buyerId,inp.inv);
   const r=recordEvent({type:'PAYMENT_CLAIMED', buyerId:inp.buyerId, invoice:inp.inv, amount:Math.min(amt,balOf(inp.buyerId,inp.inv))||1, verification:'unverified', source:'Buyer message', actor:BUY[inp.buyerId].name}); if(!r.ok) return;
   st.routed='In payment review'; log({ic:'match',ti:`Payment claim sent to review · ${BUY[inp.buyerId].name}`,de:`${inp.inv} · unverified · balance unchanged · reminders paused until reconciled`,src:['conv'],who:M.owner,chem:BUY[inp.buyerId].name}); rr(); toast('Sent to payment review · not marked as paid'); };
 /* a claim is only ever closed by evidence: a payment found in a connected source, or the merchant confirming receipt with a reference */
@@ -276,11 +288,13 @@ A.claimVerify=(id, inv, found, how, ref)=>{ const i=invOf(id,inv); if(!i||!i.cla
 function claimRows(offset=0){ const rows=[]; Object.keys(S.led.invoices).forEach(id=>invsOf(id).forEach(i=>{ if(i.claim&&i.bal>0){ const c=chemView(chem(id)); rows.push(aRow(offset+rows.length,{id:'act-cl-'+id,name:c.name,band:c.band,area:i.inv,amt:inr(i.claim.amount),kind:'Payment claimed',kc:'k-held',reason:'Buyer says paid · unverified · reminders paused',chan:'Reconciliation',chanIc:'match',right:`<button class="btn btn-p btn-sm" onclick="A.claimCheck('${id}','${i.inv}')">Verify claim</button><button class="btn btn-g btn-sm" onclick="A.claimVerify('${id}','${i.inv}',false)">Not found</button>`})); } })); return rows.join(''); }
 
 /* generic "interpret a buyer message" card on a buyer profile */
+const IP_EXAMPLES=['Kal 10 hazaar bhej dunga.','Aadha aaj aur baaki Friday.','20 ko 12000 bhejunga.','Payment kar diya, check karlo.','Agar payment aa gaya toh kal de dunga.','Invoice galat hai, amount match nahi kar raha.','मैंने 5000 भेज दिए हैं, बाकी सोमवार को दूँगा।','Bhai abhi cash flow tight hai, agle hafte pakka.'];
 function interpCard(id){
   const key='msg:'+id; const st=S.interp[key]; const open=invsOf(id).filter(i=>i.bal>0); if(!open.length) return '';
   const sel=(st&&st.input.inv)||open[0].inv;
   const idle=`<div class="ip-in mt12"><textarea class="textarea" id="ipq-${id}" rows="2" placeholder="Paste or type the buyer’s WhatsApp reply, e.g. “Kal 5 hazaar bhejunga, baaki Friday”"></textarea>
-    <div class="row gap8 mt8 wrap"><select class="select" id="ipi-${id}" style="max-width:300px">${open.map(i=>`<option value="${i.inv}" ${i.inv===sel?'selected':''}>${i.inv} · ${inr(i.bal)} outstanding</option>`).join('')}</select><button class="btn btn-p btn-sm" onclick="A.ipRun('${id}')">${clover(13)} Interpret</button><span class="xs muted">${esc(aiLabel())}</span></div></div>`;
+    <div class="row gap8 mt8 wrap"><select class="select" id="ipi-${id}" style="max-width:300px">${open.map(i=>`<option value="${i.inv}" ${i.inv===sel?'selected':''}>${i.inv} · ${inr(i.bal)} outstanding</option>`).join('')}</select><button class="btn btn-p btn-sm" id="ipr-${id}" onclick="A.ipRun('${id}')">${clover(13)} Interpret</button><span class="xs muted">${esc(aiLabel())}</span></div>
+    <div class="row gap6 mt8 wrap"><span class="xs muted">Try:</span>${IP_EXAMPLES.map(x=>`<button class="chip-s" onclick="document.getElementById('ipq-${id}').value=this.dataset.m" data-m="${esc(x)}">${esc(x.length>34?x.slice(0,32)+'…':x)}</button>`).join('')}</div></div>`;
   const body=!st||st.status==='idle'?idle:`${interpPanel(key,{buyerId:id})}<div class="mt8"><a class="link xs" onclick="S.interp['${key}']={status:'idle',input:{inv:'${sel}'}};rr()">Interpret another message</a></div>`;
   return `<div class="card pad mt16" id="ip-card-${id}"><div class="row between"><div class="row gap8"><span class="ai-tag">${clover(14)}</span><span class="h3">Buyer message</span></div><span class="xs muted">Promise, dispute or payment claim · you confirm before anything is saved</span></div>${body}</div>`;
 }

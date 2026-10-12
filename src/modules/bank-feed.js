@@ -90,7 +90,7 @@ function payGupta(via){
   if(['paid','broken'].includes(S.gupta.promise)&&S.gupta.paidVia) return;
   const pr=openPromise('gupta'), bal=balOf('gupta','INV-24891'); const amt=Math.min(bal, (pr&&pr.first&&pr.first.amt)||Math.round(bal/2)); if(!amt) return;
   const r=ledgerPay('gupta','INV-24891',amt,{type:'PAYMENT_RECEIVED', source:via==='bank'?'Bank account (Connected Banking+)':'Razorpay Smart Collect', actor:via==='bank'?'Connected Banking+':'Razorpay', ref:via==='bank'?'UPI/62739182':'pay_GT24891sc'}); if(!r.ok) return;
-  if(pr&&pr.first) pr.first.paid=true; const row=S.bank.rows.find(x=>x.gupta); if(row) row.amt=amt;
+  if(pr&&pr.first){ pr.first.paid=true; pr.first.paidEv=r.event.id; } const row=S.bank.rows.find(x=>x.gupta); if(row) row.amt=amt;
   S.gupta.promise=S.gupta.promise==='broken'?'broken':'paid'; S.gupta.paidVia=via; S.gupta.paidAmt=amt;
   const left=balOf('gupta','INV-24891');
   log(via==='bank'?{ic:'rupee',ti:`${inr(amt)} received from Gupta Traders`,de:`UPI from guptatraders@okhdfc · matched to INV-24891 · verified · ${inr(left)} remaining`,src:['aa'],who:BANK_NAME+' · Connected Banking+',chem:'Gupta Traders'}

@@ -90,7 +90,7 @@ function vOverview(){
    ${top.map(id=>{ const [t,nm]=ewText(id); return `<div class="ov-row" style="padding:12px 20px;cursor:pointer" onclick="go('raahi/buyer/${id}')"><div style="width:240px;flex-shrink:0;white-space:nowrap"><b style="color:var(--strong)">${chem(id).name}</b> ${bandBadge(recOf(id).band)}</div><div class="grow small" style="color:var(--text)">${t}</div>${nm?netMark(nm):''}<div class="small" style="font-weight:600;color:var(--strong);white-space:nowrap;width:160px;text-align:right">${dueTxt(id)}</div>${I('right',16,2)}</div>`; }).join('')}
    ${rest.length?`<div class="xs muted" style="padding:10px 20px;border-top:1px solid var(--border-subtle)">Also: ${rest.map(id=>chem(id).name).join(', ')} · <a class="link" onclick="goSec('raahi/actions','grp-early')">see all ${slip.length}</a></div>`:''}</div>
   <div class="card mt16" id="ov-coll"><div class="sec-h"><div><div class="row gap8">${stage('COLLECT')}<span class="h3" style="font-size:17px">Collections this week</span></div><div class="small muted mt4">Collected within authorised mandates, recovered when a debit fails, and reconciled before anyone is chased.</div></div></div>
-   ${row('ov-up','refresh','background:var(--blue-tint);color:var(--link)',`${lakhs(st.autoThisWeek)} scheduled for automatic collection`,`${st.autoDebitsThisWeek} debits within authorised mandates · ${mehta?'Mehta Enterprises collected and matched automatically':'Mehta Enterprises ₹30,000 tomorrow'} · ${collSt('arora')==='paidbank'?'Arora Retail paid by NEFT, autopay cancelled':'Arora Retail today'}`,`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-upcoming')">View collections</button>`)}
+   ${row('ov-up','refresh','background:var(--blue-tint);color:var(--link)',`${lakhs(st.autoThisWeek)} scheduled for automatic collection`,`${st.autoDebitsThisWeek} debits within authorised mandates · ${mehta?'Mehta Enterprises collected and matched automatically':`Mehta Enterprises ${inr((UPCOMING.mehta||{}).amt||0)} on ${(UPCOMING.mehta||{}).due||''}`} · ${collSt('arora')==='paidbank'?'Arora Retail paid by NEFT, autopay cancelled':'Arora Retail today'}`,`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-upcoming')">View collections</button>`)}
    ${commits.length?row('ov-commit','cal','background:var(--blue-tint);color:var(--link)',`${commits.length} payment commitment${commits.length===1?'':'s'} confirmed · ${inr(cAmt)} expected`,commits.map(x=>`${chem(x.buyerId).name}${x.later&&x.later.date?' by '+RayDates.fmtShort(x.later.date):''}`).join(' · ')+' · expected, not guaranteed',`<button class="btn btn-s btn-sm" onclick="goSec('raahi/actions','grp-upcoming')">View</button>`):''}
    ${recoveryOverviewRow(row)}
    ${kirOverviewRow()}
@@ -136,7 +136,8 @@ function vPortfolio(){
 function guptaSignals(){
   const s=sigOf('gupta'), r=recOf('gupta'), n=BUY.gupta.network;
   const out=[];
-  if(r.network.eligible&&r.networkStep) out.push([`Slowed with ${n.coverage} other distributors first`,`Typical days to pay elsewhere ${n.baseLow}–${n.baseHigh} → ${n.nowLow}–${n.nowHigh} since ${n.firstSlowed}`,'About 5 weeks earlier',[['net','Razorpay network']]]);
+  if(r.network.eligible&&r.networkStep){ const sn=s.network, m=sn.monthly, d=POL.network.adverseDeltaDays, a=m&&firstSlowMonth(m.labels,m.net,d), b=m&&firstSlowMonth(m.labels,m.own,d), lead=a&&b?b.i-a.i:0;
+    out.push([`Slowed with ${sn.coverage} other distributors first`,`Typical days to pay elsewhere ${sn.baseLow}–${sn.baseHigh} → ${sn.nowLow}–${sn.nowHigh}${a?' since '+MONTHS_FULL[a.label]:''}`,lead>0?`About ${lead} month${lead===1?'':'s'} earlier`:'Earlier signal',[['net','Razorpay network']]]); }
   if(s.debit.failures60d||s.partialPayments) out.push(['Collection reliability',`${s.debit.failures60d} ${s.debit.method} failure${s.debit.failures60d===1?'':'s'} in 60 days${s.partialPayments?` · ${s.partialPayments} partial payment${s.partialPayments===1?'':'s'} (not counted against them)`:''}`,`${s.debit.failures6m} in 6 months`,[['rzp','Razorpay payment history']]]);
   out.push(['Payment behaviour deteriorated across the last 3 invoices','Each invoice was paid later than the one before',s.trajectory==='worse'?'3 of 3 slower':'Mixed',[['rzp','Razorpay payment history']]]);
   out.push(['Average payment delay increased',`Usual delay for this buyer was ${s.usual} days`,`${s.usual} → ${s.delay} days`,[['led','Own ledger'],['rzp','Smart Collect']]]);
@@ -180,7 +181,7 @@ function vProfile(id){
   ${howPanel('gupta')}
   <div class="mt16">${planCard('gupta')}</div>
   ${invTable('gupta')}
-  ${outcomeCard('gupta')}
+  ${outcomeCard('gupta')}${paymentsCard('gupta')}
   ${interpCard('gupta')}
 `;
 }

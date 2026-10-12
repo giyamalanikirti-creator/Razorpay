@@ -253,7 +253,7 @@ function recBody(id,mob){
    ${r.status==='completed'?'':`<div class="xs muted mt12 row gap4" style="align-items:flex-start" id="rec-src-${id}">${I('shield',12)} <span>${sourcesLine(id,f.inv)}</span></div>`}`;
 }
 function vRecover(id){ if(!FAILS[id]) return '<div class="empty">No failed collection for this buyer</div>';
-  return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('raahi/actions','grp-failed')">${I('arrowL',14,2)} Failed collections</a></div><div style="max-width:920px">${pageHead('Smart recovery','A failed automatic collection, with a staged plan to recover it.')}<div class="card pad mt16">${recBody(id,false)}</div></div>`; }
+  return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('raahi/actions','grp-failed')">${I('arrowL',14,2)} Failed collections</a></div><div style="max-width:920px">${pageHead('Smart recovery','A failed automatic collection, with a staged plan to recover it.')}<div class="card pad mt16">${recBody(id,false)}</div>${paymentsCard(id,{title:'Payments recorded against this buyer'})}</div>`; }
 
 /* ---------- partial-payment link: the minimum is validated and bound to the payload, preview, record and audit ---------- */
 function recLinkDraft(id){ const r=recoveryOf(id), rs=recS(id), c=chem(id), first=c.name.split(' ')[0];

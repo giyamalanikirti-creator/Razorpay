@@ -1,5 +1,5 @@
 {
- "description": "Labelled Hinglish buyer replies for evaluating payment-promise and dispute interpretation. Message date for all items: Monday 5 Oct 2026 (Asia/Kolkata). Labels written by hand for this prototype; amounts in INR. null means not stated / must not be invented.",
+ "description": "Labelled Hinglish and Devanagari buyer replies for evaluating payment-promise and dispute interpretation. Message date for all items: Monday 5 Oct 2026 (Asia/Kolkata). Labels written by hand for this prototype; amounts in INR. null means not stated / must not be invented. Items 41+ added for the master prompt examples. \"claimed\" is the amount a buyer says was already paid (unverified).",
  "messageDate": "2026-10-05",
  "items": [
   {
@@ -249,11 +249,12 @@
    "message": "Kal hi GPay kar diya tha 38400",
    "outstanding": 38400,
    "intent": "payment_claim",
-   "now": 38400,
+   "now": null,
    "later": null,
    "firstDate": null,
    "laterDate": null,
-   "clarify": false
+   "clarify": false,
+   "claimed": 38400
   },
   {
    "id": 24,
@@ -440,6 +441,161 @@
    "later": null,
    "firstDate": null,
    "laterDate": null,
+   "clarify": true
+  },
+  {
+   "id": 41,
+   "message": "Kal 10 hazaar bhej dunga.",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": null,
+   "later": 10000,
+   "firstDate": null,
+   "laterDate": "2026-10-06",
+   "clarify": false
+  },
+  {
+   "id": 42,
+   "message": "20 ko 12000 bhejunga.",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": null,
+   "later": 12000,
+   "firstDate": null,
+   "laterDate": "2026-10-20",
+   "clarify": false
+  },
+  {
+   "id": 43,
+   "message": "Aadha aaj aur baaki Friday.",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": 10000,
+   "later": 10000,
+   "firstDate": "2026-10-05",
+   "laterDate": "2026-10-09",
+   "clarify": false
+  },
+  {
+   "id": 44,
+   "message": "Payment kar diya, check karlo.",
+   "outstanding": 20000,
+   "intent": "payment_claim",
+   "now": null,
+   "later": null,
+   "firstDate": null,
+   "laterDate": null,
+   "clarify": false
+  },
+  {
+   "id": 45,
+   "message": "Bhai abhi cash flow tight hai, agle hafte pakka.",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": null,
+   "later": null,
+   "firstDate": null,
+   "laterDate": null,
+   "clarify": true
+  },
+  {
+   "id": 46,
+   "message": "Agar payment aa gaya toh kal de dunga.",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": null,
+   "later": null,
+   "firstDate": null,
+   "laterDate": "2026-10-06",
+   "clarify": true
+  },
+  {
+   "id": 47,
+   "message": "Invoice galat hai, amount match nahi kar raha.",
+   "outstanding": 20000,
+   "intent": "dispute",
+   "now": null,
+   "later": null,
+   "firstDate": null,
+   "laterDate": null,
+   "clarify": false
+  },
+  {
+   "id": 48,
+   "message": "मैंने 5000 भेज दिए हैं, बाकी सोमवार को दूँगा।",
+   "outstanding": 20000,
+   "intent": "payment_claim",
+   "now": null,
+   "later": 15000,
+   "firstDate": null,
+   "laterDate": "2026-10-12",
+   "clarify": false,
+   "claimed": 5000
+  },
+  {
+   "id": 49,
+   "message": "कल 10 हज़ार भेज दूँगा।",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": null,
+   "later": 10000,
+   "firstDate": null,
+   "laterDate": "2026-10-06",
+   "clarify": false
+  },
+  {
+   "id": 50,
+   "message": "आधा आज, बाकी शुक्रवार को।",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": 10000,
+   "later": 10000,
+   "firstDate": "2026-10-05",
+   "laterDate": "2026-10-09",
+   "clarify": false
+  },
+  {
+   "id": 51,
+   "message": "पेमेंट कर दिया है, चेक कर लो।",
+   "outstanding": 20000,
+   "intent": "payment_claim",
+   "now": null,
+   "later": null,
+   "firstDate": null,
+   "laterDate": null,
+   "clarify": false
+  },
+  {
+   "id": 52,
+   "message": "माल कम आया है, बिल गलत है।",
+   "outstanding": 20000,
+   "intent": "dispute",
+   "now": null,
+   "later": null,
+   "firstDate": null,
+   "laterDate": null,
+   "clarify": false
+  },
+  {
+   "id": 53,
+   "message": "Kal 5000 bhejunga, nahi parso 5000.",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": 5000,
+   "later": 5000,
+   "firstDate": "2026-10-06",
+   "laterDate": "2026-10-07",
+   "clarify": true
+  },
+  {
+   "id": 54,
+   "message": "Kal ya parso 8000 bhej dunga.",
+   "outstanding": 20000,
+   "intent": "promise",
+   "now": null,
+   "later": 8000,
+   "firstDate": null,
+   "laterDate": "2026-10-06",
    "clarify": true
   }
  ]

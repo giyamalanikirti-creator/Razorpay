@@ -4,3 +4,4 @@ __pycache__/
 .vercel
 node_modules/
 screenshots/
+tests/results/screens/

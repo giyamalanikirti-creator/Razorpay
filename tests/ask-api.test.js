@@ -32,3 +32,19 @@ test('ask: provider timeout → 504 with an honest message', async () => {
   const r = await call({ body }, { env: { OPENAI_API_KEY: 'k', AI_TIMEOUT_MS: '20' }, fetch: slow });
   assert.equal(r.statusCode, 504); assert.equal(r.body.code, 'TIMEOUT');
 });
+test('ask: an answer that cites rupee amounts not in the data is discarded (502 UNSUPPORTED_AMOUNT)', async () => {
+  const ctx = { buyersMentioned: [{ name: 'Gupta Traders', outstanding: 78400 }] };
+  let r = await call({ body: { question: 'Gupta kitna dena hai?', context: ctx } }, { env: { OPENAI_API_KEY: 'k' }, fetch: openai({ answer: 'Gupta Traders owes ₹78,400.', answerable: true, actions: [] }) });
+  assert.equal(r.statusCode, 200);
+  r = await call({ body: { question: 'Gupta kitna dena hai?', context: ctx } }, { env: { OPENAI_API_KEY: 'k' }, fetch: openai({ answer: 'Gupta Traders owes ₹91,250.', answerable: true, actions: [] }) });
+  assert.equal(r.statusCode, 502); assert.equal(r.body.code, 'UNSUPPORTED_AMOUNT');
+});
+test('ask: 429 and 5xx from the provider are reported, never answered', async () => {
+  let r = await call({ body }, { env: { OPENAI_API_KEY: 'k' }, fetch: openai({}, 429) }); assert.equal(r.statusCode, 429);
+  r = await call({ body }, { env: { OPENAI_API_KEY: 'k' }, fetch: openai({}, 503) }); assert.equal(r.statusCode, 502);
+});
+test('ask: per-IP rate limit (in-memory, best-effort per instance)', async () => {
+  ask._resetRateLimit(); let last;
+  for (let k = 0; k < 21; k++) { const res = mockRes(); await ask({ method: 'POST', headers: { 'x-forwarded-for': '9.9.9.9' }, body }, res, { env: {} }); last = res; }
+  assert.equal(last.statusCode, 429);
+});

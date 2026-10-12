@@ -1,8 +1,8 @@
 {
  "suite": "Browser smoke and guided demos (Playwright)",
  "file": "tests/ui_smoke.py",
- "ranAt": "2026-10-11T18:43:37+00:00",
- "build": "9bb5410e05",
+ "ranAt": "2026-10-12T06:57:54+00:00",
+ "build": "4c89bc4324",
  "total": 23,
  "passed": 23,
  "failed": 0,
@@ -58,7 +58,7 @@
    "detail": ""
   },
   {
-   "name": "Fallback is labelled as not AI",
+   "name": "Fallback is labelled as rule-based, not AI",
    "pass": true,
    "detail": ""
   },

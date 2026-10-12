@@ -56,3 +56,41 @@ test('Request validation', () => {
   assert.ok(R.validateRequest({ message: 'x', outstanding: -1, messageDate: '2026-10-05' }).length);
   assert.ok(R.validateRequest({ message: 'x', outstanding: 1, messageDate: 'yesterday' }).length);
 });
+
+/* ---- master-prompt examples: Hinglish, Devanagari, claims, conditions, contradictions (rule-based fallback, not AI) ---- */
+const run20 = (m) => run(m, 20000);
+test('Hinglish examples resolve amounts and IST dates from the demo clock (Mon 5 Oct 2026)', () => {
+  let i = run20('Kal 10 hazaar bhej dunga.').interpretation; assert.equal(i.promisedAmountLater, 10000); assert.equal(i.promisedDate, '2026-10-06');
+  i = run20('20 ko 12000 bhejunga.').interpretation; assert.equal(i.promisedAmountLater, 12000); assert.equal(i.promisedDate, '2026-10-20');
+  i = run20('Aadha aaj aur baaki Friday.').interpretation; assert.deepEqual([i.promisedAmountNow, i.firstPaymentDate, i.promisedAmountLater, i.promisedDate], [10000, '2026-10-05', 10000, '2026-10-09']);
+});
+test('Claims, vague dates, conditions and disputes are never confirmable', () => {
+  let v = run20('Payment kar diya, check karlo.'); assert.equal(v.interpretation.intent, 'payment_claim'); assert.equal(v.canConfirm, false); assert.equal(v.paymentVerified, false);
+  v = run20('Bhai abhi cash flow tight hai, agle hafte pakka.'); assert.equal(v.interpretation.needsClarification, true); assert.equal(v.canConfirm, false); assert.equal(v.interpretation.firstPaymentDate, null);
+  v = run20('Agar payment aa gaya toh kal de dunga.'); assert.equal(v.interpretation.isConditional, true); assert.equal(v.canConfirm, false);
+  v = run20('Invoice galat hai, amount match nahi kar raha.'); assert.equal(v.interpretation.intent, 'dispute'); assert.equal(v.canConfirm, false);
+});
+test('Devanagari: claim of ₹5,000 plus a promise of the rest on Monday; evidence stays in the original script', () => {
+  const m = 'मैंने 5000 भेज दिए हैं, बाकी सोमवार को दूँगा।'; const v = run20(m); const i = v.interpretation;
+  assert.equal(i.intent, 'payment_claim'); assert.equal(i.claimedAmount, 5000); assert.equal(i.promisedAmountLater, 15000); assert.equal(i.promisedDate, '2026-10-12');
+  assert.equal(v.canConfirm, false, 'a claim is never confirmed automatically');
+  assert.ok(i.evidenceSpans.length && i.evidenceSpans.every((s) => m.includes(s)), JSON.stringify(i.evidenceSpans));
+  const k = run20('कल 10 हज़ार भेज दूँगा').interpretation; assert.equal(k.promisedAmountLater, 10000); assert.equal(k.promisedDate, '2026-10-06');
+  assert.equal(run20('पेमेंट कर दिया है, चेक कर लो').interpretation.intent, 'payment_claim');
+});
+test('Self-corrections and alternative dates need clarification', () => {
+  assert.equal(run20('Kal 5000 bhejunga, nahi parso 5000.').canConfirm, false);
+  assert.equal(run20('Kal ya parso 8000 bhej dunga.').interpretation.needsClarification, true);
+  assert.equal(run20('Abhi nahi, kal 5000 bhej dunga.').interpretation.needsClarification, false, '"not now, tomorrow" is a clear date');
+});
+test('Model output: an unstated claimed amount and contradictory dates are caught by validation', () => {
+  const m = 'Payment kar diya bhai';
+  const v = R.validateInterpretation({ intent: 'payment_claim', claimedAmount: 18000, promisedAmountNow: null, promisedAmountLater: null, evidenceSpans: ['kar diya'] }, { message: m, outstanding: 20000, messageDate: '2026-10-05' });
+  assert.equal(v.interpretation.claimedAmount, null); assert.ok(v.checks.some((c) => /claimed amount/.test(c)));
+  const c = R.validateInterpretation({ intent: 'promise', promisedAmountLater: 5000, promisedDate: '2026-10-07', evidenceSpans: [] }, { message: 'Kal 5000, nahi parso', outstanding: 20000, messageDate: '2026-10-05' });
+  assert.equal(c.canConfirm, false); assert.ok(c.checks.some((x) => /corrects itself/.test(x)));
+});
+test('The model never sees the buyer name (data minimisation)', () => {
+  const p = R.buildUserPrompt({ message: 'kal 5000', outstanding: 9000, invoiceId: 'INV-1', buyerName: 'Gupta Traders', messageDate: '2026-10-05' });
+  assert.ok(!p.includes('Gupta Traders')); assert.ok(p.includes('<buyer_message>'));
+});

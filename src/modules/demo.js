@@ -26,27 +26,31 @@ function loadOutcomeScenario(){
 }
 const outcomesRecorded = () => eventsSince('gupta').some(e=>['AUTOPAY_FAILED','PROMISE_MISSED'].includes(e.type));
 
-/* ---------- Judge walkthrough: eight short steps, each one shows a real state change ---------- */
+/* ---------- Judge walkthrough: nine steps. Navigating never approves, pays, reverses or sends; buttons in the note do,
+   and only when the presenter clicks them. Every number in a note is read from the current state. ---------- */
 const CORE = [
- ['Install · or continue without a bank', ()=>{ S.installed=false; go('studio/raahi'); setTimeout(()=>{ S.inst=null; inst(2,'marg'); },120);
-    scenario('Choose “No” to skip the bank. RAY still works; every payment check then says the bank was not checked, instead of claiming it was.','',null); }, KEEP.modal],
- ['Your ledger vs the Razorpay network', ()=>{ installed(); goSec('raahi/request/gupta','ncmp-gupta');
-    scenario('Toggle “Your data only”: ₹75,000 · 21 days. With consented, aggregated network evidence: ₹60,000 · 14 days. No other distributor is ever named.','',null); }],
- ['Explainable approval', ()=>{ installed(); S.howOpen=S.howOpen||{}; S.howOpen.gupta=true; goSec('raahi/request/gupta','req-rec'); if(S.gupta.rec==='open') setTimeout(()=>A.approveGupta(),350);
-    scenario('The confirmation shows exactly what will be applied, why, and what happens to the ₹78,400 already owed. The same values are applied once, even on a double click.','',null); }, KEEP.modal],
- ['Undo, with an audit trail', ()=>{ installed(); goSec('raahi/buyer/gupta','why');
-    if(lastCreditOp('gupta')) scenario('Undo restores the limit, terms, request and decision. The approval stays in Activity next to the reversal.','Undo the approval',()=>{ S.demoNote=null; A.undoCredit('gupta'); go('raahi/activity'); demoRender(); });
-    else scenario('Approve first (step 3), then come back to undo it.','',null); }],
- ['Failed collection → partial payment', ()=>{ installed(); go('raahi/recover/gupta'); const r=recoveryOf('gupta');
+ ['The merchant’s problem', ()=>{ installed(); go('raahi/overview'); const st=pfStats();
+    scenario(`Agarwal Distributors (synthetic) has ${lakhs(st.outstanding)} outstanding across ${st.openInvoices.toLocaleString('en-IN')} open invoices and ${st.buyers} buyers. Payments arrive through Razorpay, a bank account, cash and cheques, so knowing who owes what, and who to trust with more credit, is manual work. Demo clock: ${simDateLabel()}, ${nowLabel()} IST.`,'',null); }],
+ ['Why the network matters', ()=>{ installed(); goSec('raahi/buyer/gupta','net'); const o=recAlt('gupta',false), n=recAlt('gupta',true);
+    scenario(`Gupta Traders. Your ledger alone: ${inr(o.recommendedLimit)} · ${o.recommendedTerms} days. With eligible network evidence: ${inr(n.recommendedLimit)} · ${n.recommendedTerms} days, because the slowdown started earlier with other distributors. Both computed now by the same policy; the network data is synthetic and the capability is proposed. Try “Buyer revokes consent” or “Signal goes stale” on the card.`,'',null); }],
+ ['Explainable credit recommendation', ()=>{ installed(); S.howOpen=S.howOpen||{}; S.howOpen.gupta=true; goSec('raahi/buyer/gupta','how-gupta'); const r=recOf('gupta');
+    scenario(`Every signal, its source, the rule it triggered and its points. Current ${inr(curLimitOf('gupta'))} · ${curTermsOf('gupta')} days → proposed ${inr(r.recommendedLimit)} · ${r.recommendedTerms} days (${r.band}, confidence ${r.confidence}). ${r.needsHumanReview?'Needs your review: '+r.reviewReasons.join(', ')+'.':''}`,'',null); }],
+ ['Merchant approval and undo', ()=>{ installed(); goSec('raahi/buyer/gupta','why'); const op=lastCreditOp('gupta');
+    if(op&&op.kind==='approved') scenario(`Approved: ${inr(curLimitOf('gupta'))} · ${curTermsOf('gupta')} days. Undo restores the previous limit, terms and request; the approval and its reversal both stay in Activity.`,'Undo the approval',()=>{ S.demoNote=null; A.undoCredit('gupta'); go('raahi/activity'); demoRender(); });
+    else scenario(`Approval shows exactly what will be applied (${inr(recOf('gupta').recommendedLimit)} · ${recOf('gupta').recommendedTerms} days) and what happens to the ${inr(outOf('gupta'))} already owed. It applies once, even on a double click. Nothing is approved until you confirm.`,'Open the approval',()=>{ S.demoNote=null; A.approveGupta(); demoRender(); }); }, KEEP.modal],
+ ['Failed collection and partial payment', ()=>{ installed(); go('raahi/recover/gupta'); const r=recoveryOf('gupta');
     if(r&&r.status==='open') setTimeout(()=>A.recLink('gupta'),300);
-    scenario('Try a ₹25,000 minimum: it is rejected inline. Send the link, then simulate the buyer paying the minimum.','Buyer pays the minimum (simulated)',()=>{ const x=recoveryOf('gupta'); if(!x||x.status==='completed') return; if(!x.link){ recLinkKeep&&recLinkKeep('gupta'); A.recSend('gupta'); } const y=recoveryOf('gupta'); if(y.link) A.recPay('gupta', Math.min(y.link.min,y.balance), 'demo_min_'+y.inv); S.demoNote=null; demoRender(); }); }, KEEP.modal],
- ['Balance paid · recovery completes everywhere', ()=>{ installed(); go('raahi/recover/gupta'); const r=recoveryOf('gupta');
-    if(r&&r.status!=='completed') scenario(`Simulate the buyer paying the remaining ${inr(r.balance)}. The recovery closes, steps stop, and Overview, Actions, WhatsApp and mobile all show it.`,'Buyer pays the balance (simulated)',()=>{ const x=recoveryOf('gupta'); A.recPay('gupta', x.balance, 'demo_full_'+x.inv); S.demoNote=null; demoRender(); }); }],
- ['Reconcile before any follow-up', ()=>{ installed(); go('raahi/payment/verma');
-    scenario('A ₹26,500 Razorpay credit may already cover Verma Retail. The reminder is held until you match it; matching updates the invoice and cancels the reminder.','',null); }],
- ['Same status on WhatsApp and mobile', ()=>{ installed(); A.openWA(); setTimeout(()=>A.waSend('Gupta Traders ka payment kya hua?'),300);
-    scenario('RAY on WhatsApp answers from the same ledger. Ask the same question in RAY Credit for Mobile.','Ask on mobile',()=>{ S.demoNote=null; A.closeWA(); A.openMobile('ask'); setTimeout(()=>A.mobAsk('Gupta Traders ka payment kya hua?'),200); demoRender(); }); }, KEEP.wa],
- ['What ran: Checks', ()=>{ installed(); go('raahi/checks'); }],
+    scenario(r&&r.status==='completed'?`${r.inv} is already recovered in full. Reset the demo to replay this step.`:`The ${r?r.method:''} debit of ${r?inr(r.amount):''} failed. Try a minimum above the ${r?inr(r.balance):''} balance: it is rejected inline. Send the link (simulated delivery), then simulate the buyer paying the minimum.`,r&&r.status!=='completed'?'Buyer pays the minimum (simulated)':'',r&&r.status!=='completed'?()=>{ const x=recoveryOf('gupta'); if(!x||x.status==='completed') return; if(!x.link){ recLinkKeep&&recLinkKeep('gupta'); A.recSend('gupta'); } const y=recoveryOf('gupta'); if(y.link) A.recPay('gupta', Math.min(y.link.min,y.balance), 'demo_min_'+y.inv); S.demoNote=null; demoRender(); }:null); }, KEEP.modal],
+ ['Full recovery · optional reversal', ()=>{ installed(); go('raahi/recover/gupta'); const r=recoveryOf('gupta');
+    if(r&&r.status!=='completed') scenario(`Simulate the buyer paying the remaining ${inr(r.balance)}. The invoice reaches ₹0, recovery completes, remaining steps stop, and Overview, Actions, WhatsApp and mobile all show it.`,'Buyer pays the balance (simulated)',()=>{ const x=recoveryOf('gupta'); A.recPay('gupta', x.balance, 'demo_full_'+x.inv); S.demoNote=null; demoRender(); });
+    else scenario(`${r?r.inv:''} recovered in full. Optional branch: under “Payments recorded against this buyer”, “Reverse recorded payment” adds a PAYMENT_REVERSED event (a ledger correction, not a refund); the balance and recovery status recalculate and the original payment stays in the log.`,'Show recorded payments',()=>{ S.demoNote=null; scrollTo_('pays-gupta'); demoRender(); }); }],
+ ['Reconcile before chasing', ()=>{ installed(); go('raahi/payment/verma'); const p=PAYREV.verma;
+    scenario(prPending('verma')?`A ${p?inr(p.amt):''} Razorpay credit may already cover Verma Retail’s ${p?p.inv:''}. Sending a reminder now risks chasing a buyer who has paid, so it is held. Match the payment: the invoice updates and the reminder is cancelled. ${S.bank.st==='on'?'':'Your bank is not connected, so RAY says it did not check it.'}`:`Verma Retail’s payment is matched; ${inr(balOf('verma',(p||{}).inv))} is due on ${(p||{}).inv}.`,'',null); }],
+ ['Same intelligence across surfaces', ()=>{ installed(); A.openWA(); setTimeout(()=>A.waSend('Gupta Traders ka payment kya hua?'),300);
+    scenario(`RAY on WhatsApp answers in Hinglish from the same ledger (balance now ${inr(outOf('gupta'))}). Ask the same on mobile. Then try a buyer’s reply: ${aiLabel()}.`,'Ask on mobile',()=>{ S.demoNote=null; A.closeWA(); A.openMobile('ask'); setTimeout(()=>A.mobAsk('Gupta Traders ka payment kya hua?'),200);
+      scenario('Same answer on mobile. Next: read a Hinglish buyer reply with the interpreter (nothing is recorded until you confirm).','Interpret a buyer reply',()=>{ S.demoNote=null; A.closeMobile(); goSec('raahi/buyer/gupta','ip-card-gupta'); setTimeout(()=>{ const t=document.getElementById('ipq-gupta'); if(t){ t.value='मैंने 5000 भेज दिए हैं, बाकी सोमवार को दूँगा।'; A.ipRun('gupta'); } },350); demoRender(); }); demoRender(); }); }, KEEP.wa],
+ ['What is real, simulated and tested', ()=>{ installed(); go('raahi/checks');
+    scenario(`Checks runs the journeys live in this page and lists recorded test runs separately. ${aiLabel()}. How it works shows what is implemented, simulated and still needs production work, plus the proposed pilot (not yet executed, no validated lift).`,'Open How it works',()=>{ S.demoNote=null; go('raahi/how'); demoRender(); }); }],
 ];
 
 /* ---------- Explore all features (original story, now side-effect free on navigation) ---------- */
@@ -80,11 +84,13 @@ const STEPS = [
 const demoList = () => S.demoList==='core'?CORE:STEPS;
 A.step=(i,list)=>{ if(list) S.demoList=list; const L=demoList(); const k=L[i][2]||0; if(!(k&KEEP.modal)) closeModal(); if(!(k&KEEP.aa)) A.aaClose(); if(!(k&KEEP.wa)) A.closeWA(); if(!(k&KEEP.mob)&&S.mob) A.closeMobile(); S.step=i; S.demoOpen=false; S.demoNote=null; L[i][1](); demoRender(); };
 A.next=()=>{ const L=demoList(); A.step(Math.min(L.length-1,S.step+1)); };
+A.demoExit=()=>{ S.demoNote=null; S.demoOpen=false; closeModal(); demoRender(); toast('Walkthrough closed · your progress is kept'); };
 A.simExpiry=()=>{ ensureBank(); S.bank.expiry=true; log({ic:'clock',ti:'Bank feed consent ends in 7 days',de:'RAY reminded you on WhatsApp · renewal needs your approval',src:['aa'],who:'RAY'});
   if(!S.wa.msgs) waInit(); S.wa.msgs.push({from:'ray',t:'9:00 AM',html:'Your bank feed consent ends in 7 days (5 Oct 2027). Renew it to keep auto-confirming payments.',btns:[{l:'Renew',a:'waRenew'}]}); S.demoOpen=false; demoRender(); A.openWA(); };
 function demoRender(){
   const r=document.getElementById('demo-root'); const L=demoList(); const cur=S.demoList||'all';
-  const note=S.demoNote?`<div class="demo-note"><div class="small" style="color:var(--strong)">${S.demoNote.text}</div>${S.demoNote.fn?`<button class="btn btn-p btn-sm mt8" onclick="(S.demoNote&&S.demoNote.fn)&&S.demoNote.fn()">${S.demoNote.label}</button>`:''}<button class="x" onclick="S.demoNote=null;demoRender()">${I('x',14)}</button></div>`:'';
+  const nav=`<div class="row gap6 mt8 wrap demo-nav"><span class="xs muted">Step ${S.step+1} of ${L.length}${cur==='core'?' · judge walkthrough':''}</span><span class="grow"></span><button class="btn btn-g btn-sm" id="demo-prev" ${S.step<=0?'disabled':''} onclick="A.step(Math.max(0,S.step-1))">${I('arrowL',12,2)} Previous</button><button class="btn btn-s btn-sm" id="demo-next" ${S.step>=L.length-1?'disabled':''} onclick="A.next()">Next ${I('arrowR',12,2)}</button><button class="btn btn-g btn-sm" id="demo-exit" onclick="A.demoExit()">Exit</button></div>`;
+  const note=S.demoNote?`<div class="demo-note"><div class="xs" style="font-weight:600;color:var(--muted)">${esc(L[S.step]?L[S.step][0]:'')}</div><div class="small mt4" style="color:var(--strong)">${S.demoNote.text}</div>${S.demoNote.fn&&S.demoNote.label?`<button class="btn btn-p btn-sm mt8" id="demo-act" onclick="(S.demoNote&&S.demoNote.fn)&&S.demoNote.fn()">${S.demoNote.label}</button>`:''}${nav}<button class="x" aria-label="Close note" onclick="S.demoNote=null;demoRender()">${I('x',14)}</button></div>`:'';
   const list=(arr,key)=>arr.map((s,i)=>`<button class="${cur===key&&i===S.step?'cur':''}" onclick="A.step(${i},'${key}')"><span class="k">${i+1}</span><span>${s[0]}</span></button>`).join('');
   r.innerHTML=`${note}${S.demoOpen?`<div class="demo"><div class="dh"><b>Explore RAY Credit</b><div class="xs" style="margin-top:2px;opacity:.8">One intelligence layer, across every surface.</div><div class="col gap6 mt8"><button class="surf-b" onclick="A.surf('desk')">Open Desktop</button><button class="surf-b" onclick="A.surf('wa')">Open RAY on WhatsApp</button><button class="surf-b" onclick="A.surf('mob')">Open RAY Credit for Mobile</button></div><p class="mt8">Concept prototype for Razorpay Agent Studio · synthetic merchant data (Agarwal Distributors, Ludhiana). Not a live Razorpay product. <a class="link" style="color:inherit;text-decoration:underline" onclick="A.about()">About this demo</a></p></div>
    <div class="ds"><h6>Judge walkthrough · about 5 minutes</h6>${list(CORE,'core')}
@@ -99,4 +105,4 @@ document.addEventListener('keydown',e=>{ const t=e.target; if(t&&(t.tagName==='I
   if(e.key==='ArrowRight'||e.key==='n'||e.key==='N'){ if(e.key==='N'&&e.shiftKey) return; e.preventDefault(); A.next(); }
   else if(e.key==='ArrowLeft'){ e.preventDefault(); A.step(Math.max(0,S.step-1)); }
   else if((e.key==='D'||e.key==='d')&&e.shiftKey){ S.demoOpen=!S.demoOpen; demoRender(); }
-  else if(e.key==='Escape'&&S.demoOpen){ S.demoOpen=false; demoRender(); } });
+  else if(e.key==='Escape'&&(S.demoOpen||S.demoNote)){ S.demoOpen=false; S.demoNote=null; demoRender(); } });

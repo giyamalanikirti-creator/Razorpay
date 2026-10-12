@@ -6,10 +6,11 @@
 <style>/*CSS*/</style></head>
 <body>
 <header class="topbar">
+  <button class="iconbtn-dark menu-btn" id="menu-btn" aria-label="Open navigation" aria-controls="side" onclick="document.body.classList.toggle('side-open')">__MENU__</button>
   <img id="logo" class="logo" alt="Razorpay" onclick="go('home')">
   <nav class="topnav" id="topnav"></nav>
   <div class="topright">
-    <span class="datechip" title="Prototype date">__CAL__<span id="datechip">Mon, 5 Oct</span></span>
+    <span class="datechip" title="Demo clock: a simulated date and time (IST) used by every surface. Not the real date." aria-label="Demo clock">__CAL__<span class="dc-k">Demo clock</span><span id="datechip">Mon, 5 Oct</span></span>
     <div class="gsearch">__SEARCH__<input id="gsq" placeholder="Search payment products, settings, and more" autocomplete="off"><div class="results" id="gsr"></div></div>
     <button class="iconbtn-dark" onclick="toast('Payments health · all systems normal')" title="Status">__PULSE__</button>
     <button class="iconbtn-dark" onclick="toast('What’s new: RAY is now in Agent Studio')" title="What’s new">__MEGA__</button>

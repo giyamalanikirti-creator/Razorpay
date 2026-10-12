@@ -52,7 +52,7 @@ function recoveryOf(id){
   const f=FAILS[id]; if(!f) return null;
   const inv=invOf(id,f.inv), bal=inv?Math.max(0,inv.bal):0, r=(S.rec[id]=S.rec[id]||{st:null});
   const failSeq=Math.max(0,...evOf(id).filter(e=>e.type==='AUTOPAY_FAILED'&&e.invoice===f.inv).map(e=>seqNum(e)||0));
-  const pays=evOf(id).filter(e=>e.invoice===f.inv&&MONEY_IN_T.includes(e.type)&&(seqNum(e)||0)>failSeq&&!String(e.id).startsWith('ev-seed'));
+  const pays=evOf(id).filter(e=>e.invoice===f.inv&&MONEY_IN_T.includes(e.type)&&!RayEvents.isReversed(S.led,e.id)&&(seqNum(e)||0)>failSeq&&!String(e.id).startsWith('ev-seed'));
   const received=pays.reduce((a,e)=>a+(e.amount||0),0);
   const status=bal<=0?'completed':inv&&inv.claim?'claimed':received>0?'partial':r.st?'action':'open';
   const step=r.st==='retry'?'Retry scheduled':r.st==='later'?(r.when==='Salesperson visit'?'Salesperson visit assigned':'Follow-up scheduled'):(r.st==='link'||r.st==='sent')?'Payment link sent':null;
@@ -67,10 +67,11 @@ const recoveringAmt = () => recoveriesActive().reduce((a,id)=>a+recoveryOf(id).b
 function paymentStatus(id){
   const b=BUY[id]; if(!b) return null;
   const open=invsOf(id).filter(i=>i.bal>0).sort((a,c)=>RayDates.toN(a.due)-RayDates.toN(c.due));
-  const paidRecent=evOf(id).filter(e=>MONEY_IN_T.includes(e.type)&&!String(e.id).startsWith('ev-seed')).slice(-4).reverse();
+  const paidRecent=evOf(id).filter(e=>MONEY_IN_T.includes(e.type)&&!RayEvents.isReversed(S.led,e.id)&&!String(e.id).startsWith('ev-seed')).slice(-4).reverse();
+  const reversedRecent=evOf(id).filter(e=>e.type==='PAYMENT_REVERSED').slice(-2).reverse();
   const rec=recoveryOf(id), claims=open.filter(i=>i.claim), check=payCheck(id,null);
   const next=open.find(i=>!i.claim&&!(rec&&rec.active&&i.inv===rec.inv))||null, pr=typeof openPromise==='function'?openPromise(id):null;
-  return {id, name:b.name, out:outOf(id), open, paidRecent, rec, claims, check, next, promise:pr, method:collMethod(id).m, review:check.review}; }
+  return {id, name:b.name, out:outOf(id), open, paidRecent, reversedRecent, rec, claims, check, next, promise:pr, method:collMethod(id).m, review:check.review}; }
 
 /* ---------- the only way money is applied ---------- */
 function ledgerPay(id, inv, amt, o={}){
@@ -81,7 +82,7 @@ function ledgerPay(id, inv, amt, o={}){
   if(!isFinite(a)||a<=0) return {ok:false, error:'Amount must be a positive number'};
   if(a>i.bal) return {ok:false, error:`${inr(a)} is more than the ${inr(i.bal)} still due on ${i.inv}. Nothing recorded.`};
   if(!o.ref) return {ok:false, error:'A payment reference is required, so the same payment cannot be applied twice'};
-  if(S.led.refs&&S.led.refs[o.ref]) return {ok:false, dup:true, error:`Payment ${o.ref} was already applied. Nothing recorded twice.`};
+  if(RayEvents.refInUse(S.led, o.ref)) return {ok:false, dup:true, error:`Payment ${o.ref} was already applied. Nothing recorded twice.`};
   const r=recordEvent({type:o.type||'PAYMENT_RECEIVED', buyerId:id, invoice:i.inv, amount:a, verification:'verified', source:o.source||'Razorpay', actor:o.actor||'Razorpay', ref:o.ref, meta:o.meta||{}},{quiet:true});
   if(r.ok) afterPayment(id, r.event);
   return r.ok?r:Object.assign(r,{error:r.error}); }
@@ -101,8 +102,8 @@ function afterPayment(id, e){
 function ledgerPayAllocate(id, amt, prefer, o={}){
   const a=Math.round(Number(amt)); if(!isFinite(a)||a<=0) return {ok:false, error:'Amount must be a positive number'};
   if(!o.ref) return {ok:false, error:'A payment reference is required'};
-  if(S.led.refs&&(S.led.refs[o.ref]||S.led.refs[o.ref+'#1'])) return {ok:false, dup:true, error:`Payment ${o.ref} was already applied. Nothing recorded twice.`};
+  if(RayEvents.refInUse(S.led, o.ref)||RayEvents.refInUse(S.led, o.ref+'#1')) return {ok:false, dup:true, error:`Payment ${o.ref} was already applied. Nothing recorded twice.`};
   const plan=RayEvents.allocate(S.led, id, a, prefer);
   if(plan.unallocated>0) return {ok:false, error:`${inr(a)} is more than the ${inr(outOf(id))} ${BUY[id].name} owes. Nothing recorded; review it as an unidentified credit.`};
-  const parts=[]; for(const [k,pt] of plan.parts.entries()){ const r=ledgerPay(id, pt.invoice, pt.amount, Object.assign({}, o, {ref:plan.parts.length===1?o.ref:`${o.ref}#${k+1}`})); if(!r.ok) return Object.assign(r,{parts}); parts.push(r.event); }
+  const parts=[]; for(const [k,pt] of plan.parts.entries()){ const r=ledgerPay(id, pt.invoice, pt.amount, Object.assign({}, o, {ref:plan.parts.length===1?o.ref:`${o.ref}#${k+1}`, meta:Object.assign({}, o.meta||{}, plan.parts.length>1?{allocation:o.ref, part:k+1, parts:plan.parts.length}:{})})); if(!r.ok) return Object.assign(r,{parts}); parts.push(r.event); }
   return {ok:true, parts, event:parts[parts.length-1]}; }

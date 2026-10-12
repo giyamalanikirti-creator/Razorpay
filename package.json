@@ -13,6 +13,7 @@
     "eval": "node scripts/eval_interpreter.js",
     "test:e2e": "python3 tests/e2e_journeys.py",
     "test:all": "python3 scripts/record_tests.py",
-    "check": "node scripts/check_bundle.js"
+    "check": "node scripts/check_bundle.js",
+    "test:responsive": "python3 tests/responsive.py"
   }
 }

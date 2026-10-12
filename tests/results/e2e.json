@@ -1,10 +1,10 @@
 {
  "suite": "Browser journeys (Playwright, Chromium)",
  "file": "tests/e2e_journeys.py",
- "ranAt": "2026-10-11T18:42:56+00:00",
- "build": "9bb5410e05",
- "total": 96,
- "passed": 96,
+ "ranAt": "2026-10-12T06:57:14+00:00",
+ "build": "4c89bc4324",
+ "total": 142,
+ "passed": 142,
  "failed": 0,
  "cases": [
   {
@@ -574,6 +574,282 @@
   {
    "journey": "AI",
    "name": "AI status label is honest when no provider is configured",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Setup: ₹5,000 then ₹15,000 recorded, recovery completed",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Confirmation shows reference, amount, invoice and the balance after correction",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Opening the confirmation changes nothing",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Balance restored to ₹5,000 and recovery is partial again",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Original payment kept; one PAYMENT_REVERSED added",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Recovery page shows the reversed payment and the new status",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Second reversal of the same payment is rejected",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Activity shows the correction with its reason and 'not a refund'",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "WhatsApp answer reflects the corrected ledger",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Mobile answer reflects the corrected ledger",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REV",
+   "name": "Overview shows recovery in progress again (not completed)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI-RULE",
+   "name": "Rule-based result is labelled as such, never as AI",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI-RULE",
+   "name": "Shows 'Needs merchant confirmation' before anything is recorded",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI-RULE",
+   "name": "Amounts and IST dates derived from the demo clock",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI-RULE",
+   "name": "Confirming records PROMISE_RECORDED and the commitment appears in Actions",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI-RULE",
+   "name": "Devanagari reply: claim of ₹5,000 shown as unverified, balance commitment derived",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI-RULE",
+   "name": "A claim never changes the balance or records anything by itself",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI-RULE",
+   "name": "Sending the claim to review records PAYMENT_CLAIMED (unverified) without touching the balance",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "AI-RULE",
+   "name": "Reminders for that invoice are held while the claim is unverified",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "Side-by-side shows ₹75,000 · 21 days (your ledger) and ₹60,000 · 14 days (network)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "Causal chain and regulatory boundary are visible",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "revoked: recommendation recomputes to 75000,21",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "requested: recommendation recomputes to 75000,21",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "granted: recommendation recomputes to 60000,14",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "stale: recommendation recomputes to 75000,21",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "restored: recommendation recomputes to 60000,14",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "insufficient coverage: recommendation recomputes to 75000,21",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "restored: recommendation recomputes to 60000,14",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "disputed: recommendation recomputes to 75000,21",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "resolved: recommendation recomputes to 60000,14",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "participation off: recommendation recomputes to 75000,21",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "Explains why evidence is excluded",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "Chawla: disagreement flagged, limit held (no cut)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Nine steps reachable with Next; navigation alone records no event, approval, send or promise",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Previous goes back one step",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Exit closes the walkthrough and keeps progress",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REPEAT",
+   "name": "Run 1 and run 2 from reset produce identical state (no hidden stale state)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REPEAT",
+   "name": "No duplicate approvals or payments: 1 approval, 2 payments, balance ₹0, recovery completed",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REPEAT",
+   "name": "Surfaces agree after the repeated run",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "MOCK-AI",
+   "name": "Status label says Live AI with provider/model when the endpoint reports a key",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "MOCK-AI",
+   "name": "Mocked model result labelled 'Live AI · openai/gpt-4o-mini' and still needs confirmation",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "MOCK-AI",
+   "name": "A failed live call is labelled 'AI unavailable · Rule-based fallback' with the reason",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "MOCK-AI",
+   "name": "The fallback still reads the message (₹10,000 by 6 Oct)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "MOCK-AI",
+   "name": "Ask RAY: an unsupported question goes to the (mocked) model and is labelled as a model explanation",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "MOCK-AI",
+   "name": "Ask RAY: ledger questions stay deterministic even with live AI on",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "MOCK-AI",
+   "name": "Ask RAY: a discarded model answer falls back with an honest label",
    "pass": true,
    "detail": ""
   },

@@ -10,6 +10,8 @@
  *
  * GET returns { configured, provider, model }. Missing key → 503 AI_NOT_CONFIGURED (the page falls back to rules).
  * Questions and data are never logged.
+ * Rate limit: 20 requests/minute per IP, held in memory per warm serverless instance. It is best-effort only:
+ * instances do not share counts and a cold start resets them. Production needs a shared store (e.g. Redis/KV).
  */
 const { providerConfig, send } = require('./parse-promise.js');
 
@@ -57,6 +59,7 @@ function validateAsk(b) {
   if (typeof b.question !== 'string' || !b.question.trim()) e.push('question required');
   else if (b.question.length > 600) e.push('question too long (max 600)');
   if (!b.context || typeof b.context !== 'object' || Array.isArray(b.context)) e.push('context object required');
+  else if (JSON.stringify(b.context).length > 40000) e.push('context too large');
   return e;
 }
 const userMsg = (b) => `<data>\n${JSON.stringify(b.context)}\n</data>\n<question>\n${b.question.trim()}\n</question>\nReply with JSON: {"answer": string, "answerable": boolean, "actions": [{"type": one of ${ACTIONS.join('|')}, "buyerId": string|null}] (at most 2)}`;
@@ -79,6 +82,16 @@ async function callAnthropic(cfg, b, signal, f) {
   if (!blk || typeof blk.input !== 'object') throw Object.assign(new Error('no tool'), { code: 'INVALID_MODEL_OUTPUT' });
   return blk.input;
 }
+/* rupee amounts in the answer must appear in the data the model was given (no invented or computed figures) */
+function unsupportedAmounts(answer, context) {
+  const seen = new Set((JSON.stringify(context || {}).match(/\d+(?:\.\d+)?/g) || []).map((n) => String(Math.round(+n))));
+  const out = []; const re = /(?:₹|rs\.?\s?|inr\s?)\s?(\d[\d,]*(?:\.\d+)?)\s*(k|l|lakh|lakhs|cr|crore)?\b/gi; let m;
+  while ((m = re.exec(String(answer)))) {
+    const base = +m[1].replace(/,/g, ''); const mul = { k: 1e3, l: 1e5, lakh: 1e5, lakhs: 1e5, cr: 1e7, crore: 1e7 }[String(m[2] || '').toLowerCase()] || 1;
+    const v = String(Math.round(base * mul)); if (v.length >= 3 && !seen.has(v)) out.push(m[0].trim());
+  }
+  return out;
+}
 /* deterministic post-checks: shape, length, allowed actions only */
 function cleanAnswer(o) {
   if (!o || typeof o.answer !== 'string' || !o.answer.trim()) return null;
@@ -100,6 +113,8 @@ async function handler(req, res, deps = {}) {
   try {
     const raw = cfg.provider === 'anthropic' ? await callAnthropic(cfg, b, ctl.signal, f) : await callOpenAI(cfg, b, ctl.signal, f);
     const out = cleanAnswer(raw); if (!out) return send(res, 502, { ok: false, code: 'INVALID_MODEL_OUTPUT', message: 'The model returned invalid output.' });
+    const bad = unsupportedAmounts(out.answer, b.context);
+    if (bad.length) return send(res, 502, { ok: false, code: 'UNSUPPORTED_AMOUNT', message: 'The model cited amounts that are not in your data, so its answer was discarded.' });
     return send(res, 200, Object.assign({ ok: true, mode: 'ai', provider: cfg.provider, model: cfg.model, changesState: false }, out));
   } catch (e) {
     const code = e.name === 'AbortError' ? 'TIMEOUT' : (e.code || 'UPSTREAM_ERROR');
@@ -111,4 +126,5 @@ module.exports = handler;
 module.exports.handler = handler;
 module.exports.cleanAnswer = cleanAnswer;
 module.exports.validateAsk = validateAsk;
+module.exports.unsupportedAmounts = unsupportedAmounts;
 module.exports._resetRateLimit = () => hits.clear();

@@ -1,0 +1,251 @@
+{
+ "suite": "Responsive layout (Playwright): 1440, 1280, 768, 390 px",
+ "file": "tests/responsive.py",
+ "ranAt": "2026-10-12T06:58:22+00:00",
+ "build": "4c89bc4324",
+ "total": 48,
+ "passed": 48,
+ "failed": 0,
+ "cases": [
+  {
+   "name": "1440×900 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 raahi/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 raahi/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 raahi/actions: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 raahi/activity: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 raahi/how: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 raahi/checks: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 raahi/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 recovery-link sheet fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 approval modal fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 RAY Credit for Mobile opens without page overflow",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 no uncaught errors",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/actions: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/activity: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/how: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/checks: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 recovery-link sheet fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 approval modal fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 RAY Credit for Mobile opens without page overflow",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 no uncaught errors",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/actions: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/activity: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/how: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/checks: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 recovery-link sheet fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 approval modal fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 RAY Credit for Mobile opens without page overflow",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 no uncaught errors",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/actions: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/activity: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/how: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/checks: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 recovery-link sheet fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 approval modal fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 RAY Credit for Mobile opens without page overflow",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 no uncaught errors",
+   "pass": true,
+   "detail": ""
+  }
+ ]
+}

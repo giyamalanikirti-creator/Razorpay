@@ -1,0 +1,18 @@
+{
+ "suite": "Live AI provider test (runs only when a key is configured)",
+ "file": "tests/live-provider.test.js",
+ "ranAt": "2026-10-12T06:55:59+00:00",
+ "build": "4c89bc4324",
+ "total": 0,
+ "passed": 0,
+ "failed": 0,
+ "skipped": 1,
+ "cases": [
+  {
+   "name": "LIVE provider: a real model reads a Hinglish promise and passes deterministic checks",
+   "pass": false,
+   "skipped": true,
+   "detail": "skipped: not run"
+  }
+ ]
+}
