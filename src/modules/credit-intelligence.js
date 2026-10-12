@@ -140,9 +140,9 @@ function guptaSignals(){
     out.push([`Slowed with ${sn.coverage} other distributors first`,`Typical days to pay elsewhere ${sn.baseLow}–${sn.baseHigh} → ${sn.nowLow}–${sn.nowHigh}${a?' since '+MONTHS_FULL[a.label]:''}`,lead>0?`About ${lead} month${lead===1?'':'s'} earlier`:'Earlier signal',[['net','Razorpay network']]]); }
   if(s.debit.failures60d||s.partialPayments) out.push(['Collection reliability',`${s.debit.failures60d} ${s.debit.method} failure${s.debit.failures60d===1?'':'s'} in 60 days${s.partialPayments?` · ${s.partialPayments} partial payment${s.partialPayments===1?'':'s'} (not counted against them)`:''}`,`${s.debit.failures6m} in 6 months`,[['rzp','Razorpay payment history']]]);
   out.push(['Payment behaviour deteriorated across the last 3 invoices','Each invoice was paid later than the one before',s.trajectory==='worse'?'3 of 3 slower':'Mixed',[['rzp','Razorpay payment history']]]);
-  out.push(['Average payment delay increased',`Usual delay for this buyer was ${s.usual} days`,`${s.usual} → ${s.delay} days`,[['led','Own ledger'],['rzp','Smart Collect']]]);
+  out.push(['Days taken to pay increased',`Invoice to payment usually took ${s.usual} days (not days overdue)`,`${s.usual} → ${s.delay} days`,[['led','Own ledger'],['rzp','Smart Collect']]]);
   out.push(['Order volume fell while exposure stayed high',`Monthly orders ${lakh(s.ordersPrev)} → ${lakh(s.ordersNow)}`,`${s.ordersChangePct}% orders · ${inr(s.out)} owed`,[['led','Own ledger']]]);
-  out.push(['Promise behaviour suggests near-term risk',`${s.promises.kept} kept, ${s.promises.broken} missed${s.promises.partial?`, ${s.promises.partial} part-paid`:''} · merchant-confirmed promises only`,`${s.promises.broken} of ${s.promises.made} missed`,[['conv','Buyer conversations']]]);
+  out.push(['Promise behaviour suggests near-term risk',`${s.promises.kept} kept, ${s.promises.broken} missed${s.promises.partial?` (${s.promises.partial} of them part-paid)`:''} · merchant-confirmed promises only`,`${s.promises.broken} of ${s.promises.made} missed`,[['conv','Buyer conversations']]]);
   return out;
 }
 function guptaWhyCard(){

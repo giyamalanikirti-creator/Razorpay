@@ -65,7 +65,7 @@ function instRender(){
     body=`<div class="h3" style="font-size:16px">Connect bank account</div><p class="muted mt4">Should RAY check your business bank account before it recommends any follow-up?</p>
      <div class="col gap8 mt12">
       <div role="button" class="radio-card ${yes?'on':''}" style="padding:14px 16px;align-items:flex-start" onclick="S.inst.choice='yes';instRender()"><span class="radio" style="margin-top:2px"></span><div class="grow"><div class="row gap8"><b style="color:var(--strong)">Yes, connect my bank account</b><span class="badge b-n">Recommended</span></div>
-       <div class="small mt4" style="color:var(--text)">RAY confirms payments in your bank before any follow-up, so follow-ups are more accurate and it never chases a buyer who has already paid.</div>
+       <div class="small mt4" style="color:var(--text)">RAY checks connected payment sources before follow-up and pauses reminders when a payment claim or possible match needs review. Connecting your bank adds NEFT, UPI-app and cheque payments to what it can check.</div>
        ${yes?`<div class="cb-box mt12"><div class="xs" style="font-weight:700;color:var(--strong);letter-spacing:.03em">HOW RAY READS YOUR BANK</div>${cbLayers()}<div class="xs muted mt8 row gap4">${I('lock',12)} ${CB_TRUST}</div></div>`:''}</div></div>
       <div role="button" class="radio-card ${yes?'':'on'}" style="padding:14px 16px;align-items:flex-start" onclick="S.inst.choice='no';instRender()"><span class="radio" style="margin-top:2px"></span><div class="grow"><b style="color:var(--strong)">No, not now</b>
        <div class="small mt4" style="color:var(--text)">RAY still works, but follow-ups are less accurate. Payments made by NEFT, RTGS, IMPS or UPI apps straight into your bank are only seen when a buyer shares a UTR or your ledger syncs.</div>
@@ -74,7 +74,7 @@ function instRender(){
         ${li('doc','Intelligent Reconciliation (UTR matching)','When a buyer shares a UTR number or a bank screenshot, RAY scans it, cross-checks your ledger and marks the invoice as paid.')}
         ${li('refresh','ERP and accounting sync','Receivables ageing from Tally, Marg, Zoho Books or QuickBooks, updated when a payment clears.')}
         ${li('truck','Salesperson collections','Cash and cheques your team records in the field.')}
-        <div class="ol-note mt12"><span style="color:var(--a);flex-shrink:0">${I('info',14,2)}</span><span>With <b>Yes</b>, RAY can check your bank before every follow-up, so it never chases a buyer who has already paid and its follow-ups are more accurate.</span></div></div>`}</div></div>
+        <div class="ol-note mt12"><span style="color:var(--a);flex-shrink:0">${I('info',14,2)}</span><span>With <b>Yes</b>, RAY also checks your bank before follow-up and pauses reminders when a possible match needs review. With <b>No</b>: bank account not checked; no match in the available sources does not prove the buyer has not paid.</span></div></div>`}</div></div>
      </div>`;
     acts=[{label:'Back',fn:()=>{S.inst.step=1;instRender()}},{label:yes?'Continue to connect':'Continue without bank',cls:'btn-p',id:'inst-bank',fn:()=>{ if(yes) A.cbStart('inst','icici'); else { S.inst.step=3; instRender(); } }}];
     }

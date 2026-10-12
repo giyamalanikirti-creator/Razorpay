@@ -38,7 +38,7 @@ function journeyChecks(){
       const rs=recS('gupta'); rs.draftMin='10000'; rs.draftMsg='Gupta ji, thoda bhi bhej sakte hain.'; A.recSend('gupta'); const L=recS('gupta').link, o=S.outbox.filter(x=>x.kind==='payment_link').slice(-1)[0];
       return ok(bad.every(x=>!x)&&L&&L.min===10000&&/thoda bhi/.test(L.msg)&&o&&o.payload.min===10000&&/minimum ₹10,000/.test(S.act[0].de), `link minimum ${L&&inr(L.min)} · outbox ${o&&inr(o.payload.min)}`); });
     run('J10','With the bank not connected, no screen claims a bank check',()=>{ S.bank.st='off'; const t=sourcesLine('gupta','INV-24790',{html:false});
-      return ok(/Not checked: Your bank account/.test(t)&&!/RAY checked[^.]*bank/.test(t)&&/does not mean the buyer has not paid/.test(t), t.slice(0,140)); });
+      return ok(/Not checked: Your bank account/.test(t)&&!/RAY checked[^.]*bank/.test(t)&&/Bank account not checked\. No match in the available sources does not prove the buyer has not paid/.test(t), t.slice(0,140)); });
     run('J11','A verified full payment cancels the scheduled reminder',()=>{ const c=CHASE.find(x=>x.ch==='wa'&&x.invs&&x.invs.length===1&&gateFor(x.id,'whatsapp',x.invs[0].inv).action==='send'); const inv=c.invs[0].inv;
       trySend(c.id,{inv, msg:'x', via:'Checks', scheduleAt:simNowMs()+3600e3}); ledgerPay(c.id, inv, balOf(c.id,inv), {ref:'chk-full-'+c.id});
       const o=S.outbox.filter(x=>x.buyerId===c.id).slice(-1)[0]; return ok(o.status==='cancelled', `${BUY[c.id].name} · ${inv} · reminder ${o.status}`); });
@@ -59,6 +59,14 @@ function journeyChecks(){
     run('J16','A Devanagari reply is read but nothing is recorded until the merchant confirms',()=>{ const m='मैंने 5000 भेज दिए हैं, बाकी सोमवार को दूँगा।', n0=S.led.events.length; const input={message:m,outstanding:balOf('gupta','INV-24891'),messageDate:S.today};
       const v=RayPromise.validateInterpretation(RayPromise.demoParse(m,input),input), i=v.interpretation;
       return ok(i.intent==='payment_claim'&&i.claimedAmount===5000&&i.promisedDate===RayDates.addDays(S.today,7)&&!v.canConfirm&&!v.paymentVerified&&S.led.events.length===n0, `${i.intent} · claimed ${inr(i.claimedAmount||0)} · rest ${i.promisedAmountLater!=null?inr(i.promisedAmountLater):'—'} by ${i.promisedDate} · ledger events unchanged`); });
+    fresh();
+    run('J17','Undo invalidates the repayment setup opened for that approval; reapproval gets a new one',()=>{ const k1=holdProposal(creditProposal('gupta')), r1=creditApprove(k1,'Checks',{setup:false}); A.repaySetup('gupta', r1.op.opId); const opened=!!S.rs&&S.rs.limit===60000;
+      undoCredit('gupta','Checks'); const closed=!S.rs&&!setupOpValid('gupta',r1.op.opId); A.repaySetup('gupta', r1.op.opId); const reopened=!!S.rs;
+      const k2=holdProposal(creditProposal('gupta')), r2=creditApprove(k2,'Checks',{setup:false}); A.repaySetup('gupta', r2.op.opId); const fresh2=!!S.rs&&S.rs.opId===r2.op.opId; S.rs=null;
+      return ok(opened&&closed&&!reopened&&fresh2&&!S.mand.gupta, `opened ${opened} · closed on undo ${closed} · obsolete reopen ${reopened} · new decision ${fresh2}`); });
+    run('J18','Previewing network scenarios changes no setting, consent, approval or audit record',()=>{ const snap=()=>JSON.stringify([S.ctl.net,S.act.length,S.led.events.length,(S.creditOps||[]).length,recOf('gupta').recommendedLimit]); const a=snap();
+      A.netPreview('gupta','own'); A.netPreview('gupta','net'); A.netPreview('gupta','own'); const b=snap(); delete NET_PREVIEW.gupta;
+      return ok(a===b&&recOf('gupta').recommendedLimit===60000, `before ${a} · after ${b}`); });
   } finally {
     S=JSON.parse(saved); _clock=savedClock; Object.assign(window, keep); _recCache={}; _recSig=''; engineSync(); syncChase(true);
   }
@@ -92,5 +100,5 @@ function vChecks(){
    ${runs.api?recRunCard(runs.api):notRecorded('npm test')}
    <div class="h2 mt24" style="font-size:18px">6 · Live AI provider test</div>
    ${runs.live&&runs.live.total?recRunCard(runs.live):`<div class="card pad mt12" id="checks-live"><span class="badge b-n">Not run</span> <span class="small">No OpenAI or Anthropic key was configured when tests were recorded, so no real model was tested.${runs.live?` Recorded ${esc(new Date(runs.live.ranAt).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}))} · ${runs.live.skipped||0} skipped.`:''} This page: ${esc(aiLabel())}.</span></div>`}
-   <div class="card pad mt16" id="checks-not-run"><div class="h3">7 · Not executed by any test here</div><div class="small muted mt8">A real AI model (unless section 6 shows a recorded live run). Real WhatsApp delivery, bank feeds, Marg sync, Payment Links, mandates and debits (all simulated). A real cross-distributor network (synthetic data only). Concurrency across several users or devices. Accessibility with a screen reader. Visual quality beyond the layout checks in section 4. User testing with distributors (none run; see the evaluation template in How it works).</div></div>`;
+   <div class="card pad mt16" id="checks-not-run"><div class="h3">7 · Not executed by any test here</div><div class="small muted mt8">A real AI model (unless section 6 shows a recorded live run), so no comparison between a model and the rule-based fallback has been measured. Real WhatsApp delivery, bank feeds, Marg sync, Payment Links, mandates and debits (all simulated). A real cross-distributor network (synthetic data only). Concurrency across several users or devices. Accessibility with a screen reader. Visual quality beyond the layout checks in section 4. User testing with distributors (none run; see the evaluation template in How it works).</div></div>`;
 }

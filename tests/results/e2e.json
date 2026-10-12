@@ -1,10 +1,10 @@
 {
  "suite": "Browser journeys (Playwright, Chromium)",
  "file": "tests/e2e_journeys.py",
- "ranAt": "2026-10-12T06:57:14+00:00",
- "build": "4c89bc4324",
- "total": 142,
- "passed": 142,
+ "ranAt": "2026-10-12T08:35:36+00:00",
+ "build": "e2c3fa012e",
+ "total": 175,
+ "passed": 175,
  "failed": 0,
  "cases": [
   {
@@ -759,13 +759,37 @@
   },
   {
    "journey": "NET",
-   "name": "participation off: recommendation recomputes to 75000,21",
+   "name": "Scenario preview is read-only: participation, consent, approvals and audit unchanged",
    "pass": true,
    "detail": ""
   },
   {
    "journey": "NET",
-   "name": "Explains why evidence is excluded",
+   "name": "The approvable recommendation stays tied to actual settings while previewing",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "participation off (changed in Controls): recommendation recomputes to 75000,21",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "Not participating: no network evidence is shown, the reason is",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "Previewing the network scenario while not participating reveals nothing",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "NET",
+   "name": "Explains why evidence is excluded (consent revoked)",
    "pass": true,
    "detail": ""
   },
@@ -777,7 +801,43 @@
   },
   {
    "journey": "WALK",
-   "name": "Nine steps reachable with Next; navigation alone records no event, approval, send or promise",
+   "name": "Eight steps reachable with Next; navigation alone records no event, approval, send or promise",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Step 3 approval applies ₹60,000 · 14 days",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Moving on closes any open repayment setup (no stale dialog)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Step 5 offers a labelled simulated ₹5,000 payment",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "₹5,000 leaves ₹15,000 due",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Remaining ₹15,000 completes recovery",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Step 8 shows what changed in RAY's inputs",
    "pass": true,
    "detail": ""
   },
@@ -789,7 +849,145 @@
   },
   {
    "journey": "WALK",
-   "name": "Exit closes the walkthrough and keeps progress",
+   "name": "Exit closes the walkthrough",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "Reset restarts cleanly: baseline balances, no dialogs, no setup, no note",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "WALK",
+   "name": "After reset the story starts again from step 1 with current state",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Approve then undo before the setup appears: no setup opens, values restored, both events kept",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Setup opens for the applied decision (₹60,000 · 14 days)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Undo from another surface while setup is open closes it; nothing can be confirmed",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Activity records the withdrawn setup",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "The obsolete setup cannot be re-rendered",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "An obsolete mandate update cannot be sent or activated after undo",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Navigating away during the transition does not pop up setup on another screen",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Setup stays available on the decision via 'Set up repayment'",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Double-clicking Undo reverses once",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Approve again after undo: ₹60,000 · 14 days, setup opens for the new decision",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Mandate activates only for the live decision (maximum ₹60,000)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "All surfaces agree on the applied limit",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "UNDO-UI",
+   "name": "Invoice balances and due dates untouched by approve/undo",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "OVR",
+   "name": "Override without a reason is refused",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "OVR",
+   "name": "Override logs reason, invoice, unresolved evidence and result; balance unchanged",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "OVR",
+   "name": "The payment review stays open after an override (later reminders pause again)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "OVR",
+   "name": "Override cannot bypass Do not contact",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "OVR",
+   "name": "Override cannot bypass paused automation",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "EVID",
+   "name": "Credit assessment and recovery state the same partial-payment evidence",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "EVID",
+   "name": "A buyer with no partial-payment evidence gets the product rationale, not invented history",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "EVID",
+   "name": "After a verified ₹5,000, the screen separates recorded payments from the search for more",
    "pass": true,
    "detail": ""
   },

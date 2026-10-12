@@ -1,8 +1,8 @@
 {
  "suite": "Unit tests: policy, ledger, reversal, network, interpreter (node --test)",
  "file": "tests/engine.test.js, tests/interpreter.test.js, tests/journeys.test.js, tests/network.test.js, tests/reversal.test.js",
- "ranAt": "2026-10-12T06:55:59+00:00",
- "build": "4c89bc4324",
+ "ranAt": "2026-10-12T08:33:53+00:00",
+ "build": "e2c3fa012e",
  "total": 62,
  "passed": 62,
  "failed": 0,

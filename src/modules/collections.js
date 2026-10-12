@@ -59,11 +59,11 @@ function syncLists(){
   for(const k of Object.keys(FAILS)) delete FAILS[k];
   S.led.events.filter(e=>e.type==='AUTOPAY_FAILED').forEach(e=>{ const i=invOf(e.buyerId, e.invoice); if(!i||!BUY[e.buyerId]) return;
     const cur=FAILS[e.buyerId]; if(cur){ const ci=invOf(e.buyerId,cur.inv); if(ci&&ci.bal>0&&i.bal<=0) return; }
-    const s=sigOf(e.buyerId), part=((s.promises&&s.promises.partial)||0)>0||(s.partialPayments||0)>0, nm=BUY[e.buyerId].name;
+    const pe=partialEvidence(e.buyerId), part=pe.any, nm=BUY[e.buyerId].name;
     FAILS[e.buyerId]={inv:e.invoice, amt:e.amount||i.amt, date:e.date, due:dueYear(i.due), m:/enach/i.test(e.source||'')?'eNACH':collMethod(e.buyerId).m, on:`${RayDates.fmtDay(e.date)} · ${(e.meta&&e.meta.time)||'10:02 AM'}`,
       reason:(e.meta&&e.meta.reason)||'Debit did not go through', partialHistory:part,
       rec:part?'Send a payment link and allow partial payment.':'Retry the debit once and send a payment link.',
-      why:part?`${nm} has paid in parts before. A partial-payment link lets them start paying now instead of waiting until the full amount is available.`:`${nm} usually pays on time. One retry after they add balance, plus a link to pay now, is enough.`}; });
+      why:part?`Evidence: ${pe.summary}. ${PARTIAL_RATIONALE}`:`${nm} usually pays on time. One retry after they add balance, plus a link to pay now, is enough.`}; });
   /* scheduled automatic collections: next invoice due within 7 days for every buyer with an active mandate */
   const keepUp=Object.fromEntries(Object.entries(UPCOMING).filter(([id])=>['received','progress','paidbank'].includes(S.coll&&S.coll[id])));
   for(const k of Object.keys(UPCOMING)) delete UPCOMING[k];
@@ -95,9 +95,9 @@ function uwData(id){
   const oldest=nextOpenInv(id), od=oldest?RayDates.diffDays(S.today,oldest.due):0;
   const season={gupta:['Orders are typically 35% higher during the festive period.','No festive increase, because repayment is weakening.','w'],arora:['Orders are typically 35% higher during the festive period.',`The ₹80,000 request fits that pattern. ${r.action==='increase'?'A higher limit for the season is supported.':''}`,'g']}[id]||['Orders are typically 20% higher in October and November.',r.recommendedTerms<s.terms?`Shorter ${r.recommendedTerms}-day terms keep festive exposure in check.`:'Current terms are fine for the season.',''];
   return [
-   ['Payment behaviour','rzp',[['Average payment delay',`${s.delay} days · usual ${s.usual}`,w(s.delayVsUsual>=3,s.delayVsUsual<=0)],['Delay trend',s.last3.map(x=>x+'d').join(' → '),w(s.trajectory==='worse',s.trajectory==='better')],['Invoices paid on time',`${s.onTimePaid} of ${s.invoicesPaid} in 6 months`,w(s.onTimePct<75,s.onTimePct>=90)],['Broken payment promises',s.promises.made?`${s.promises.broken} of last ${s.promises.made}`:'None',w(s.promises.broken>0,!s.promises.broken)]]],
+   ['Payment behaviour','rzp',[['Average days to pay (invoice → payment)',`${s.delay} days · usual ${s.usual}`,w(s.delayVsUsual>=3,s.delayVsUsual<=0)],['Days to pay, last 3 invoices',s.last3.map(x=>x+'d').join(' → '),w(s.trajectory==='worse',s.trajectory==='better')],['Invoices paid on time',`${s.onTimePaid} of ${s.invoicesPaid} in 6 months`,w(s.onTimePct<75,s.onTimePct>=90)],['Broken payment promises',s.promises.made?`${s.promises.broken} of last ${s.promises.made}`:'None',w(s.promises.broken>0,!s.promises.broken)]]],
    ['Relationship','led',[['Buyer vintage',`Buying from you for ${(s.tenureMonths/12).toFixed(1)} years`,w(false,s.tenureMonths>=36)],['Monthly orders',`${lakh(s.ordersPrev)} → ${lakh(s.ordersNow)}`,''],['Recent order trend',s.ordersChangePct<=-10?`Declining · ${s.ordersChangePct}%`:s.ordersChangePct>=10?`Rising · +${s.ordersChangePct}%`:'Steady',w(s.ordersChangePct<=-10,s.ordersChangePct>=10)]]],
-   ['Collection reliability','rzp',s.debit.method==='Manual'?[['Collection method','Manual payments',''],['Partial payments',s.partialPayments?`${s.partialPayments} verified this cycle`:'None',''],['Claims to reconcile',s.claimsPending?`${s.claimsPending} unverified`:'None','']]:[[`${s.debit.method} success rate`,`${s.debit.attempts-s.debit.failures6m} of ${s.debit.attempts} · ${Math.round((s.debit.attempts-s.debit.failures6m)/Math.max(1,s.debit.attempts)*100)}%`,w(s.debit.failures6m>0,!s.debit.failures6m)],['Failed debits',s.debit.failures6m?`${s.debit.failures60d} in 60 days · ${s.debit.failures6m} in 6 months`:'None',w(s.debit.failures60d>0,false)],['On-time collections in a row',String(s.debit.streak),w(false,s.debit.streak>=6)],['Partial-payment behaviour',s.partialPayments?`${s.partialPayments} verified · reduces the balance, never adds risk`:'None','']]],
+   ['Collection reliability','rzp',s.debit.method==='Manual'?[['Collection method','Manual payments',''],['Partial-payment behaviour',partialEvidence(id).summary,''],['Claims to reconcile',s.claimsPending?`${s.claimsPending} unverified`:'None','']]:[[`${s.debit.method} success rate`,`${s.debit.attempts-s.debit.failures6m} of ${s.debit.attempts} · ${Math.round((s.debit.attempts-s.debit.failures6m)/Math.max(1,s.debit.attempts)*100)}%`,w(s.debit.failures6m>0,!s.debit.failures6m)],['Failed debits',s.debit.failures6m?`${s.debit.failures60d} in 60 days · ${s.debit.failures6m} in 6 months`:'None',w(s.debit.failures60d>0,false)],['On-time collections in a row',String(s.debit.streak),w(false,s.debit.streak>=6)],['Partial-payment behaviour',partialEvidence(id).summary+(partialEvidence(id).any?' · never adds risk':''),'']]],
    ['Current exposure','led',[['Outstanding balance',inr(s.out),''],['Exposure vs reference limit',`${s.utilisationPct}% of ${inr(s.refLimit)}`,w(s.utilisationPct>=75,false)],['Oldest unpaid invoice',oldest?`${inr(oldest.bal)} · ${oldest.inv} · ${od>0?od+' days overdue':od===0?'due today':'due '+RayDates.fmtShort(oldest.due)}`:'None',w(od>0,false)]]],
    ['How they pay other distributors','net',on&&r.network.eligible?[[`Across ${n.coverage} distributors`,n.baseLow!=null?`${n.baseLow}–${n.baseHigh}d → ${n.nowLow}–${n.nowHigh}d`:`About ${n.avgDays} days`,w(r.network.trend==='adverse',r.network.trend!=='adverse')],['Policy effect',r.networkStep?(r.networkStep.kind==='corroborated'?`${inr(r.networkStep.from)} → ${inr(r.networkStep.to)}`:'Watch · limit held'):'No adjustment',w(!!r.networkStep,false)]]:[[on?'Razorpay network':'Razorpay network',on?NET_STATE_LABEL[r.network.state]||'Not used':'Not enabled','']]],
    ['Seasonal context','led',[['Festive period',season[0],''],['RAY’s view',season[1],season[2]]]],
@@ -112,11 +112,22 @@ function uwPanel(id){
 function uwMobile(id){ const d=uwData(id), n=d.findIndex(x=>x[1]==='net'); if(n>0) d.unshift(d.splice(n,1)[0]); return d.map(([h,src,rows])=>`<div class="xs muted mt8" style="font-weight:700;letter-spacing:.04em">${h.toUpperCase()}</div>${rows.map(r=>`<div class="mline"><span>${r[0]}</span><b style="${r[2]==='w'?'color:#b26a00':r[2]==='g'?'color:var(--g)':''};text-align:right;max-width:58%">${r[1]}</b></div>`).join('')}`).join(''); }
 
 /* ---------- SET UP REPAYMENT (after a limit or terms are approved) ---------- */
-A.repaySetup=(id,limit,terms)=>{ const cur=collMethod(id);
+/* opened for one approved decision (opId). Limit and terms are read from that decision and the live state, never
+   from values captured earlier; if the decision is undone or superseded, the setup closes and nothing can be confirmed. */
+A.repaySetup=(id,opId)=>{ if(!opId){ const op=lastCreditOp(id); opId=op&&op.opId; }
+  if(!setupOpValid(id,opId)) return toast('Repayment setup is not available: the credit decision it belongs to is no longer the applied one');
+  const cur=collMethod(id), limit=curLimitOf(id), terms=curTermsOf(id);
   const sug = cur.m==='UPI Autopay'||cur.m==='eNACH' ? cur.m : limit>=100000 ? 'eNACH' : 'UPI Autopay';
-  S.rs={id, limit, terms, pick:sug, sug, step:'choose'}; rsRender(); };
+  S.rs={id, opId, limit, terms, pick:sug, sug, step:'choose'}; rsRender(); };
+function rsValid(){ const r=S.rs; return !!(r&&r.opId&&setupOpValid(r.id,r.opId)&&curLimitOf(r.id)===r.limit&&curTermsOf(r.id)===r.terms); }
+/* close a setup whose decision is gone; nothing is sent or activated */
+function rsCancel(id, opId, why){ const r=S.rs; if(!r||r.id!==id||(opId&&r.opId!==opId)) return false; const c=chem(id), sent=r.step==='wait';
+  S.rs=null; closeModal(); if(S.mob&&S.mob.sheet==='pr'){ S.mob.sheet=null; if(typeof mobRender==='function') mobRender(); }
+  log({ic:'x',ti:`Repayment setup withdrawn · ${c.name}`,de:`${why==='undone'?'The credit decision it belonged to was undone':'The credit decision changed'} · ${sent?'mandate request for '+inr(r.limit)+' withdrawn before activation':'nothing was sent'} · no mandate change`,src:[],who:'RAY controls',chem:c.name});
+  return true; }
+function rsGuard(){ if(rsValid()) return true; const r=S.rs; if(r) rsCancel(r.id, r.opId, 'changed'); toast('Repayment setup closed: the credit decision it was for is no longer applied. Nothing was changed.'); prRefresh(); return false; }
 function rsRender(){
-  const r=S.rs; if(!r) return; const c=chem(r.id), cur=collMethod(r.id), first=c.name.split(' ')[0];
+  const r=S.rs; if(!r) return; if(!rsValid()){ rsGuard(); return; } const c=chem(r.id), cur=collMethod(r.id), first=c.name.split(' ')[0];
   const kv=`<div class="pr-kv"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Credit limit</span><b class="num">${inr(r.limit)}</b></div><div><span>Terms</span><b>${r.terms} days</b></div></div>`;
   let h='';
   if(r.step==='choose'){
@@ -145,13 +156,13 @@ function rsRender(){
   }
   prOpen(h);
 }
-A.rsSkip=()=>{ const c=chem(S.rs.id); log({ic:'clock',ti:`Repayment setup skipped for ${c.name}`,de:`Current method kept: ${mLabel(collMethod(S.rs.id).m)}`,src:[],who:prWho(),chem:c.name}); S.rs=null; prClose(); prRefresh(); };
-A.rsNext=()=>{ const r=S.rs, c=chem(r.id);
+A.rsSkip=()=>{ if(!S.rs) return prClose(); const c=chem(S.rs.id); log({ic:'clock',ti:`Repayment setup skipped for ${c.name}`,de:`Current method kept: ${mLabel(collMethod(S.rs.id).m)}`,src:[],who:prWho(),chem:c.name}); S.rs=null; prClose(); prRefresh(); };
+A.rsNext=()=>{ const r=S.rs; if(!r||r.step!=='choose') return; if(!rsGuard()) return; const c=chem(r.id);
   if(r.pick==='Manual'){ S.mand[r.id]={m:'Manual'}; log({ic:'link',ti:`Repayment method set: manual payment for ${c.name}`,de:`Payment links on each invoice · RAY reconciles payments as they arrive · limit ${inr(r.limit)} · ${r.terms} days`,src:['led'],who:'Approved by '+prWho(),chem:c.name}); S.rs=null; prClose(); prRefresh(); toast('Repayment method saved · manual payment'); return; }
   r.step=r.pick==='UPI Autopay'?'upi':'nach'; rsRender(); };
-A.rsSend=()=>{ const r=S.rs, c=chem(r.id); r.step='wait'; rsRender();
+A.rsSend=()=>{ const r=S.rs; if(!r||(r.step!=='upi'&&r.step!=='nach')) return; if(!rsGuard()) return; const c=chem(r.id); r.step='wait'; rsRender();
   log({ic:'send',ti:`${r.pick==='UPI Autopay'?'UPI Autopay':'eNACH mandate'} request sent to ${c.name}`,de:`Maximum ${inr(r.limit)} · ${r.pick==='UPI Autopay'?'on invoice due dates':'as invoices become due'} · buyer authorises in their ${r.pick==='UPI Autopay'?'UPI app':'bank'}`,src:['conv'],who:'Approved by '+prWho(),chem:c.name});
-  setTimeout(()=>{ if(!S.rs) return; S.mand[r.id]={m:r.pick, max:r.limit}; r.step='active';
+  setTimeout(()=>{ if(S.rs!==r) return; if(!rsValid()){ rsCancel(r.id, r.opId, 'changed'); prRefresh(); return; } S.mand[r.id]={m:r.pick, max:r.limit, opId:r.opId}; r.step='active';
     log({ic:'check',ti:`${r.pick==='UPI Autopay'?'UPI Autopay':'Bank mandate'} active for ${c.name}`,de:`Authorised by the buyer · maximum ${inr(r.limit)} · RAY cannot debit beyond this mandate`,src:['rzp'],who:`${c.name} · ${r.pick==='UPI Autopay'?'UPI app':'net banking'}`,chem:c.name});
     rsRender(); rr(); },2200); };
 
@@ -172,7 +183,7 @@ function planCard(id){
   const p=PLAN[id]; if(!p) return '';
   const c=chem(id), m=collMethod(id).m, auto=m==='UPI Autopay'||m==='eNACH', s=collSt(id);
   const done = s==='received'?`<div class="alert ok mt12" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('check',15,2.4)}</span><div class="grow small"><b style="color:var(--strong)">Payment received · ${inr(p.amt)} · ${p.inv}</b><div class="muted">${m} · ${id==='mehta'?'6 Oct, 10:42 AM':'today'} · matched automatically</div></div></div>`
-    : s==='paidbank'?`<div class="alert ok mt12" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('bank',15,2)}</span><div class="grow small"><b style="color:var(--strong)">Paid by NEFT before the autopay attempt</b><div class="muted">₹42,800 received 10:16 AM and matched from your bank account. RAY cancelled the autopay attempt. It never collects twice.</div></div></div>`:'';
+    : s==='paidbank'?`<div class="alert ok mt12" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('bank',15,2)}</span><div class="grow small"><b style="color:var(--strong)">Paid by NEFT before the autopay attempt</b><div class="muted">₹42,800 received 10:16 AM and matched from your bank account. RAY cancelled the autopay attempt. RAY cancelled the attempt to avoid collecting twice.</div></div></div>`:'';
   const pre = id==='gupta'?`<div class="pre-msg mt12"><div class="xs muted" style="font-weight:600">Pre-due message · 9 Oct · drafted by RAY</div><div class="small mt4" style="color:var(--strong)">“Your ₹38,400 payment against INV-24891 is due on 12 Oct. Your registered UPI mandate will be used on the due date.”</div><div class="xs mt8" style="color:#9a5b00;font-weight:600">${I('clock',12,2)} Gupta Traders usually pays late. RAY started follow-up 7 days before the due date.</div></div>`:'';
   return `<div class="card pad" id="plan"><div class="row between"><div class="row gap8">${stage('COLLECT')}<span class="h3">Repayment plan</span></div>${methodChip(id)}</div>
    <div class="pr-kv mt12" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div><span>Invoice</span><b>${p.inv}</b></div><div><span>Amount</span><b class="num">${inr(p.amt)}</b></div><div><span>Due</span><b>${p.d} Oct</b></div><div><span>Collection method</span><b>${mLabel(m)}</b></div></div>
@@ -188,7 +199,7 @@ function collBody(id,mob){
   const btn=(cls,lbl,fn)=>mob?`<button class="mbtn ${cls==='btn-p'?'p':cls==='btn-g'?'g':''}" onclick="${fn}">${lbl}</button>`:`<button class="btn ${cls}" onclick="${fn}">${lbl}</button>`;
   const state = s==='progress' ? `<div class="coll-st prog"><span class="lbl">Collection in progress</span><div class="mt8">${thinking(`Collecting ${inr(u.amt)} through ${cm.m}…`)}</div></div>`
    : s==='received' ? `<div class="coll-st ok"><span class="lbl" style="color:var(--g)">Payment received</span><div class="mob-amt mt4" style="font-size:24px;color:var(--strong)">${inr(u.amt)}</div><div class="pr-kv mt8 ${mob?'mob':''}"><div><span>Invoice</span><b>${u.inv}</b></div><div><span>Method</span><b>${cm.m}</b></div><div><span>Status</span><b style="color:var(--g)">Matched automatically</b></div></div><div class="xs muted mt8">Collected ${id==='mehta'?'6 Oct, 10:42 AM':'on the due date'}. Added to ${c.name}’s repayment record.</div></div>`
-   : s==='paidbank' ? `<div class="coll-st ok"><span class="lbl" style="color:var(--g)">Autopay attempt cancelled</span><div class="small mt8" style="color:var(--strong)">₹42,800 was already received by NEFT at 10:16 AM and matched to INV-24860 from your bank account. RAY does not collect twice.</div></div>`
+   : s==='paidbank' ? `<div class="coll-st ok"><span class="lbl" style="color:var(--g)">Autopay attempt cancelled</span><div class="small mt8" style="color:var(--strong)">₹42,800 was already received by NEFT at 10:16 AM and matched to INV-24860 from your bank account. RAY cancelled the attempt to avoid collecting twice.</div></div>`
    : `<div class="coll-st"><span class="lbl">Scheduled</span><div class="small mt4" style="color:var(--strong)">${u.when}</div>${btn('btn-s','Prototype: run collection on the due date',`A.collRun('${id}')`)}</div>`;
   return `<div class="pr-kv ${mob?'mob':''}"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Invoice</span><b>${u.inv}</b></div><div><span>Amount</span><b class="num">${inr(u.amt)}</b></div><div><span>Due</span><b>${u.due}</b></div></div>
    <div class="row gap8 mt12 wrap"><span class="xs muted" style="font-weight:600">Collection method</span>${methodChip(id)}<span class="xs muted">Authorised up to ${inr(cm.max||u.amt)}</span></div>

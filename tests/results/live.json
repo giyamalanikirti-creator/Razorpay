@@ -1,8 +1,8 @@
 {
  "suite": "Live AI provider test (runs only when a key is configured)",
  "file": "tests/live-provider.test.js",
- "ranAt": "2026-10-12T06:55:59+00:00",
- "build": "4c89bc4324",
+ "ranAt": "2026-10-12T08:33:54+00:00",
+ "build": "e2c3fa012e",
  "total": 0,
  "passed": 0,
  "failed": 0,

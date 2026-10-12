@@ -32,7 +32,7 @@ Gaps found in the audit: rule-based labels did not match the required wording; D
 
 ## 3. What changed, and the evidence
 
-* **Live AI, honest states.** Exact labels: "Live AI · provider/model", "Rule-based demo · AI not configured", "AI unavailable · Rule-based fallback" (with reason), "Needs merchant confirmation". Evidence: e2e `MOCK-AI` (7 checks, mocked endpoint over http), `AI-RULE` (8 checks), unit tests in `interpreter.test.js`, `api.test.js`, `ask-api.test.js`.
+* **Live AI, honest states.** Exact labels: "Live AI · provider/model", "Rule-based fallback · AI not configured", "AI unavailable · Rule-based fallback" (with reason), "Needs merchant confirmation". Evidence: e2e `MOCK-AI` (7 checks, mocked endpoint over http), `AI-RULE` (8 checks), unit tests in `interpreter.test.js`, `api.test.js`, `ask-api.test.js`.
 * **Hinglish and Devanagari.** Word-level Devanagari normalisation with a map back to the original text; `claimedAmount`; "20 ko"; conditional "agar … ho gaya to kal"; corrections and alternatives force clarification. All 8 required messages are in the eval set (items 41–54) and unit tests.
 * **Ask RAY.** New deterministic intents: why a reminder is on hold (same send gate), what changed after a failed payment, network-off counterfactual (same engine, network off), what needs my approval. Answers show their basis (ledger, policy version, network synthetic). Model answers are discarded if they cite rupee amounts that are not in the data.
 * **Network.** One card computed by the engine: own ledger vs eligible network, six-step causal chain, inclusion gates with reasons, simulation controls for every consent and evidence-quality state, regulatory boundary. Unit `network.test.js` (7), e2e `NET` (14), live check J14.
@@ -52,3 +52,20 @@ Gaps found in the audit: rule-based labels did not match the required wording; D
 ## 5. Remaining limitations
 
 See `docs/TECHNICAL.md` section 13. In short: synthetic data and simulated integrations; no real model tested; in-memory rate limit per instance; illustrative, unvalidated credit policy; payment correction affects only the synthetic ledger; the desktop dashboard is desktop-first; no user testing has been run.
+
+## 6. Final revision (prototype freeze)
+
+Root cause of the approve → undo → stale repayment popup: the repayment-setup dialog captured ₹60,000 · 14 days in its own state when it opened. Undo restored the limit but left that state alive, so the dialog (still open, open on mobile, or re-rendered) showed the cancelled decision and could still send a mandate request. Reproduced on the previous build; fixed by binding setup to the decision id and re-validating it at every step (see TECHNICAL.md §8).
+
+Other fixes in this pass: read-only network preview (participation only in Controls); shared partial-payment evidence; days-to-pay vs days-overdue labels; recorded-vs-searched payment wording; mechanism wording instead of "never chases a buyer who has paid"; reason-required possible-payment override on every path; reply analysis shows missing information and the suggested next step and flags ambiguous buyer names; label "Rule-based fallback · AI not configured"; reminder-policy figures reconciled (1,350 total, 176 Watch) and described as an observed difference; pilot cohort, primary outcome, hypothesis threshold, guardrails and pause criteria; 8-step walkthrough.
+
+| Suite | Total | Passed | Failed | Skipped |
+|---|---:|---:|---:|---:|
+| Unit (`npm test`) | 62 | 62 | 0 | 0 |
+| Mocked-provider API | 17 | 17 | 0 | 0 |
+| Live provider | 0 | 0 | 0 | 1 (no key) |
+| Browser journeys (Playwright) | 175 | 175 | 0 | 0 |
+| Smoke + demos | 24 | 24 | 0 | 0 |
+| Responsive (1440, 1280, 768, 390) | 56 | 56 | 0 | 0 |
+| Live Checks page | 18 journeys + 36 policy | 54 | 0 | 0 |
+| Eval, rule-based (57 items) | 57 | 100 % on all metrics | — | live model not run |

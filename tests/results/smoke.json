@@ -1,10 +1,10 @@
 {
  "suite": "Browser smoke and guided demos (Playwright)",
  "file": "tests/ui_smoke.py",
- "ranAt": "2026-10-12T06:57:54+00:00",
- "build": "4c89bc4324",
- "total": 23,
- "passed": 23,
+ "ranAt": "2026-10-12T08:36:20+00:00",
+ "build": "e2c3fa012e",
+ "total": 24,
+ "passed": 24,
  "failed": 0,
  "cases": [
   {
@@ -23,7 +23,12 @@
    "detail": ""
   },
   {
-   "name": "Network off recalculates to ₹75,000 · 21 days",
+   "name": "Previewing 'Your data only' shows ₹75,000 · 21 days and changes nothing",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "Turning participation off in Controls recalculates to ₹75,000 · 21 days",
    "pass": true,
    "detail": ""
   },
@@ -113,12 +118,12 @@
    "detail": ""
   },
   {
-   "name": "CORE demo (9 steps) runs without errors",
+   "name": "CORE demo (8 steps) runs without errors",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "STEPS demo (25 steps) runs without errors",
+   "name": "STEPS demo (28 steps) runs without errors",
    "pass": true,
    "detail": ""
   }

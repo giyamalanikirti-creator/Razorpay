@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PAGE = (ROOT / "index.html").as_uri()
 SHOTS = ROOT / "tests" / "results" / "screens"; SHOTS.mkdir(parents=True, exist_ok=True)
 VIEWPORTS = [(1440, 900), (1280, 800), (768, 1024), (390, 844)]
-ROUTES = ["raahi/overview", "raahi/buyer/gupta", "raahi/recover/gupta", "raahi/actions", "raahi/activity", "raahi/how", "raahi/checks", "raahi/payment/verma"]
+ROUTES = ["raahi/overview", "raahi/request/gupta", "raahi/buyer/gupta", "raahi/recover/gupta", "raahi/actions", "raahi/activity", "raahi/how", "raahi/checks", "raahi/payment/verma"]
 results = []
 def check(name, cond, detail=""):
     results.append({"name": name, "pass": bool(cond), "detail": "" if cond else str(detail)[:200]})
@@ -48,6 +48,11 @@ async def main():
             await page.evaluate("()=>{closeModal();A.approveGupta&&A.approveGupta()}"); await page.wait_for_timeout(250)
             m = await page.evaluate(MODAL)
             check(f"{w}×{h} approval modal fits the viewport width", m is None or (m["left"] >= -1 and m["right"] <= m["w"] + 1), m)
+            await page.evaluate("()=>{closeModal();A.reset();S.installed=true;go('raahi/activity')}"); await page.wait_for_timeout(300)
+            await page.evaluate("()=>A.overrideStart('verma')"); await page.wait_for_timeout(250)
+            m = await page.evaluate(MODAL)
+            check(f"{w}×{h} possible-payment override sheet fits the viewport width", m is None or (m["left"] >= -1 and m["right"] <= m["w"] + 1), m)
+            await page.screenshot(path=str(SHOTS / f"{w}x{h}_override.png"))
             await page.evaluate("()=>closeModal()")
             # mobile surface
             await page.evaluate("()=>A.openMobile('ask')"); await page.wait_for_timeout(300)

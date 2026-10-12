@@ -57,7 +57,35 @@ A.prSend=(id,edit)=>{ const c=chem(id), p=PAYREV[id];
 A.prSendCheck=(id)=>{ const pos=prPossible(id); if(!pos) return A.prSendDo(id,false);
   prOpen(`<div class="pr-sh"><span class="badge b-a">REMINDER PAUSED</span><h3 class="mt8">Possible payment found</h3><p class="small mt8" style="color:var(--strong)">${pos.msg||`We found an unmatched ${inr(pos.amt)} ${pos.src} received yesterday.`}</p><p class="xs muted mt4">If it is ${chem(id).name}’s, you would be chasing a buyer who has already paid.</p>
    <div class="pr-btns mt16"><button class="btn btn-s" onclick="A.prAnyway('${id}')">Send reminder anyway</button><button class="btn btn-p" onclick="prClose();${id==='verma'?'':`A.prCheck('${id}')`}">Review payment</button></div></div>`); };
-A.prAnyway=(id)=>prOpen(`<div class="pr-sh"><h3>Send the reminder anyway?</h3><p class="small mt8" style="color:var(--strong)">A possible payment from ${chem(id).name} is still unreviewed. This override will be logged.</p><div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-d" onclick="A.prSendDo('${id}',true)">Yes, send reminder</button></div></div>`);
+A.prAnyway=(id)=>A.overrideStart(id);
+/* ---------- overriding a possible-payment warning: one flow for desktop, mobile and the payment-review sheet ----------
+   Only the "possible unmatched payment" pause can be overridden, and only with a reason and an explicit confirmation.
+   Do not contact, paused automation, a stale ledger, a paid invoice, an unverified buyer claim, channel and weekly
+   limits and quiet hours still apply (sendGate re-checks every one at send time). The balance never changes. */
+const OVR_REASONS=['Buyer confirmed on a call that this credit is not theirs','The possible match is for a different invoice','Salesperson confirmed the payment is still pending','Other'];
+function overrideEvidence(id){ const p=PAYREV[id], pos=p&&(p.possible||(p.cands&&p.cands[0])); return pos?`${inr(pos.amt)} ${pos.from||pos.src||'credit'}${pos.t?' · '+pos.t:''}${pos.ref?' · '+pos.ref:''}`:'A possible payment is waiting for review'; }
+A.overrideStart=(id)=>{ const c=chem(id), p=PAYREV[id], inv=(p&&p.inv)||chaseInv(id); const g=gateFor(id,'whatsapp',inv,{override:'unmatched'});
+  if(!prPending(id)) return toast('No possible-payment warning to override for '+c.name);
+  const other=g.action==='block'?gateNote(g):'';
+  prOpen(`<div class="pr-sh"><span class="badge b-a">OVERRIDE A POSSIBLE-PAYMENT WARNING</span><h3 class="mt8">Send a reminder to ${c.name} anyway?</h3>
+   <div class="pr-kv mt8"><div><span>Invoice</span><b>${inv}</b></div><div><span>Due in ledger</span><b class="num">${inr(balOf(id,inv))}</b></div><div><span>Unresolved evidence</span><b>${esc(overrideEvidence(id))}</b></div></div>
+   <p class="small mt12" style="color:var(--strong)">RAY paused this reminder because a payment that may cover this invoice has not been reviewed. If it is the buyer’s payment, this reminder chases someone who has paid. The balance does not change.</p>
+   ${other?`<div class="alert warn mt12" style="padding:10px 12px"><span class="ic" style="width:26px;height:26px">${I('ban',14)}</span><div class="small grow"><b style="color:var(--strong)">Still blocked:</b> ${esc(other)} The override does not bypass this.</div></div>`:''}
+   <div class="field mt12"><label for="ovr-reason">Reason for overriding</label><select class="select" id="ovr-reason"><option value="">Choose a reason</option>${OVR_REASONS.map(x=>`<option>${x}</option>`).join('')}</select></div>
+   <div class="field mt8"><label for="ovr-note">Note <span class="muted">(required for “Other”)</span></label><input class="input" id="ovr-note" maxlength="140"></div>
+   <label class="row gap8 mt12 small" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="ovr-ok" style="margin-top:3px"> <span>I am overriding a possible-payment warning. The reason, invoice and unresolved payment evidence will be logged with my name.</span></label>
+   <div class="xs mt8" id="ovr-err" role="alert" style="color:var(--r);font-weight:600"></div>
+   <div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="prClose();go('raahi/payment/${id}')">Review payment instead</button><button class="btn btn-d" id="ovr-send" ${other?'disabled':''} onclick="A.overrideSend('${id}')">Send with override</button></div></div>`); };
+A.overrideSend=(id)=>{ const c=chem(id), p=PAYREV[id], inv=(p&&p.inv)||chaseInv(id), reason=(document.getElementById('ovr-reason')||{}).value||'', note=((document.getElementById('ovr-note')||{}).value||'').trim(), ok=(document.getElementById('ovr-ok')||{}).checked, err=document.getElementById('ovr-err');
+  const fail=m=>{ if(err) err.textContent=m; else toast(m); };
+  if(!reason) return fail('Choose a reason for overriding the warning.'); if(reason==='Other'&&note.length<5) return fail('Add a short note for “Other”.'); if(!ok) return fail('Confirm that you are overriding a possible-payment warning.');
+  const why=reason+(note?' · '+note:''), it=S.chase[id];
+  const r=sendMessage(id,{kind:'reminder', inv, msg:(prS(id).msg)||(it&&it.msg)||prMsg(id), via:prWho(), override:'unmatched', quiet:true});
+  const result=r.ok?'sent (simulated delivery)':r.queued?'queued for the end of quiet hours':'blocked: '+gateNote(r.gate);
+  log({ic:r.ok||r.queued?'send':'ban',ti:`Possible-payment warning overridden · ${c.name}`,de:`${inv} · ${inr(balOf(id,inv))} due · unresolved evidence: ${overrideEvidence(id)} · reason: ${why} · reminder ${result} · balance unchanged`,src:['conv'],who:'Override by '+prWho(),chem:c.name});
+  if(!r.ok&&!r.queued){ prClose(); prRefresh(); return toast('Not sent: '+gateNote(r.gate)); }
+  const st=prS(id); st.override={at:nowT(), reason:why}; if(it){ it.st=r.queued?'queued':'sent'; it.at=nowT(); } /* the payment review stays open: later reminders are paused again until it is resolved */
+  prClose(); prRefresh(); toast(`Reminder ${r.queued?'queued':'sent (simulated)'} · override and reason logged`); };
 A.prSendDo=(id,override)=>{ const c=chem(id), p=PAYREV[id], st=prS(id);
   const r=sendMessage(id,{kind:'reminder', inv:p.inv, msg:prMsg(id), via:prWho(), override:override?'unmatched':undefined});
   if(!r.ok&&!r.queued){ prClose(); prRefresh(); return; }

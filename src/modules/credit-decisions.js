@@ -76,8 +76,11 @@ function applyCredit(p, o={}){
 
 /* the latest decision for a buyer that can still be undone */
 const lastCreditOp = id => (S.creditOps||[]).slice().reverse().find(o=>o.id===id&&!o.reversed) || null;
-function undoCredit(id, via='Dashboard'){
+function undoCredit(id, via='Dashboard', opId){
+  if(opId){ const o=(S.creditOps||[]).find(x=>x.opId===opId); if(!o) return {ok:false, msg:'Nothing to undo'}; if(o.reversed) return {ok:false, dup:true, msg:'Already undone. Nothing changed twice.'}; }
   const op=lastCreditOp(id); if(!op) return {ok:false, msg:'Nothing to undo'};
+  if(opId&&op.opId!==opId) return {ok:false, stale:true, msg:'A newer decision exists. Undo that one first.'};
+  cancelPendingSetup(id); if(typeof rsCancel==='function') rsCancel(id, op.opId, 'undone');
   const was={limit:curLimitOf(id), terms:curTermsOf(id)};
   creditRestore(id, op.prior);
   op.reversed=true; op.reversedAt=decStamp();
@@ -112,15 +115,25 @@ function creditApprove(key, via, opts={}){
   const c=BUY[p.id], o=res.op;
   log({ic:'check',ti:`${c.name}: future limit set to ${inr(o.to.limit)} · ${o.to.terms}-day terms`,de:`Was ${inr(o.from.limit)} · ${o.from.terms} days · ${p.band} · policy ${p.policy} · applies to new invoices · supply continues`,src:['led',recOf(p.id).network.eligible?'net':'rzp','conv'],who:`Approved by ${M.owner} · ${via}`,chem:c.name, op:o.opId});
   rr(); toast(`Future limit set to ${inr(o.to.limit)} · ${o.to.terms}-day terms · logged`);
-  if(opts.setup!==false&&(via==='Dashboard'||via==='RAY Credit for Mobile')&&!S.mand[p.id]) setTimeout(()=>{ if(!lastCreditOp(p.id)||lastCreditOp(p.id).opId!==o.opId) return; A.repaySetup(p.id,o.to.limit,o.to.terms); },350);
+  if(opts.setup!==false&&(via==='Dashboard'||via==='RAY Credit for Mobile')&&!S.mand[p.id]) scheduleSetup(p.id, o.opId);
   return res; }
+/* follow-on repayment setup belongs to one approved decision. It opens only if that decision is still the live one,
+   on the same screen; undo or navigating away cancels it, and every step re-checks it (see collections.js rsValid). */
+const SETUP_PENDING = {};
+function scheduleSetup(id, opId){ cancelPendingSetup(id); const at=route();
+  SETUP_PENDING[id]={opId, t:setTimeout(()=>{ const pend=SETUP_PENDING[id]; delete SETUP_PENDING[id]; if(!pend||pend.opId!==opId||route()!==at) return; if(!setupOpValid(id,opId)) return; A.repaySetup(id, opId); },350)}; }
+function cancelPendingSetup(id){ const p=SETUP_PENDING[id]; if(p){ clearTimeout(p.t); delete SETUP_PENDING[id]; } }
+window.addEventListener('hashchange',()=>Object.keys(SETUP_PENDING).forEach(cancelPendingSetup));
+/* the decision a setup was opened for is still the applied one: not undone, and the live limit and terms match it */
+function setupOpValid(id, opId){ const op=(S.creditOps||[]).find(o=>o.opId===opId); const last=lastCreditOp(id);
+  return !!(op&&!op.reversed&&op.kind==='approved'&&last&&last.opId===opId&&curLimitOf(id)===op.to.limit&&curTermsOf(id)===op.to.terms); }
 function creditKeep(id, reason, via='Dashboard', extra={}){
   const res=applyCredit({id, key:extra.key}, {kind:'kept', via, reason, req:extra.req, reqAmt:extra.reqAmt, override:extra.override});
   if(!res.ok){ toast(res.msg); return res; }
   const c=BUY[id];
   log({ic:'check',ti:extra.title||`Kept current limit for ${c.name}`,de:`Merchant override · ${inr(curLimitOf(id))} · ${curTermsOf(id)} days${reason?` · reason: ${reason}`:''} · recorded with the recommendation it overrides`,src:['conv'],who:`Decided by ${M.owner} · ${via}`,chem:c.name, op:res.op.opId});
   rr(); toast(extra.toast||'Current limit kept · override recorded'); return res; }
-A.undoCredit=(id, via)=>{ const res=undoCredit(id, via||(typeof prMob==='function'&&prMob()?'RAY Credit for Mobile':'Dashboard'));
+A.undoCredit=(id, via, opId)=>{ const res=undoCredit(id, via||(typeof prMob==='function'&&prMob()?'RAY Credit for Mobile':'Dashboard'), opId);
   if(!res.ok) return toast(res.msg);
   const c=BUY[id], o=res.op;
   log({ic:'refresh',ti:`${c.name}: decision undone`,de:`Back to ${inr(curLimitOf(id))} · ${curTermsOf(id)} days${o.req!==undefined?' · credit request reopened':''} · original approval kept in the audit trail, reversal recorded`,src:['led'],who:`${M.owner} · ${via||'Dashboard'}`,chem:c.name, op:o.opId});
@@ -130,5 +143,6 @@ function creditStatus(id){ const op=lastCreditOp(id), d=decOf(id);
   return {op, status:op?op.kind:'open', changed:recChanged(id), limit:curLimitOf(id), terms:curTermsOf(id), refLimit:refLimitOf(id), refTerms:refTermsOf(id)}; }
 function undoBar(id, mob){ const op=lastCreditOp(id); if(!op) return '';
   const t=op.kind==='approved'?`${inr(op.to.limit)} · ${op.to.terms} days set ${op.at}`:`Override recorded ${op.at}`;
-  return mob?`<button class="mbtn" onclick="A.undoCredit('${id}')">Undo · ${t}</button>`
-    :`<div class="row gap8 mt8 wrap"><button class="btn btn-g btn-sm" id="undo-${id}" onclick="A.undoCredit('${id}')">${I('refresh',13)} Undo</button><span class="xs muted">${t} · ${op.via}</span></div>`; }
+  const setup=op.kind==='approved'&&!S.mand[id]&&setupOpValid(id,op.opId);
+  return mob?`<button class="mbtn" onclick="A.undoCredit('${id}',null,'${op.opId}')">Undo · ${t}</button>${setup?`<button class="mbtn mt8" onclick="A.repaySetup('${id}','${op.opId}')">Set up repayment</button>`:''}`
+    :`<div class="row gap8 mt8 wrap"><button class="btn btn-g btn-sm" id="undo-${id}" onclick="A.undoCredit('${id}',null,'${op.opId}')">${I('refresh',13)} Undo</button>${setup?`<button class="btn btn-s btn-sm" id="setup-${id}" onclick="A.repaySetup('${id}','${op.opId}')">Set up repayment</button>`:''}<span class="xs muted">${t} · ${op.via}</span></div>`; }

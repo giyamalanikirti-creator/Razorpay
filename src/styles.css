@@ -1242,3 +1242,6 @@ body.paymode .pay-root{display:block}
   .phone{width:100vw;height:calc(100vh - 50px);border-radius:0;padding:0;box-shadow:none}
   .phone>*{border-radius:0!important}
 }
+.ip-miss{border-left:3px solid #f0b24a;background:#fffaf0;border-radius:6px;padding:8px 10px}
+@media (max-width:600px){.pr-kv{grid-template-columns:minmax(0,1fr)!important}.pr-kv b{overflow-wrap:anywhere}.modal .pr-btns{flex-wrap:wrap}}
+.pr-kv b{overflow-wrap:anywhere}

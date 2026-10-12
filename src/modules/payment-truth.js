@@ -41,7 +41,9 @@ function sourcesLine(id, inv, o={}){
   else if(c.found==='claim') res=`The buyer says they paid ${inr(c.claim.claim.amount)}. That is not verified yet, so the balance is unchanged and reminders stay paused.`;
   else if(c.found==='possible') res=`A possible payment needs your review before any reminder.`;
   else if(!inv) res=c.complete?'':`A payment made through ${c.unavailable.map((x,i)=>nm(x,1)).join(' or ')} would not show here.`;
-  else res=`No matching payment found in these sources.${c.complete?'':' That does not mean the buyer has not paid.'}`;
+  else { const i=invOf(id,inv), recd=evOf(id).filter(e=>e.invoice===inv&&MONEY_IN_T.includes(e.type)&&!RayEvents.isReversed(S.led,e.id)&&!String(e.id).startsWith('ev-seed')).reduce((a,e)=>a+(e.amount||0),0);
+    res=recd&&i?`${inr(recd)} already recorded and verified on ${inv}. No further payment for the remaining ${inr(i.bal)} found in these sources.`:`No matching payment found in these sources.`;
+    if(!c.complete) res+=c.unavailable.some(x=>x.key==='bank')?' Bank account not checked. No match in the available sources does not prove the buyer has not paid.':' No match in the available sources does not prove the buyer has not paid.'; }
   const txt=`${o.time===false?'RAY checked':`At ${nowLabel()} RAY checked`} ${chk[0].toLowerCase()==='r'?chk:chk}. ${un?`Not checked: ${un}. `:''}${res}`.trim();
   return o.html===false?txt:esc(txt).replace(/Not checked:/,'<b>Not checked:</b>'); }
 
@@ -62,6 +64,15 @@ function recoveryOf(id){
 const recoveriesActive = () => Object.keys(FAILS).filter(id=>{ const r=recoveryOf(id); return r&&r.active; });
 const recoveriesDone = () => Object.keys(FAILS).filter(id=>{ const r=recoveryOf(id); return r&&!r.active; });
 const recoveringAmt = () => recoveriesActive().reduce((a,id)=>a+recoveryOf(id).balance,0);
+
+/* ---------- one evidence source for "has this buyer paid in parts?" (credit assessment, recovery, mobile, answers) ----------
+   history: part-paid promises in the buyer's record (merchant-confirmed promise history, synthetic, last 90 days)
+   session: partial payments verified in this demo (ledger events, reversed ones excluded) */
+function partialEvidence(id){ const s=sigOf(id); if(!s) return {hist:0, session:0, any:false, summary:'None on record'};
+  const hist=(s.promises&&s.promises.partial)||0, session=evOf(id).filter(e=>e.type==='PAYMENT_PARTIALLY_RECEIVED'&&!RayEvents.isReversed(S.led,e.id)).length;
+  const parts=[]; if(hist) parts.push(`${hist} missed promise${hist===1?' was':'s were'} part-paid in the last 90 days (promise history, synthetic)`); if(session) parts.push(`${session} partial payment${session===1?'':'s'} verified in this demo`);
+  return {hist, session, any:hist+session>0, summary:parts.length?parts.join(' · '):'None on record'}; }
+const PARTIAL_RATIONALE = 'Allowing partial payment gives the buyer a way to start clearing the outstanding amount.';
 
 /* ---------- a buyer's current payment position (used by every answer surface) ---------- */
 function paymentStatus(id){

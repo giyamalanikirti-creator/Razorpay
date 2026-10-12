@@ -1,14 +1,19 @@
 {
  "suite": "Responsive layout (Playwright): 1440, 1280, 768, 390 px",
  "file": "tests/responsive.py",
- "ranAt": "2026-10-12T06:58:22+00:00",
- "build": "4c89bc4324",
- "total": 48,
- "passed": 48,
+ "ranAt": "2026-10-12T08:36:54+00:00",
+ "build": "e2c3fa012e",
+ "total": 56,
+ "passed": 56,
  "failed": 0,
  "cases": [
   {
    "name": "1440×900 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1440×900 raahi/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
@@ -58,6 +63,11 @@
    "detail": ""
   },
   {
+   "name": "1440×900 possible-payment override sheet fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
    "name": "1440×900 RAY Credit for Mobile opens without page overflow",
    "pass": true,
    "detail": ""
@@ -69,6 +79,11 @@
   },
   {
    "name": "1280×800 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "1280×800 raahi/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
@@ -118,6 +133,11 @@
    "detail": ""
   },
   {
+   "name": "1280×800 possible-payment override sheet fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
    "name": "1280×800 RAY Credit for Mobile opens without page overflow",
    "pass": true,
    "detail": ""
@@ -129,6 +149,11 @@
   },
   {
    "name": "768×1024 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "768×1024 raahi/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
@@ -178,6 +203,11 @@
    "detail": ""
   },
   {
+   "name": "768×1024 possible-payment override sheet fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
    "name": "768×1024 RAY Credit for Mobile opens without page overflow",
    "pass": true,
    "detail": ""
@@ -189,6 +219,11 @@
   },
   {
    "name": "390×844 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 raahi/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
@@ -234,6 +269,11 @@
   },
   {
    "name": "390×844 approval modal fits the viewport width",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "390×844 possible-payment override sheet fits the viewport width",
    "pass": true,
    "detail": ""
   },

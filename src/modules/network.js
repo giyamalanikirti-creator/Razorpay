@@ -6,21 +6,32 @@ const netMark = (t='Network changed this') => `<span class="netmark">${I('users'
 
 /* both recommendations computed by the same engine: with eligible network evidence, and from your data only.
    The switch is the real participation setting; when it is off, network data is not used at all. */
+/* read-only comparison. Choosing a scenario is a preview only: it lives in this variable (not in app state, not saved,
+   not logged) and never changes participation, consent, approvals or actions. The actionable recommendation is always
+   recOf(id), i.e. the merchant's actual settings and the buyer's current eligibility. Changing participation is done in
+   Controls. Network figures are shown only when the evidence is eligible AND the merchant participates. */
+const NET_PREVIEW = {};
+const netPreviewOf = id => NET_PREVIEW[id] || (recOf(id).networkStep ? 'net' : 'own');
+A.netPreview=(id,k)=>{ NET_PREVIEW[id]=k; const e=document.getElementById('ncmp-'+id); if(e) e.outerHTML=netCompare(id,{mob:e.classList.contains('mob')}); };
+/* why network evidence cannot be shown or used for this buyer right now ('' when it can) */
+function netUnavailable(id){ if(!S.ctl.net) return 'You are not taking part in the Razorpay network, so no network evidence is shown or used. Participation is changed in Controls.'; const n=recAlt(id,true).network; return n.eligible?'':`Not available for this buyer: ${n.reason}.`; }
 function netCompare(id,opts={}){
   if(!BUY[id]) return '';
-  const own=recAlt(id,false), on=netOn(), withN=on?recAlt(id,true):null, used=withN&&withN.networkStep;
-  const col=(t,r,active,note)=>`<div class="ncmp-c ${active?'on':''}"><div class="xs muted" style="font-weight:600">${t}</div>${r?`<div class="ncmp-rec mt4">${bandBadge(r.band)} ${inr(r.recommendedLimit)} · ${r.recommendedTerms} days</div><div class="xs muted mt4">Confidence ${r.confidence}${r.riskIndex!=null?` · risk index ${r.riskIndex}`:''}</div>`:''}${note?`<div class="xs mt4" style="color:var(--text)">${note}</div>`:''}</div>`;
-  const netNote=!on?'Network off. Turn it on to include consented signals.':!withN.network.eligible?esc(withN.network.reason):withN.networkStep?esc(withN.networkStep.rule):'Network evidence is stable: no adjustment.';
-  return `<div class="ncmp ${opts.mob?'mob':''}" id="ncmp-${id}"><div class="row between wrap gap8">${used?netMark():`<span class="xs muted" style="font-weight:600">Network vs your data</span>`}<div class="nseg"><button class="${on?'on':''}" onclick="${on?'':'A.netToggle()'}">Network on</button><button class="${on?'':'on'}" onclick="${on?'A.netToggle()':''}">Your data only</button></div></div>
-   <div class="ncmp-g mt8">${col('With Razorpay network',withN&&withN.network.eligible?withN:null,on,withN&&withN.network.eligible?'':netNote)}${col('Your data only',own,!on||!used,'')}</div>${withN&&withN.network.eligible?`<div class="xs muted mt8">${netNote}</div>`:''}
-   ${used&&withN.networkStep.kind==='corroborated'?`<div class="small mt8" style="color:var(--strong)">Network changed this: ${inr(own.recommendedLimit)} → <b>${inr(withN.recommendedLimit)}</b>, ${own.recommendedTerms} → ${withN.recommendedTerms} days.</div>`:used?`<div class="small mt8" style="color:var(--strong)">Network changed this: ${own.band} → <b>${withN.band}</b>, limit held at ${inr(withN.recommendedLimit)}.</div>`:''}</div>`;
+  const own=recAlt(id,false), live=recOf(id), na=netUnavailable(id), withN=na?null:recAlt(id,true), pv=netPreviewOf(id);
+  const scen=pv==='net'?withN:own;
+  const pill=(k,t)=>`<button class="${pv===k?'on':''}" aria-pressed="${pv===k}" onclick="A.netPreview('${id}','${k}')">${t}</button>`;
+  const body=pv==='net'&&!withN?`<div class="small mt8" style="color:var(--text)">${esc(na)}</div>`
+    :`<div class="ncmp-rec mt8">${bandBadge(scen.band)} ${inr(scen.recommendedLimit)} · ${scen.recommendedTerms} days</div><div class="xs muted mt4">Confidence ${scen.confidence}${scen.riskIndex!=null?` · risk index ${scen.riskIndex}`:''} · ${pv==='net'?(withN.networkStep?esc(withN.networkStep.rule):'Eligible network evidence is stable: no adjustment'):'Your ledger and Razorpay payments with you only'}</div>`;
+  return `<div class="ncmp ${opts.mob?'mob':''}" id="ncmp-${id}"><div class="row between wrap gap8"><span class="xs" style="font-weight:600;color:var(--strong)">Compare scenarios <span class="badge b-n" style="margin-left:4px">Preview only · changes nothing</span></span><div class="nseg" role="group" aria-label="Scenario preview">${pill('net','With eligible network evidence')}${pill('own','Your data only')}</div></div>
+   ${body}
+   <div class="ncmp-act mt8 xs"><b style="color:var(--strong)">Recommendation you would approve:</b> ${bandBadge(live.band)} ${inr(live.recommendedLimit)} · ${live.recommendedTerms} days · ${live.networkStep?'uses eligible network evidence':'your data only'} (${S.ctl.net?'network participation on':'network participation off'}). <a class="link" onclick="goSec('raahi/controls','net-ctl')">Controls</a></div></div>`;
 }
 /* ---------- with you vs across the network (buyer profile): the differentiator, computed by the engine ---------- */
 /* first month a series is at least `delta` days slower than its own first month (same threshold as the network rule) */
 function firstSlowMonth(labels, vals, delta){ if(!labels||!vals||!vals.length) return null; const b=vals[0]; const i=vals.findIndex(v=>v>=b+delta); return i<0?null:{i, label:labels[i]}; }
 const MONTHS_FULL={Jan:'January',Feb:'February',Mar:'March',Apr:'April',May:'May',Jun:'June',Jul:'July',Aug:'August',Sep:'September',Oct:'October',Nov:'November',Dec:'December'};
 /* why network evidence is or is not used for this buyer: the same gates as lib/policy.js networkEvidence() */
-function netGates(id){ const s=sigOf(id), n=s.network, c=POL.network;
+function netGates(id){ const s=sigOf(id), c=POL.network, part=!!S.ctl.net, n=part?s.network:null;
   return [
     {k:'part', label:'You take part in the Razorpay network', ok:!!S.ctl.net, val:S.ctl.net?'On':'Off'},
     {k:'consent', label:'Buyer consent', ok:s.consent==='available', val:NET_STATE_LABEL[s.consent]||s.consent},
@@ -29,35 +40,38 @@ function netGates(id){ const s=sigOf(id), n=s.network, c=POL.network;
     {k:'dispute', label:'Not under buyer dispute', ok:!s.networkDisputed, val:s.networkDisputed?'Buyer asked for a review':'No dispute'}]; }
 function netStory(id, opts={}){
   const b=BUY[id]; if(!b||!b.network) return '';
-  const s=sigOf(id), own=recAlt(id,false), withN=recAlt(id,true), live=recOf(id), n=s.network||{}, used=!!live.networkStep, elig=withN.network.eligible;
+  const s=sigOf(id), own=recAlt(id,false), live=recOf(id), part=!!S.ctl.net, used=!!live.networkStep;
+  /* not participating: no network evidence is computed for display or shown (chart, coverage, trend), only the reason */
+  const withN=part?recAlt(id,true):own, n=part?(s.network||{}):{}, elig=part&&withN.network.eligible;
   const gates=netGates(id), firstFail=gates.find(g=>!g.ok);
   const m=n.monthly, d=POL.network.adverseDeltaDays;
   const netM=m?firstSlowMonth(m.labels,m.net,d):null, ownM=m?firstSlowMonth(m.labels,m.own,d):null;
   const lead=netM&&ownM?ownM.i-netM.i:null;
-  const step=withN.networkStep, kind=s.isNew?'new':step?step.kind:'none';
+  const step=part?withN.networkStep:null, kind=s.isNew?'new':step?step.kind:'none';
   /* one sentence, computed: what the merchant sees vs what eligible evidence adds */
   const say = kind==='corroborated'?`Your records show ${b.name} slowing down${ownM?` from ${MONTHS_FULL[ownM.label]}`:''}. Eligible network evidence shows the slowdown began earlier${netM?`, in ${MONTHS_FULL[netM.label]}`:''}, across ${n.coverage} other participating distributors${lead>0?` (${lead} month${lead===1?'':'s'} before your ledger)`:''}.`
     : kind==='uncorroborated'?`Your records show ${b.name} paying on time (${s.usual} → ${s.delay} days). Eligible network evidence shows it slowing with ${n.coverage} other participating distributors${netM?` since ${MONTHS_FULL[netM.label]}`:''}. The policy flags a review and holds the limit; it does not cut on evidence your data does not confirm.`
     : kind==='new'?`${b.name} has no repayment history with you. ${elig?`Eligible network evidence shows it paying ${n.coverage} participating distributors in about ${n.avgDays} days, so the starter limit is raised by rule.`:'Without eligible network evidence RAY uses the conservative starter limit.'}`
+    : !part?'You are not taking part in the Razorpay network, so RAY uses your ledger only and no network evidence is shown. Participation is changed in Controls.'
     : elig?'Eligible network evidence is stable, so it does not change the recommendation.':`Network evidence is not used: ${withN.network.reason||firstFail&&firstFail.label}.`;
   const col=(r)=>`${bandBadge(r.band)}`;
   const diff=(a,b2)=>a!==b2?' class="ns-diff"':'';
   const evidenceOwn=s.isNew?'GST record only (no history with you)':`Your ledger and Razorpay payments with you`;
-  const evidenceNet=elig?`${evidenceOwn} + consented, aggregated signals from ${n.coverage} distributors (synthetic)`:`${evidenceOwn} only · network excluded (${esc(withN.network.reason)})`;
+  const evidenceNet=!part?'Not shown: you are not taking part in the network':elig?`${evidenceOwn} + consented, aggregated signals from ${n.coverage} distributors (synthetic)`:`${evidenceOwn} only · network excluded (${esc(withN.network.reason)})`;
   const appr=(()=>{ const d0=decOf(id), cs=typeof creditStatus==='function'?creditStatus(id):null;
     if(s.isNew) return S.newLife?`Approved by you · ${inr(curLimitOf(id))} · ${curTermsOf(id)} days`:'Needs your approval before any credit';
     if(d0&&d0.status==='approved'&&!recChanged(id)) return `Approved by ${d0.by||M.owner}`; if(d0&&d0.status==='kept'&&!recChanged(id)) return 'You kept the current limit';
     return ['none'].includes(live.action)?'Nothing to approve':'Pending your approval · nothing changes until you approve'; })();
   const chain=[
     ['Your repayment history', s.isNew?'No invoices with you yet':`${s.usual}d → ${s.delay}d to pay${ownM?` · ≥${d} days slower from ${ownM.label}`:' · no slowdown'} · ${s.onTimePct!=null?s.onTimePct+'% on time':''}`],
-    ['Eligible network signal', elig?(n.avgDays!=null&&n.baseLow==null?`${n.coverage} distributors · about ${n.avgDays}d to pay`:`${n.coverage} distributors · ${n.baseLow}–${n.baseHigh}d → ${n.nowLow}–${n.nowHigh}d${netM?` · slower from ${netM.label}`:''}`):`Excluded · ${esc(withN.network.reason)}`],
+    ['Eligible network signal', !part?'Not shown · participation off':elig?(n.avgDays!=null&&n.baseLow==null?`${n.coverage} distributors · about ${n.avgDays}d to pay`:`${n.coverage} distributors · ${n.baseLow}–${n.baseHigh}d → ${n.nowLow}–${n.nowHigh}d${netM?` · slower from ${netM.label}`:''}`):`Excluded · ${esc(withN.network.reason)}`],
     ['Corroboration', !elig?'Not assessed (signal excluded)':kind==='corroborated'?'Agrees with your data':kind==='uncorroborated'?'Disagrees: on time with you':kind==='new'?'No history with you to compare':'Stable elsewhere'],
     ['Policy rule', step?esc(step.rule):kind==='new'&&!elig?`Starter policy ${inr(own.recommendedLimit)} · ${own.recommendedTerms} days`:'No network rule applies'],
     ['Adjustment', step?(step.kind==='uncorroborated'?`${own.band} → ${withN.band} · limit held at ${inr(withN.recommendedLimit)}`:`${inr(own.recommendedLimit)} · ${own.recommendedTerms}d → ${inr(withN.recommendedLimit)} · ${withN.recommendedTerms}d`):'None'],
     ['Your approval', appr]];
   const ctl=!opts.mob?netEvidenceControls(id):'';
-  const chart=m&&!opts.compact?lineChart({labels:m.labels,series:[{v:m.net,c:'#7b5fd6',label:'Network',name:`Across ${n.coverage} distributors`,dy:-12},{v:m.own,c:'#d47a1f',hl:ownM?m.own.map((_,i)=>i).filter(i=>i>=ownM.i):[],label:'With you',name:'With you',dy:13}],yMax:30,ticks:[0,10,20,30],fmt:v=>v+'d'}):'';
-  return `<div class="card pad netbig mt16 ns" id="net"><div class="row between wrap gap8"><div class="row gap8"><span class="net-ic">${I('users',16,2.2)}</span><span class="h3">${s.isNew?'Day-one credit: your data vs eligible network evidence':'Your ledger vs eligible network evidence'}</span></div><div class="row gap6 wrap">${used?netMark('Network changed this decision'):`<span class="badge b-n">${S.ctl.net?esc(NET_STATE_LABEL[live.network.state]||'Not used'):'Network participation off · comparison only'}</span>`}<span class="badge b-a">Synthetic data · proposed capability</span></div></div>
+  const chart=m&&elig&&!opts.compact?lineChart({labels:m.labels,series:[{v:m.net,c:'#7b5fd6',label:'Network',name:`Across ${n.coverage} distributors`,dy:-12},{v:m.own,c:'#d47a1f',hl:ownM?m.own.map((_,i)=>i).filter(i=>i>=ownM.i):[],label:'With you',name:'With you',dy:13}],yMax:30,ticks:[0,10,20,30],fmt:v=>v+'d'}):'';
+  return `<div class="card pad netbig mt16 ns" id="net"><div class="row between wrap gap8"><div class="row gap8"><span class="net-ic">${I('users',16,2.2)}</span><span class="h3">${s.isNew?'Day-one credit: your data vs eligible network evidence':'Your ledger vs eligible network evidence'}</span></div><div class="row gap6 wrap">${used?netMark('Network changed this decision'):`<span class="badge b-n">${S.ctl.net?esc(NET_STATE_LABEL[live.network.state]||'Not used'):'Network participation off'}</span>`}<span class="badge b-a">Synthetic data · proposed capability</span></div></div>
    <div class="small mt12 ns-say">${say}</div>
    <div style="overflow-x:auto"><table class="table ns-t mt12"><thead><tr><th></th><th>Your ledger only</th><th>With eligible network signals</th></tr></thead><tbody>
     <tr><td>Risk band</td><td>${col(own)}</td><td${diff(own.band,withN.band)}>${col(withN)}</td></tr>
@@ -66,7 +80,7 @@ function netStory(id, opts={}){
     <tr><td>Evidence</td><td class="xs">${evidenceOwn}</td><td class="xs">${evidenceNet}</td></tr>
     <tr><td>Confidence (evidence sufficiency)</td><td>${own.confidence}</td><td>${withN.confidence}</td></tr>
    </tbody></table></div>
-   <div class="xs muted mt4">Both columns are computed now by the same policy (${POL.version}); no buyer is special-cased. ${S.ctl.net?`RAY is currently using the ${used?'network':'your-ledger'} column.`:'Participation is off, so RAY uses your ledger column; the other column shows what eligible evidence would change.'}</div>
+   <div class="xs muted mt4">Both columns are computed now by the same policy (${POL.version}); no buyer is special-cased. ${S.ctl.net?`The recommendation you would approve uses the ${used?'network':'your-ledger'} column.`:'Participation is off, so the network column is not computed from network data and RAY uses your ledger only.'}</div>
    <ol class="ns-chain mt16">${chain.map(([h,t],i)=>`<li><span class="ns-n">${i+1}</span><div><b>${h}</b><div class="xs muted">${t}</div></div></li>`).join('')}</ol>
    <div class="grid g2 mt16" style="gap:16px;align-items:start"><div><div class="lbl">Why network evidence is ${elig&&S.ctl.net?'included':'excluded'}</div><div class="col gap4 mt8">${gates.map(g=>`<div class="row gap8 small"><span style="color:${g.ok?'var(--g)':'var(--r)'};flex-shrink:0">${I(g.ok?'check':'x',13,2.6)}</span><span class="grow">${g.label}</span><span class="xs muted">${esc(g.val)}</span></div>`).join('')}</div></div>
     ${chart?`<div><div class="row between"><span class="xs muted" style="font-weight:600">Typical days to pay (synthetic, aggregated)</span><span class="legend"><span><i style="background:#7b5fd6"></i>Network</span><span><i style="background:#d47a1f"></i>With you</span></span></div><div class="mt4">${chart}</div></div>`:'<div></div>'}</div>
@@ -79,8 +93,8 @@ function netEvidenceControls(id){ const s=sigOf(id), n=s.network; if(!n) return 
   const b=(lbl,fn,cls='btn-g')=>`<button class="btn ${cls} btn-sm" onclick="${fn}">${lbl}</button>`;
   const base=BUY[id].network, changed=n.recencyDays!==base.recencyDays||n.coverage!==base.coverage;
   const consent=s.consent==='available'?b('Buyer revokes consent',`A.consentSim('${id}','revoke')`):s.consent==='pending'?b('Buyer grants consent',`A.consentSim('${id}','grant')`)+b('Buyer declines',`A.consentSim('${id}','deny')`):b('Request consent',`A.consentSim('${id}','request')`,'btn-s');
-  return `<div class="ns-ctl mt12"><div class="xs" style="font-weight:600;color:var(--strong)">Try it · simulate consent and evidence quality <span class="muted" style="font-weight:400">(each change is recorded as an event and the recommendation recomputes)</span></div><div class="row gap6 mt8 wrap">
-   ${b(S.ctl.net?'Turn network participation off':'Turn network participation on','A.netToggle()',S.ctl.net?'btn-g':'btn-s')}${consent}
+  return `<div class="ns-ctl mt12"><div class="xs" style="font-weight:600;color:var(--strong)">Simulate buyer and network events <span class="muted" style="font-weight:400">(each is recorded as an event and the recommendation recomputes; your participation is changed only in <a class="link" onclick="goSec('raahi/controls','net-ctl')">Controls</a>)</span></div><div class="row gap6 mt8 wrap">
+   ${consent}
    ${s.networkDisputed?b('Close buyer review',`A.consentSim('${id}','resolve')`):s.consent==='available'?b('Buyer disputes the information',`A.consentSim('${id}','dispute')`):''}
    ${n.recencyDays<=POL.network.maxRecencyDays?b(`Signal goes stale (${POL.network.maxRecencyDays+15} days)`,`A.netQuality('${id}','stale')`):''}
    ${n.coverage>=POL.network.minCoverage?b(`Coverage drops to ${POL.network.minCoverage-2}`,`A.netQuality('${id}','coverage')`):''}
@@ -97,7 +111,7 @@ function guptaWhen(){ const m=sigOf('gupta').network&&sigOf('gupta').network.mon
 function chawlaNext(){ const i=nextDueInv('chawla'), c=recOf('chawla'), d=i?RayDates.diffDays(i.due,S.today):null; const when=d==null?'':d===0?'today':d===1?'tomorrow':`on ${RayDates.fmtShort(i.due)}`;
   return `Moved to ${c.band}, limit held${i?`, early follow-up before ${when}’s ${inr(i.bal-(i.disputed||0))} ${collMethod('chawla').m} debit`:''}.`; }
 function netOverviewCard(){
-  if(!netOn()) return `<div class="card pad mt16 netbig"><div class="row between"><div class="row gap8"><span class="net-ic">${I('users',16,2.2)}</span><span class="h3">Razorpay network is off</span></div><button class="btn btn-s btn-sm" onclick="A.netToggle()">Turn on</button></div><div class="small muted mt8">RAY is using your data only, and every recommendation has been recalculated without network evidence. Turn on the network to include consented repayment signals from other distributors on Razorpay.</div></div>`;
+  if(!netOn()) return `<div class="card pad mt16 netbig"><div class="row between"><div class="row gap8"><span class="net-ic">${I('users',16,2.2)}</span><span class="h3">Razorpay network is off</span></div><button class="btn btn-s btn-sm" onclick="goSec('raahi/controls','net-ctl')">Open Controls</button></div><div class="small muted mt8">RAY is using your data only, and every recommendation has been recalculated without network evidence. Turn on the network to include consented repayment signals from other distributors on Razorpay.</div></div>`;
   const st=pfStats(); const changed=RayData.FEATURED.map(b=>b.id).filter(id=>recOf(id).networkStep);
   const nl=recOf('newlife'), nlOwn=recAlt('newlife',false);
   const tile=(tag,name,t,s,cta,fn)=>`<div class="ntile"><span class="ntag">${tag}</span><b style="color:var(--strong);font-size:15px">${name}</b><div class="small mt4" style="color:var(--strong);font-weight:500">${t}</div><div class="xs muted mt4">${s}</div><button class="btn btn-s btn-sm mt12" onclick="${fn}">${cta}</button></div>`;
