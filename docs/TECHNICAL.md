@@ -255,7 +255,9 @@ The project still deploys as static `index.html` at the repository root, plus on
 | `OPENAI_MODEL` | no | `gpt-4o-mini` | any model that supports JSON-schema structured outputs |
 | `ANTHROPIC_API_KEY` | optional | none | alternative provider |
 | `ANTHROPIC_MODEL` | no | `claude-haiku-5-5` | |
-| `AI_PROVIDER` | no | OpenAI if its key is set | `openai` or `anthropic` |
+| `GEMINI_API_KEY` | optional | none | Google AI Studio key (has a free tier), server-side only |
+| `GEMINI_MODEL` | no | `gemini-3.5-flash-lite` | any Gemini model that supports `response_format` schemas |
+| `AI_PROVIDER` | no | first key present: OpenAI → Anthropic → Gemini | `openai`, `anthropic` or `gemini` |
 | `AI_TIMEOUT_MS` | no | `12000` | provider timeout |
 
 Set them in Vercel → Project → Settings → Environment Variables (Production), then redeploy.

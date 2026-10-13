@@ -1,9 +1,9 @@
-/* Live provider check. Runs ONLY when OPENAI_API_KEY or ANTHROPIC_API_KEY is set; otherwise it is skipped and
+/* Live provider check. Runs ONLY when a provider key (OpenAI, Anthropic or Gemini) is set; otherwise it is skipped and
  * reported as "not run". It never claims a model was tested when no key was present. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const handler = require('../api/parse-promise.js');
-const live = !!(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY);
+const live = !!(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY);
 test('LIVE provider: a real model reads a Hinglish promise and passes deterministic checks', { skip: live ? false : 'no provider key configured: live model NOT tested' }, async () => {
   handler._resetRateLimit();
   const res = { statusCode: 0, headers: {}, body: null, setHeader() {}, end(b) { this.body = JSON.parse(b); } };

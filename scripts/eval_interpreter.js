@@ -1,7 +1,8 @@
 /* Evaluate the payment-message interpreter on tests/eval/hinglish_messages.json.
  *
  *   node scripts/eval_interpreter.js            rule-based fallback only (always runs, no network)
- *   OPENAI_API_KEY=... node scripts/eval_interpreter.js   also runs the live model through api/parse-promise.js
+ *   OPENAI_API_KEY=... (or ANTHROPIC_API_KEY / GEMINI_API_KEY) node scripts/eval_interpreter.js
+ *       also runs the live model through api/parse-promise.js and reports it beside the rule-based reader
  *
  * Writes tests/eval/RESULTS.md with the observed numbers. Nothing is estimated or filled in.
  */
@@ -27,7 +28,7 @@ function score(rows) {
 const pct = (x) => (x * 100).toFixed(1) + '%';
 
 async function live() {
-  if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) return null;
+  if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) return null;
   const rows = [];
   for (const it of data.items) {
     const res = { statusCode: 0, headers: {}, body: null, setHeader() {}, end(b) { this.body = JSON.parse(b); } };

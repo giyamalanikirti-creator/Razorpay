@@ -90,3 +90,23 @@ New tests: `tests/credit-math.test.js` (9 unit tests), browser journeys REL (14 
 | Responsive (1440, 1280, 768, 390) | 68 | 68 | 0 | 0 |
 | Live Checks page | 20 journeys + 36 policy | 56 | 0 | 0 |
 | Eval, rule-based (57 items) | 57 | 100 % on all metrics | — | live model not run; the rule-based reader was written against this set |
+
+## 8. Gemini provider (13 Oct 2026)
+
+`/api/parse-promise` and `/api/ask` now speak a third provider. `GEMINI_API_KEY` alone switches live AI on; the default model is `gemini-3.5-flash-lite` (Google AI Studio, free tier). Provider selection is one shared table: an explicit `AI_PROVIDER` wins, otherwise the first key present in the order OpenAI → Anthropic → Gemini.
+
+Gemini is called through the Interactions API (`POST /v1beta/interactions`) with the same JSON schema the other providers get, passed as `response_format.schema`. The key goes in the `x-goog-api-key` header, never in the URL, so it cannot leak through request logs or a referrer. `generation_config` uses `thinking_level: minimal` and a fixed `seed` for repeatable extraction. The structured payload is read from the first step content that parses as JSON, so a thinking step before the answer does not break it.
+
+Every deterministic guarantee is unchanged: a fabricated amount is stripped, an unsupported amount in an answer is discarded (`UNSUPPORTED_AMOUNT`), a claim never becomes a verified payment, and an upstream failure falls back to the labelled rule-based reader rather than inventing a result.
+
+New tests: 7 mocked-Gemini cases across both endpoints (provider selection and default model, request shape and header, fabricated-amount stripping, JSON found in any step, a thinking-only reply rejected, 429 and 500 handled). The live-provider test and the interpreter eval now also recognise `GEMINI_API_KEY`.
+
+| Suite | Total | Passed | Failed | Skipped |
+|---|---:|---:|---:|---:|
+| Unit (`npm test`) | 71 | 71 | 0 | 0 |
+| Mocked-provider API (OpenAI, Anthropic, Gemini) | 24 | 24 | 0 | 0 |
+| Live provider | 0 | 0 | 0 | 1 (no key) |
+| Browser journeys (Playwright) | 211 | 211 | 0 | 0 |
+| Smoke + demos | 24 | 24 | 0 | 0 |
+| Responsive (1440, 1280, 768, 390) | 68 | 68 | 0 | 0 |
+| Live Checks page | 20 journeys + 36 policy | 56 | 0 | 0 |

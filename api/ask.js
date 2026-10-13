@@ -6,6 +6,7 @@
  *
  * Environment variables (same as /api/parse-promise; the key never reaches the browser)
  *   OPENAI_API_KEY / OPENAI_MODEL (default gpt-4o-mini) · ANTHROPIC_API_KEY / ANTHROPIC_MODEL (default claude-haiku-5-5)
+ *   GEMINI_API_KEY / GEMINI_MODEL (default gemini-3.5-flash-lite, Google AI Studio free tier)
  *   AI_PROVIDER ("openai" | "anthropic") · AI_TIMEOUT_MS (default 12000)
  *
  * GET returns { configured, provider, model }. Missing key → 503 AI_NOT_CONFIGURED (the page falls back to rules).
@@ -13,7 +14,7 @@
  * Rate limit: 20 requests/minute per IP, held in memory per warm serverless instance. It is best-effort only:
  * instances do not share counts and a cold start resets them. Production needs a shared store (e.g. Redis/KV).
  */
-const { providerConfig, send } = require('./parse-promise.js');
+const { providerConfig, send, geminiJson } = require('./parse-promise.js');
 
 const MAX_BODY = 48 * 1024;
 const RATE = { windowMs: 60000, max: 20 };
@@ -82,6 +83,13 @@ async function callAnthropic(cfg, b, signal, f) {
   if (!blk || typeof blk.input !== 'object') throw Object.assign(new Error('no tool'), { code: 'INVALID_MODEL_OUTPUT' });
   return blk.input;
 }
+async function callGemini(cfg, b, signal, f) {
+  const r = await f('https://generativelanguage.googleapis.com/v1beta/interactions', { method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
+    body: JSON.stringify({ model: cfg.model, system_instruction: SYSTEM, input: userMsg(b), response_format: { type: 'text', mime_type: 'application/json', schema: SCHEMA }, generation_config: { max_output_tokens: 600, seed: 7, thinking_level: 'minimal', thinking_summaries: 'none' } }) });
+  if (r.status === 429) throw Object.assign(new Error('rate'), { code: 'RATE_LIMITED' });
+  if (!r.ok) throw Object.assign(new Error('upstream'), { code: 'UPSTREAM_ERROR', status: r.status });
+  return geminiJson(await r.json());
+}
 /* rupee amounts in the answer must appear in the data the model was given (no invented or computed figures) */
 function unsupportedAmounts(answer, context) {
   const seen = new Set((JSON.stringify(context || {}).match(/\d+(?:\.\d+)?/g) || []).map((n) => String(Math.round(+n))));
@@ -111,7 +119,8 @@ async function handler(req, res, deps = {}) {
   if (!cfg.key) return send(res, 503, { ok: false, code: 'AI_NOT_CONFIGURED', message: 'Live AI is not configured on this deployment.' });
   const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), +(env.AI_TIMEOUT_MS || 12000));
   try {
-    const raw = cfg.provider === 'anthropic' ? await callAnthropic(cfg, b, ctl.signal, f) : await callOpenAI(cfg, b, ctl.signal, f);
+    const call = cfg.provider === 'anthropic' ? callAnthropic : cfg.provider === 'gemini' ? callGemini : callOpenAI;
+    const raw = await call(cfg, b, ctl.signal, f);
     const out = cleanAnswer(raw); if (!out) return send(res, 502, { ok: false, code: 'INVALID_MODEL_OUTPUT', message: 'The model returned invalid output.' });
     const bad = unsupportedAmounts(out.answer, b.context);
     if (bad.length) return send(res, 502, { ok: false, code: 'UNSUPPORTED_AMOUNT', message: 'The model cited amounts that are not in your data, so its answer was discarded.' });

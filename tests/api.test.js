@@ -66,3 +66,51 @@ test('Mocked provider: body over the size limit and wrong types are rejected bef
   const r = await call({ body: { message: 'x', outstanding: 'lots', messageDate: '2026-10-05' } }, { env: { OPENAI_API_KEY: 'k' }, fetch: f });
   assert.equal(r.statusCode, 400); assert.equal(called, false);
 });
+
+/* ---------- Gemini provider (Google AI Studio) ---------- */
+const gemini = (content, status = 200) => async (url, opts) => { gemini.last = { url, opts }; return { ok: status < 400, status, json: async () => ({ id: 'v1_x', object: 'interaction', status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: typeof content === 'string' ? content : JSON.stringify(content) }] }] }) }; };
+
+test('GEMINI_API_KEY alone selects Gemini and its default model', async () => {
+  const r = await call({ method: 'GET' }, { env: { GEMINI_API_KEY: 'AIza-secret' } });
+  assert.deepEqual(r.body, { configured: true, provider: 'gemini', model: 'gemini-3.5-flash-lite' });
+  assert.ok(!JSON.stringify(r.body).includes('AIza-secret'), 'the key is never returned');
+  const pinned = await call({ method: 'GET' }, { env: { GEMINI_API_KEY: 'k', GEMINI_MODEL: 'gemini-3.8-flash' } });
+  assert.equal(pinned.body.model, 'gemini-3.8-flash');
+});
+
+test('Gemini: the request carries the schema, the key header and no key in the URL', async () => {
+  const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(good) });
+  assert.equal(r.statusCode, 200); assert.equal(r.body.mode, 'ai'); assert.equal(r.body.provider, 'gemini');
+  assert.equal(r.body.interpretation.promisedAmountNow, 19200); assert.equal(r.body.paymentVerified, false);
+  assert.equal(gemini.last.url, 'https://generativelanguage.googleapis.com/v1beta/interactions');
+  assert.ok(!gemini.last.url.includes('k'), 'the key is sent as a header, never as a query parameter');
+  assert.equal(gemini.last.opts.headers['x-goog-api-key'], 'k');
+  const sent = JSON.parse(gemini.last.opts.body);
+  assert.equal(sent.response_format.mime_type, 'application/json');
+  assert.equal(sent.response_format.schema.properties.intent.type, 'string');
+  assert.equal(sent.generation_config.thinking_level, 'minimal');
+  assert.ok(sent.system_instruction.includes('untrusted'));
+  assert.ok(sent.input.includes('<buyer_message>'));
+});
+
+test('Gemini: the same deterministic checks strip a fabricated amount', async () => {
+  const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(Object.assign({}, good, { promisedAmountLater: 25000 })) });
+  assert.equal(r.statusCode, 200);
+  assert.notEqual(r.body.interpretation.promisedAmountLater, 25000, 'an amount not in the message is not accepted');
+});
+
+test('Gemini: JSON found in any step, and a thinking-only reply is rejected', async () => {
+  const wrapped = async () => ({ ok: true, status: 200, json: async () => ({ steps: [{ type: 'thinking', content: [{ type: 'text', text: 'considering the message' }] }, { type: 'model_output', content: [{ type: 'text', text: JSON.stringify(good) }] }] }) });
+  const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: wrapped });
+  assert.equal(r.statusCode, 200); assert.equal(r.body.interpretation.intent, 'promise');
+  const empty = async () => ({ ok: true, status: 200, json: async () => ({ steps: [{ type: 'model_output', content: [{ type: 'text', text: 'sorry, no JSON here' }] }] }) });
+  const bad = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: empty });
+  assert.equal(bad.statusCode, 502); assert.equal(bad.body.code, 'INVALID_MODEL_OUTPUT');
+});
+
+test('Gemini: upstream failures fall back honestly, never as a fake answer', async () => {
+  const r429 = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(good, 429) });
+  assert.equal(r429.statusCode, 429); assert.equal(r429.body.code, 'RATE_LIMITED');
+  const r500 = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(good, 500) });
+  assert.equal(r500.body.ok, false); assert.ok(['UPSTREAM_ERROR', 'AI_FAILED'].includes(r500.body.code), r500.body.code);
+});

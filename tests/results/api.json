@@ -1,10 +1,10 @@
 {
  "suite": "API tests with a mocked AI provider (no network, no key)",
  "file": "tests/api.test.js, tests/ask-api.test.js",
- "ranAt": "2026-10-13T08:53:37+00:00",
- "build": "02b892de65",
- "total": 17,
- "passed": 17,
+ "ranAt": "2026-10-13T09:48:05+00:00",
+ "build": "da9ceb8dc2",
+ "total": 24,
+ "passed": 24,
  "failed": 0,
  "skipped": 0,
  "cases": [
@@ -63,6 +63,36 @@
    "detail": ""
   },
   {
+   "name": "GEMINI_API_KEY alone selects Gemini and its default model",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Gemini: the request carries the schema, the key header and no key in the URL",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Gemini: the same deterministic checks strip a fabricated amount",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Gemini: JSON found in any step, and a thinking-only reply is rejected",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Gemini: upstream failures fall back honestly, never as a fake answer",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
    "name": "ask: GET reports configuration without exposing the key",
    "pass": true,
    "skipped": false,
@@ -106,6 +136,18 @@
   },
   {
    "name": "ask: per-IP rate limit (in-memory, best-effort per instance)",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: a Gemini key answers from the data and keeps the key server-side",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "ask: an amount Gemini invented is discarded, not shown",
    "pass": true,
    "skipped": false,
    "detail": ""

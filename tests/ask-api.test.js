@@ -48,3 +48,24 @@ test('ask: per-IP rate limit (in-memory, best-effort per instance)', async () =>
   for (let k = 0; k < 21; k++) { const res = mockRes(); await ask({ method: 'POST', headers: { 'x-forwarded-for': '9.9.9.9' }, body }, res, { env: {} }); last = res; }
   assert.equal(last.statusCode, 429);
 });
+
+/* ---------- Gemini provider ---------- */
+const geminiAsk = (content, status = 200) => async (url, opts) => { geminiAsk.last = { url, opts }; return { ok: status < 400, status, json: async () => ({ steps: [{ type: 'model_output', content: [{ type: 'text', text: JSON.stringify(content) }] }] }) }; };
+
+test('ask: a Gemini key answers from the data and keeps the key server-side', async () => {
+  const answer = { answer: 'Four buyers are slipping this week.', answerable: true, actions: [{ type: 'open_actions', buyerId: null }] };
+  const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: geminiAsk(answer) });
+  assert.equal(r.statusCode, 200); assert.equal(r.body.provider, 'gemini'); assert.equal(r.body.changesState, false);
+  assert.equal(geminiAsk.last.url, 'https://generativelanguage.googleapis.com/v1beta/interactions');
+  assert.equal(geminiAsk.last.opts.headers['x-goog-api-key'], 'k');
+  assert.ok(!JSON.stringify(r.body).includes('"k"'));
+  const sent = JSON.parse(geminiAsk.last.opts.body);
+  assert.equal(sent.response_format.mime_type, 'application/json');
+  assert.ok(sent.input.includes('<question>'));
+});
+
+test('ask: an amount Gemini invented is discarded, not shown', async () => {
+  const invented = { answer: 'Gupta Traders owes ₹99,999 today.', answerable: true, actions: [] };
+  const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: geminiAsk(invented) });
+  assert.equal(r.body.ok, false); assert.equal(r.body.code, 'UNSUPPORTED_AMOUNT');
+});

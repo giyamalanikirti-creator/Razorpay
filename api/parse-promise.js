@@ -8,7 +8,9 @@
  *   OPENAI_MODEL        optional, default gpt-4o-mini
  *   ANTHROPIC_API_KEY   optional alternative provider
  *   ANTHROPIC_MODEL     optional, default claude-haiku-5-5
- *   AI_PROVIDER         optional: "openai" | "anthropic" (default: whichever key is set, OpenAI first)
+ *   GEMINI_API_KEY      optional alternative provider (Google AI Studio; has a free tier)
+ *   GEMINI_MODEL        optional, default gemini-3.5-flash-lite
+ *   AI_PROVIDER         optional: "openai" | "anthropic" | "gemini" (default: whichever key is set, OpenAI first)
  *   AI_TIMEOUT_MS       optional, default 12000
  *
  * GET returns { configured, provider, model } so the UI can say honestly whether live AI is available.
@@ -22,11 +24,17 @@ const MAX_BODY = 8 * 1024;
 const RATE = { windowMs: 60000, max: 20 };
 const hits = new Map(); // best-effort, per warm instance
 
+/* Which provider to call. An explicit AI_PROVIDER wins; otherwise the first key present, OpenAI → Anthropic →
+   Gemini. With no key at all, the shape is still returned so GET can report the model it would use. */
+const MODEL_DEFAULT = { openai: 'gpt-4o-mini', anthropic: 'claude-haiku-5-5', gemini: 'gemini-3.5-flash-lite' };
+const KEY_ENV = { openai: 'OPENAI_API_KEY', anthropic: 'ANTHROPIC_API_KEY', gemini: 'GEMINI_API_KEY' };
+const MODEL_ENV = { openai: 'OPENAI_MODEL', anthropic: 'ANTHROPIC_MODEL', gemini: 'GEMINI_MODEL' };
 function providerConfig(env = process.env) {
   const pref = (env.AI_PROVIDER || '').toLowerCase();
-  if ((pref === 'anthropic' || (!pref && !env.OPENAI_API_KEY)) && env.ANTHROPIC_API_KEY) return { provider: 'anthropic', key: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL || 'claude-haiku-5-5' };
-  if (env.OPENAI_API_KEY && pref !== 'anthropic') return { provider: 'openai', key: env.OPENAI_API_KEY, model: env.OPENAI_MODEL || 'gpt-4o-mini' };
-  return { provider: pref || 'openai', key: null, model: pref === 'anthropic' ? (env.ANTHROPIC_MODEL || 'claude-haiku-5-5') : (env.OPENAI_MODEL || 'gpt-4o-mini') };
+  const of = (p) => ({ provider: p, key: env[KEY_ENV[p]] || null, model: env[MODEL_ENV[p]] || MODEL_DEFAULT[p] });
+  if (MODEL_DEFAULT[pref]) return of(pref);
+  for (const p of ['openai', 'anthropic', 'gemini']) if (env[KEY_ENV[p]]) return of(p);
+  return of('openai');
 }
 
 function send(res, status, body) {
@@ -96,6 +104,37 @@ async function callAnthropic(cfg, input, signal, fetchImpl) {
   return block.input;
 }
 
+/* Google AI Studio (Gemini). Interactions API with a response_format schema; the JSON comes back as text
+   inside a model_output step, so the first content item that parses as JSON is used. */
+async function callGemini(cfg, input, signal, fetchImpl) {
+  const r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/interactions`, {
+    method: 'POST', signal,
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
+    body: JSON.stringify({
+      model: cfg.model,
+      system_instruction: rules.SYSTEM_PROMPT,
+      input: rules.buildUserPrompt(input),
+      response_format: { type: 'text', mime_type: 'application/json', schema: rules.SCHEMA },
+      generation_config: { max_output_tokens: 800, seed: 7, thinking_level: 'minimal', thinking_summaries: 'none' },
+    }),
+  });
+  if (r.status === 429) throw Object.assign(new Error('rate limited'), { code: 'RATE_LIMITED' });
+  if (!r.ok) throw Object.assign(new Error('upstream ' + r.status), { code: 'UPSTREAM_ERROR', status: r.status });
+  const j = await r.json();
+  return geminiJson(j);
+}
+/* the structured payload out of an Interaction response, whatever step it lands in */
+function geminiJson(j) {
+  const steps = (j && j.steps) || [];
+  for (const st of steps) {
+    for (const c of (st && st.content) || []) {
+      if (c && typeof c.text === 'string') { try { return JSON.parse(c.text); } catch (e) { /* keep looking */ } }
+      if (c && c.type === 'function_call' && c.arguments && typeof c.arguments === 'object') return c.arguments;
+    }
+  }
+  throw Object.assign(new Error('no content'), { code: 'INVALID_MODEL_OUTPUT' });
+}
+
 /* required keys present with the right primitive types (strict schema check before semantic checks) */
 function schemaErrors(o) {
   const errs = [];
@@ -129,7 +168,8 @@ async function handler(req, res, deps = {}) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), +(env.AI_TIMEOUT_MS || 12000));
   try {
-    const raw = cfg.provider === 'anthropic' ? await callAnthropic(cfg, input, ctl.signal, fetchImpl) : await callOpenAI(cfg, input, ctl.signal, fetchImpl);
+    const call = cfg.provider === 'anthropic' ? callAnthropic : cfg.provider === 'gemini' ? callGemini : callOpenAI;
+    const raw = await call(cfg, input, ctl.signal, fetchImpl);
     const se = schemaErrors(raw);
     if (se.length > 3) return send(res, 502, { ok: false, code: 'INVALID_MODEL_OUTPUT', message: 'The model returned output that does not match the schema.' });
     const v = rules.validateInterpretation(raw, input);
@@ -150,3 +190,4 @@ module.exports.schemaErrors = schemaErrors;
 module.exports._resetRateLimit = () => hits.clear();
 module.exports.send = send;
 module.exports.readBody = readBody;
+module.exports.geminiJson = geminiJson;
