@@ -15,7 +15,7 @@ PIN = "2026-10-05"
 PAGE = (ROOT / "index.html").as_uri() + f"?date={PIN}"
 SHOTS = ROOT / "tests" / "results" / "screens"; SHOTS.mkdir(parents=True, exist_ok=True)
 VIEWPORTS = [(1440, 900), (1280, 800), (768, 1024), (390, 844)]
-ROUTES = ["raahi/overview", "raahi/request/gupta", "raahi/buyer/gupta", "raahi/recover/gupta", "raahi/actions", "raahi/activity", "raahi/how", "raahi/checks", "raahi/payment/verma"]
+ROUTES = ["ray-credit/overview", "ray-credit/request/gupta", "ray-credit/buyer/gupta", "ray-credit/recover/gupta", "ray-credit/actions", "ray-credit/activity", "ray-credit/how", "ray-credit/checks", "ray-credit/payment/verma"]
 results = []
 def check(name, cond, detail=""):
     results.append({"name": name, "pass": bool(cond), "detail": "" if cond else str(detail)[:200]})
@@ -42,11 +42,11 @@ async def main():
                 check(f"{w}×{h} {r}: no horizontal overflow, headings and buttons inside the viewport", o["doc"] <= o["w"] + 1 and not o["bad"], o)
                 await page.screenshot(path=str(SHOTS / f"{w}x{h}_{r.replace('/', '_')}.png"))
             # the release breakdown and the matched-payment state stay readable at every width
-            await page.evaluate("()=>{A.reset();S.installed=true;go('raahi/request/gupta')}"); await page.wait_for_timeout(300)
+            await page.evaluate("()=>{A.reset();S.installed=true;go('ray-credit/request/gupta')}"); await page.wait_for_timeout(300)
             rel = await page.evaluate("()=>{const e=document.getElementById('rel-gupta'); if(!e) return null; e.scrollIntoView(); const r=e.getBoundingClientRect(); const t=[...e.querySelectorAll('.rel-r b')].map(b=>{const q=b.getBoundingClientRect(); return q.right<=window.innerWidth+1&&q.width>0}); return {left:r.left,right:r.right,w:window.innerWidth,figures:t.every(Boolean),n:t.length,txt:e.innerText.includes('₹68,400')}}")
             check(f"{w}×{h} release breakdown: ₹68,400 and every figure visible inside the viewport", rel and rel["left"] >= -1 and rel["right"] <= rel["w"] + 1 and rel["figures"] and rel["n"] == 4 and rel["txt"], rel)
             await page.screenshot(path=str(SHOTS / f"{w}x{h}_release.png"))
-            await page.evaluate("()=>{go('raahi/payment/verma'); A.prMatchRzp('verma')}"); await page.wait_for_timeout(300)
+            await page.evaluate("()=>{go('ray-credit/payment/verma'); A.prMatchRzp('verma')}"); await page.wait_for_timeout(300)
             mt = await page.evaluate("()=>{const t=document.getElementById('main').innerText; return {matched:t.includes('Matched: ₹26,500'), stale:t.includes('may be this payment'), doc:document.documentElement.scrollWidth, w:window.innerWidth}}")
             check(f"{w}×{h} matched payment: confirmed state shown, no stale warning, no overflow", mt["matched"] and not mt["stale"] and mt["doc"] <= mt["w"] + 1, mt)
             await page.evaluate("()=>{A.openMobile(); A.mobGo('request','gupta')}"); await page.wait_for_timeout(300)
@@ -54,14 +54,14 @@ async def main():
             check(f"{w}×{h} mobile request screen shows the same breakdown", mm and mm["inside"] and mm["txt"], mm)
             await page.evaluate("()=>{A.closeMobile(); A.reset(); S.installed=true}"); await page.wait_for_timeout(200)
             # modals: recovery link and credit approval
-            await page.evaluate("()=>go('raahi/recover/gupta')"); await page.wait_for_timeout(250)
+            await page.evaluate("()=>go('ray-credit/recover/gupta')"); await page.wait_for_timeout(250)
             await page.evaluate("()=>A.recLink('gupta')"); await page.wait_for_timeout(250)
             m = await page.evaluate(MODAL)
             check(f"{w}×{h} recovery-link sheet fits the viewport width", m is None or (m["left"] >= -1 and m["right"] <= m["w"] + 1), m)
             await page.evaluate("()=>{closeModal();A.approveGupta&&A.approveGupta()}"); await page.wait_for_timeout(250)
             m = await page.evaluate(MODAL)
             check(f"{w}×{h} approval modal fits the viewport width", m is None or (m["left"] >= -1 and m["right"] <= m["w"] + 1), m)
-            await page.evaluate("()=>{closeModal();A.reset();S.installed=true;go('raahi/activity')}"); await page.wait_for_timeout(300)
+            await page.evaluate("()=>{closeModal();A.reset();S.installed=true;go('ray-credit/activity')}"); await page.wait_for_timeout(300)
             await page.evaluate("()=>A.overrideStart('verma')"); await page.wait_for_timeout(250)
             m = await page.evaluate(MODAL)
             check(f"{w}×{h} possible-payment override sheet fits the viewport width", m is None or (m["left"] >= -1 and m["right"] <= m["w"] + 1), m)

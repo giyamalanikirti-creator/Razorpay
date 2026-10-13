@@ -73,7 +73,7 @@ A.kirOutcome=(o)=>{ const k=kirS(); k.outcome=o; kirCommitEvent();
   rr(); toast(o==='kept'?'Commitment kept · added to repayment record':'Commitment missed · RAY will factor this in'); };
 
 function kirNotif(){ const k=kirS(); if(!k.notif||k.kind!=='plan') return '';
-  return `<div class="alert info mt16" id="kir-notif"><span class="ic">${I('cal',17,2)}</span><div class="grow"><h4>New payment commitment from Gupta Kirana Store</h4><div class="small" style="color:var(--strong)">${inr(k.now)} payable now. ${inr(kBal())} proposed for ${kFmt(k.date)}.</div><div class="xs muted mt4">${k.commit==='pending'?`Outside your ${K_AUTO_DAYS}-day plan rules, so it needs your approval.`:'Within your plan rules, so it was confirmed automatically.'} The ${inr(k.now)} payment is simulated in this prototype.</div></div><button class="btn btn-p btn-sm" onclick="goSec('raahi/invoice/${KIR.inv}','kir-commit')">Review commitment</button></div>`; }
+  return `<div class="alert info mt16" id="kir-notif"><span class="ic">${I('cal',17,2)}</span><div class="grow"><h4>New payment commitment from Gupta Kirana Store</h4><div class="small" style="color:var(--strong)">${inr(k.now)} payable now. ${inr(kBal())} proposed for ${kFmt(k.date)}.</div><div class="xs muted mt4">${k.commit==='pending'?`Outside your ${K_AUTO_DAYS}-day plan rules, so it needs your approval.`:'Within your plan rules, so it was confirmed automatically.'} The ${inr(k.now)} payment is simulated in this prototype.</div></div><button class="btn btn-p btn-sm" onclick="goSec('ray-credit/invoice/${KIR.inv}','kir-commit')">Review commitment</button></div>`; }
 
 /* collections forecast: approved commitments count as expected inflow, never as guaranteed revenue */
 function kirForecastRow(){ const k=kirS(), inForecast=k.kind==='plan'&&['approved','auto'].includes(k.commit)&&!k.outcome;
@@ -85,7 +85,7 @@ function kirForecastRow(){ const k=kirS(), inForecast=k.kind==='plan'&&['approve
 function kirOverviewRow(){ const k=kirS();
   const t=k.kind==='plan'?`Gupta Kirana Store · payment plan · ${inr(k.now)} now, ${inr(kBal())} on ${kShort(k.date)}`:k.kind==='dispute'?'Gupta Kirana Store · INV-2048 disputed':k.kind==='full'?`Gupta Kirana Store · ${inr(balOf(KIR.id,KIR.inv))} full payment initiated (simulated)`:`Gupta Kirana Store · ${KIR.inv} · ${inr(balOf(KIR.id,KIR.inv))} · ${Math.max(0,RayDates.diffDays(S.today,(invOf(KIR.id,KIR.inv)||{}).due||S.today))} days overdue`;
   const s=k.kind?`${COMMIT_ST[k.commit]||''}${k.kind==='plan'?' · '+PAY_ST[k.pay]:''}`:k.sent?'Payment link sent · waiting for the retailer':'At-risk invoice · RAY recommends a payment link with a payment-plan option';
-  return `<div class="ov-row" id="ov-kir"><span class="ov-ic" style="${k.kind?'background:#eef4ff;color:var(--link)':'background:var(--r-bg);color:var(--r)'}">${I(k.kind?'cal':'receipt',16,2)}</span><div class="grow"><div style="font-weight:600;color:var(--strong)">${t}</div><div class="small muted mt4">${s}</div></div><button class="btn ${k.kind==='plan'&&k.commit==='pending'?'btn-p':'btn-s'} btn-sm" onclick="go('raahi/invoice/${KIR.inv}')">${k.kind==='plan'&&k.commit==='pending'?'Review commitment':'Open invoice'}</button></div>`; }
+  return `<div class="ov-row" id="ov-kir"><span class="ov-ic" style="${k.kind?'background:#eef4ff;color:var(--link)':'background:var(--r-bg);color:var(--r)'}">${I(k.kind?'cal':'receipt',16,2)}</span><div class="grow"><div style="font-weight:600;color:var(--strong)">${t}</div><div class="small muted mt4">${s}</div></div><button class="btn ${k.kind==='plan'&&k.commit==='pending'?'btn-p':'btn-s'} btn-sm" onclick="go('ray-credit/invoice/${KIR.inv}')">${k.kind==='plan'&&k.commit==='pending'?'Review commitment':'Open invoice'}</button></div>`; }
 
 /* 3. invoice detail (desktop) */
 function vKirInvoice(){
@@ -108,7 +108,7 @@ function vKirInvoice(){
      <div class="xs muted mt8">${k.outcome?`Recorded: commitment ${k.outcome}. RAY uses this as a repayment behaviour signal for future recommendations.`:`On ${kShort(k.date)}, RAY records whether the ${inr(kBal())} arrives. Kept or missed commitments become behaviour signals for future recommendations.`} Nothing is collected automatically without a separate mandate.</div></div>`; }
   else if(k.kind==='full') cm=`<div class="card pad mt16"><div class="row between"><span class="h3">Full payment initiated</span>${kirStatus()}</div><div class="small muted mt8">Gupta Kirana Store chose to pay ${inr(KIR.amt)} now. ${PAY_ST[k.pay]}.</div>${k.pay!=='received'?`<button class="btn btn-g btn-sm mt12" onclick="A.kirPaid()">Simulate payment confirmation</button>`:''}</div>`;
   else if(k.kind==='dispute') cm=`<div class="card pad mt16"><div class="row between"><span class="h3">Dispute raised by Gupta Kirana Store</span>${kirStatus()}</div><div class="pr-kv mt12" style="grid-template-columns:1fr 2fr"><div><span>Reason</span><b>${k.dispute.reason}</b></div><div><span>Note</span><b>${esc(k.dispute.note||'No note')}</b></div></div><div class="xs muted mt8">Reminders for INV-2048 are paused until you resolve the dispute.</div></div>`;
-  return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('raahi/actions','grp-failed')">${I('arrowL',14,2)} Collections</a></div>
+  return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('ray-credit/actions','grp-failed')">${I('arrowL',14,2)} Collections</a></div>
    <div style="max-width:980px">${pageHead('Invoice '+KIR.inv,'Gupta Kirana Store · at-risk invoice')}${kirNotif()}<div class="card pad mt16">${kv}</div>${cm}${rec}</div>`;
 }
 
@@ -135,7 +135,7 @@ A.kirDispute=()=>{ const k=kirS(), r=document.querySelector('.kd-opt.on'), n=doc
 
 function kirPage(){
   const k=kirS(), v=k.view, c=chem(KIR.id);
-  const top=`<div class="kp-demo"><span>Prototype preview · what Gupta Kirana Store sees after tapping the WhatsApp link</span><button onclick="go('raahi/invoice/${KIR.inv}')">${I('arrowL',13,2.4)} Back to RAY Credit</button></div>`;
+  const top=`<div class="kp-demo"><span>Prototype preview · what Gupta Kirana Store sees after tapping the WhatsApp link</span><button onclick="go('ray-credit/invoice/${KIR.inv}')">${I('arrowL',13,2.4)} Back to RAY Credit</button></div>`;
   const head=`<div class="kp-head"><span class="kp-logo">AD</span><div><div class="kp-merch">${M.name}</div><div class="kp-sub">Payment request · ${M.city}</div></div></div>`;
   const inv=`<div class="kp-inv"><div class="row between"><span class="xs muted">Invoice #${KIR.inv.replace('INV-','INV-')}</span><span class="kp-due">${KIR.dueTxt}</span></div><div class="kp-l">Amount due</div><div class="kp-amt">${inr(KIR.amt)}</div><div class="xs muted mt4">Billed to ${c.name} · due ${KIR.due}</div></div>`;
   const foot=`<div class="kp-foot">${I('lock',12,2.2)} Secure payment request · Powered by Razorpay</div>`;
@@ -180,7 +180,7 @@ function kirPage(){
 function kirActionRow(i){ const k=kirS(), c=chemView(chem(KIR.id));
   const reason=!k.kind?(k.sent?'Payment link sent · waiting for the retailer':'3 days overdue · RAY recommends a payment link with a plan option'):k.kind==='plan'?`${inr(k.now)} now · ${inr(kBal())} proposed for ${kShort(k.date)} · ${COMMIT_ST[k.commit].toLowerCase()}`:k.kind==='dispute'?'Dispute raised · reminders paused':'Full payment initiated · simulated';
   return aRow(i,{id:'act-kir',name:c.name,band:c.band,area:KIR.inv,amt:inr(KIR.amt),kind:k.kind==='plan'?'Payment plan':'Missed payment',kc:k.kind?'k-credit':'k-held',reason,chan:'Payment link',chanIc:'link',
-    right:k.kind==='plan'&&k.commit==='pending'?`<button class="btn btn-p btn-sm" onclick="go('raahi/invoice/${KIR.inv}')">Review commitment</button>`:`<button class="btn ${k.sent?'btn-s':'btn-p'} btn-sm" onclick="go('raahi/invoice/${KIR.inv}')">${k.sent?'Open invoice':'Send payment link'}</button>`}); }
+    right:k.kind==='plan'&&k.commit==='pending'?`<button class="btn btn-p btn-sm" onclick="go('ray-credit/invoice/${KIR.inv}')">Review commitment</button>`:`<button class="btn ${k.sent?'btn-s':'btn-p'} btn-sm" onclick="go('ray-credit/invoice/${KIR.inv}')">${k.sent?'Open invoice':'Send payment link'}</button>`}); }
 
 /* helper: submit the suggested plan instantly (used by the guided story) */
 function kirSubmitNow(){ const k=kirS(); if(k.kind) return; if(!k.sent) kirDoSend(true); k.kind='plan'; k.pay='initiated'; k.commit=kNeedsApproval(k.date)?'pending':'auto'; k.notif=true; k.view='done'; k.submittedAt=nowT();

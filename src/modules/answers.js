@@ -47,9 +47,9 @@ function askIntent(q, hasBuyer){ const s=String(q||'').toLowerCase();
   return 'other'; }
 
 const fmtD = iso => RayDates.fmtShort(iso);
-const actBuyer = id => ({label:'Open buyer profile', route:`raahi/buyer/${id}`, mob:RayData.FEATURED.some(f=>f.id===id)?['buyer',id]:null});
-const actRecover = id => ({label:'View recovery', route:`raahi/recover/${id}`, mob:['recover',id]});
-const actPay = id => ({label:'Review payment', route:`raahi/payment/${id}`, mob:['pay',id]});
+const actBuyer = id => ({label:'Open buyer profile', route:`ray-credit/buyer/${id}`, mob:RayData.FEATURED.some(f=>f.id===id)?['buyer',id]:null});
+const actRecover = id => ({label:'View recovery', route:`ray-credit/recover/${id}`, mob:['recover',id]});
+const actPay = id => ({label:'Review payment', route:`ray-credit/payment/${id}`, mob:['pay',id]});
 
 /* ---------- payment status for one buyer: every number from the ledger ---------- */
 function paymentAnswer(id, hi){
@@ -78,7 +78,7 @@ function paymentAnswer(id, hi){
 
 function creditAnswer(id, hi){
   const r=recOf(id), s=sigOf(id), b=BUY[id], cs=creditStatus(id), rq=typeof creq==='function'?creq(id):null; const lines=[];
-  if(id==='newlife'&&!S.newLife){ lines.push(`New Life Stores is a new buyer. RAY’s starter recommendation is ${inr(r.recommendedLimit)} on ${r.recommendedTerms}-day terms${r.networkStep?' with the consented network uplift':' (network not used)'}. Not final until you approve.`); return {kind:'credit', ids:[id], lines, actions:[{label:'Open credit check', route:'raahi/check', mob:null}]}; }
+  if(id==='newlife'&&!S.newLife){ lines.push(`New Life Stores is a new buyer. RAY’s starter recommendation is ${inr(r.recommendedLimit)} on ${r.recommendedTerms}-day terms${r.networkStep?' with the consented network uplift':' (network not used)'}. Not final until you approve.`); return {kind:'credit', ids:[id], lines, actions:[{label:'Open credit check', route:'ray-credit/check', mob:null}]}; }
   lines.push(`${b.name} is ${r.band}. Current limit ${inr(cs.limit)} on ${cs.terms}-day terms; outstanding ${inr(s.out)}.`);
   lines.push(`RAY recommends ${inr(r.recommendedLimit)} on ${r.recommendedTerms}-day terms (confidence ${r.confidence}, evidence sufficiency). ${r.recommendation}`);
   lines.push(`Why: ${shortReasons(id,3).join('; ')}.`);
@@ -88,7 +88,7 @@ function creditAnswer(id, hi){
   if(cs.op&&cs.op.kind==='approved') lines.push(`You set ${inr(cs.op.to.limit)} · ${cs.op.to.terms} days (${cs.op.via}, ${cs.op.at}).${recChanged(id)?' The recommendation has changed since.':''}`);
   if(rq&&!S.req[id]){ const v=reqV(rq); lines.push(`Open request: ${inr(rq.amt)} more credit. RAY’s verdict: ${v.verdict.toLowerCase()} (exposure would be ${inr(v.exposureAfter)}). ${releaseLine(v.plan, reqRefColl(rq))} Needs your decision.`); }
   return {kind:'credit', ids:[id], lead:hi?(r.band==='Reliable'?'Theek hai, policy ke andar hai.':'Abhi aur credit dene se pehle dekh lijiye.'):null, lines,
-    actions:[rq&&!S.req[id]?{label:'Review credit request', route:`raahi/request/${id}`, mob:['request',id]}:actBuyer(id)]}; }
+    actions:[rq&&!S.req[id]?{label:'Review credit request', route:`ray-credit/request/${id}`, mob:['request',id]}:actBuyer(id)]}; }
 
 function invoiceAnswer(no, hi){
   const f=findInvoice(no); if(!f) return {kind:'clarify', lines:[`I can’t find ${no} in your ledger. Check the number, or ask about the buyer by name.`], actions:[]};
@@ -129,7 +129,7 @@ function netOffAnswer(hi){
     if(a.recommendedLimit!==b.recommendedLimit||a.recommendedTerms!==b.recommendedTerms||a.band!==b.band) rows.push(`${BUY[id].name}: ${a.band} ${inr(a.recommendedLimit)} · ${a.recommendedTerms}d with network → ${b.band} ${inr(b.recommendedLimit)} · ${b.recommendedTerms}d without`); });
   const lines=[S.ctl.net?`If you turn network participation off, RAY recalculates every recommendation from your own data. ${rows.length} would change:`:`Network participation is already off. Every recommendation uses your data only. With eligible network evidence, ${rows.length} would differ:`].concat(rows.map(x=>'• '+x));
   lines.push('Limits you already approved stay as they are until you approve a new recommendation.');
-  return {kind:'netoff', lead:hi?(S.ctl.net?'Network band karne par RAY sirf aapke data se recommend karega.':'Network pehle se band hai.'):null, lines, actions:[{label:S.ctl.net?'Compare on Gupta Traders':'Open Controls', route:S.ctl.net?'raahi/buyer/gupta':'raahi/controls', mob:null}], basis:['Policy '+POL.version+' (same rules, network on vs off)','Network signals · consented, aggregated']}; }
+  return {kind:'netoff', lead:hi?(S.ctl.net?'Network band karne par RAY sirf aapke data se recommend karega.':'Network pehle se band hai.'):null, lines, actions:[{label:S.ctl.net?'Compare on Gupta Traders':'Open Controls', route:S.ctl.net?'ray-credit/buyer/gupta':'ray-credit/controls', mob:null}], basis:['Policy '+POL.version+' (same rules, network on vs off)','Network signals · consented, aggregated']}; }
 
 /* ---------- what is waiting for the merchant ---------- */
 function approvalsAnswer(hi){
@@ -142,13 +142,13 @@ function approvalsAnswer(hi){
   if(credit.length) lines.push(`Credit (${credit.length}): ${credit.map(id=>{ const r=recOf(id); return `${BUY[id].name} → ${inr(r.recommendedLimit)} · ${r.recommendedTerms}d`; }).join('; ')}. Recommended, not applied until you approve.`);
   if(reqs.length) lines.push(`Credit requests (${reqs.length}): ${reqs.map(id=>BUY[id].name).join(', ')}.`);
   if(pays.length) lines.push(`Payment reviews (${pays.length}): ${pays.map(id=>BUY[id].name).join(', ')}. Reminders stay on hold until reviewed.`);
-  const acts=[]; if(rec.length) acts.push(actRecover(rec[0])); acts.push({label:'Open today’s plan', route:'raahi/actions', mob:['actions']});
+  const acts=[]; if(rec.length) acts.push(actRecover(rec[0])); acts.push({label:'Open today’s plan', route:'ray-credit/actions', mob:['actions']});
   return {kind:'approvals', lead:hi?`${rec.length+credit.length+reqs.length+pays.length} cheezein aapki approval ka intezaar kar rahi hain.`:null, lines, actions:acts, basis:['Ledger','Recovery state','Policy '+POL.version,'Payment review queue']}; }
 
 function ruleAnswer(q, surface){
   const hi=isHinglish(q), f=findBuyersIn(q), intent=askIntent(q, f.ids.length>0);
   const say=(o)=>Object.assign({mode:'rule', label:'Rule-based answer from your current RAY data', q, intent, basis:o.kind==='template'?['Static sample data']:o.kind==='credit'?['Ledger','Policy '+POL.version].concat(S.ctl.net?['Network · consented, aggregated']:[]):['Ledger · verified events only']}, o);
-  if(intent==='refuse_action') return say({kind:'refuse', lines:['I can’t change anything from a chat message. Payments are marked paid only when a payment is verified, and approvals happen on the review screens where you confirm the exact values.'], actions:[{label:'Open today’s plan', route:'raahi/actions', mob:['actions']}]});
+  if(intent==='refuse_action') return say({kind:'refuse', lines:['I can’t change anything from a chat message. Payments are marked paid only when a payment is verified, and approvals happen on the review screens where you confirm the exact values.'], actions:[{label:'Open today’s plan', route:'ray-credit/actions', mob:['actions']}]});
   if(intent==='invoice') return say(invoiceAnswer(invoiceIn(q), hi));
   if(intent==='netoff') return say(netOffAnswer(hi));
   if(intent==='approvals') return say(approvalsAnswer(hi));
@@ -160,15 +160,15 @@ function ruleAnswer(q, surface){
   if(id&&intent==='payment') return say(paymentAnswer(id, hi));
   if(id&&(intent==='credit'||intent==='other')) return say(intent==='credit'?creditAnswer(id, hi):Object.assign(creditAnswer(id, hi),{lines:paymentAnswer(id,false).lines.slice(0,1).concat(creditAnswer(id,false).lines.slice(0,2))}));
   if(intent==='payment'&&!id) return say({kind:'clarify', lines:['Which buyer or invoice? For example “Gupta Traders ka payment kya hua?” or “INV-24891 status”.'], actions:[]});
-  if(intent==='credit'&&!id) return say({kind:'clarify', lines:['Which buyer? For example “Sethi Mart ka limit badha doon?”.'], actions:[{label:'Open credit portfolio', route:'raahi/portfolio', mob:['portfolio']}]});
-  if(intent==='slip'){ const L=slipLines(); return say({kind:'slip', lines:[`${L.length} buyer${L.length===1?' is':'s are'} paying slower than usual:`].concat(L.map(r=>`${r.name}: ${r.you}, ${r.sig}, ${r.due}`)), actions:[{label:'Review early warnings', route:'raahi/actions', mob:['portfolio']}]}); }
-  if(intent==='priority'){ const T=planTop(3); return say({kind:'priority', lines:[`${lakhs(pfStats().dueThisWeek)} is due this week. Top ${T.length} to act on:`].concat(T.map((c,k)=>`${k+1}. ${(BUY[c.id]||{}).name} · ${inr(c.amt)} · ${c.kind.toLowerCase()}`)), actions:[{label:'Open today’s plan', route:'raahi/actions', mob:['actions']}]}); }
+  if(intent==='credit'&&!id) return say({kind:'clarify', lines:['Which buyer? For example “Sethi Mart ka limit badha doon?”.'], actions:[{label:'Open credit portfolio', route:'ray-credit/portfolio', mob:['portfolio']}]});
+  if(intent==='slip'){ const L=slipLines(); return say({kind:'slip', lines:[`${L.length} buyer${L.length===1?' is':'s are'} paying slower than usual:`].concat(L.map(r=>`${r.name}: ${r.you}, ${r.sig}, ${r.due}`)), actions:[{label:'Review early warnings', route:'ray-credit/actions', mob:['portfolio']}]}); }
+  if(intent==='priority'){ const T=planTop(3); return say({kind:'priority', lines:[`${lakhs(pfStats().dueThisWeek)} is due this week. Top ${T.length} to act on:`].concat(T.map((c,k)=>`${k+1}. ${(BUY[c.id]||{}).name} · ${inr(c.amt)} · ${c.kind.toLowerCase()}`)), actions:[{label:'Open today’s plan', route:'ray-credit/actions', mob:['actions']}]}); }
   if(intent==='collected'){ const live=S.led.events.filter(e=>MONEY_IN_T.includes(e.type)&&e.verification==='verified'&&!RayEvents.isReversed(S.led,e.id)&&!String(e.id).startsWith('ev-seed')), got=live.reduce((a,e)=>a+(e.amount||0),0);
-    return say({kind:'collected', lines:[`Verified in this session: ${inr(got)} across ${live.length} payment${live.length===1?'':'s'}. Due this week: ${lakhs(pfStats().dueThisWeek)}.`, `Last week: ${lakhs(WEEK.lastCollected)} of ${lakhs(WEEK.lastDue)} (${WEEK.pct}%).`], actions:[{label:'Open today’s plan', route:'raahi/actions', mob:['actions']}]}); }
+    return say({kind:'collected', lines:[`Verified in this session: ${inr(got)} across ${live.length} payment${live.length===1?'':'s'}. Due this week: ${lakhs(pfStats().dueThisWeek)}.`, `Last week: ${lakhs(WEEK.lastCollected)} of ${lakhs(WEEK.lastDue)} (${WEEK.pct}%).`], actions:[{label:'Open today’s plan', route:'ray-credit/actions', mob:['actions']}]}); }
   if(intent==='failed'){ const act=recoveriesActive(); return say({kind:'failed', lines:act.length?[`${act.length} failed automatic collection${act.length===1?'':'s'} still open:`].concat(act.map(x=>`${BUY[x].name} · ${FAILS[x].inv} · ${recoveryOf(x).label}`)):['No failed automatic collections are open.'].concat(recoveriesDone().map(x=>`${BUY[x].name} · ${FAILS[x].inv} recovered in full.`)), actions:act.length?[actRecover(act[0])]:[]}); }
   if(intent==='txn') return say({kind:'template', label:'Sample dashboard data (static, not from your ledger)', lines:['₹1,42,380 collected today from 37 captured payments. 4 failed, mostly UPI timeouts.'], actions:[{label:'See today’s payments', route:'transactions', mob:null}]});
   if(intent==='failedpay') return say({kind:'template', label:'Sample dashboard data (static, not from your ledger)', lines:['4 payments failed today, all UPI timeouts between 8 and 9 AM. Customers retried 3 of them successfully.'], actions:[{label:'View payments', route:'transactions', mob:null}]});
-  if(intent==='grow') return say({kind:'grow', lines:[`Start earlier with buyers whose repayment is slipping. RAY’s policy drafts a follow-up ${S.pol.watchLead} days before the due date for Watch buyers, checks payments first, and never sends without your approval. ${pfStats().slipping.length} buyers are on the early-warning list today.`], actions:[{label:'Open today’s plan', route:'raahi/actions', mob:['actions']}]});
+  if(intent==='grow') return say({kind:'grow', lines:[`Start earlier with buyers whose repayment is slipping. RAY’s policy drafts a follow-up ${S.pol.watchLead} days before the due date for Watch buyers, checks payments first, and never sends without your approval. ${pfStats().slipping.length} buyers are on the early-warning list today.`], actions:[{label:'Open today’s plan', route:'ray-credit/actions', mob:['actions']}]});
   if(intent==='settle') return say({kind:'template', label:'Sample dashboard data (static, not from your ledger)', lines:['₹1,38,920 settles today by 5 PM to ICICI Bank ••4821. Saturday’s ₹1,96,410 settled at 4:12 PM.'], actions:[{label:'View settlements', route:'settlements', mob:null}]});
   return say({kind:'unsupported', lines:[`I couldn’t match that to a buyer, invoice, balance, credit limit or payment status, so I won’t guess.`, `Try “Gupta Traders ka payment kya hua?”, “INV-24891 status”, “Sethi Mart ka limit?” or “Kaun buyers slip kar rahe hain?”.`, ASK_LIMITS], actions:[]}); }
 

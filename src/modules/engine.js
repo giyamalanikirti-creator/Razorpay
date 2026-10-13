@@ -161,11 +161,11 @@ const AI = {checked:false, configured:false, provider:null, model:null, reachabl
 let _claudeP=null;
 function claudeSample(){ if(_claudeP) return _claudeP;
   _claudeP=(async()=>{ try{ const c=window.claude; AI.claude=(c&&typeof c.use==='function')?await c.use('sample'):null; }catch(e){ AI.claude=null; }
-    AI.claudeChecked=true; if(route().startsWith('raahi')||route().startsWith('ray')) render(); return AI.claude; })();
+    AI.claudeChecked=true; if(route().startsWith('ray-credit')||route().startsWith('ray')) render(); return AI.claude; })();
   return _claudeP; }
 const claudeLive = () => !!AI.claude && !AI.claudeOff;
 function aiCheck(){ claudeSample(); if(AI.checked) return; AI.checked=true; if(location.protocol==='file:') return;
-  fetch('/api/parse-promise',{method:'GET'}).then(r=>r.ok?r.json():null).then(j=>{ if(j&&typeof j.configured==='boolean'){ AI.reachable=true; AI.configured=j.configured; AI.provider=j.provider; AI.model=j.model; if(route().startsWith('raahi')) render(); } }).catch(()=>{}); }
+  fetch('/api/parse-promise',{method:'GET'}).then(r=>r.ok?r.json():null).then(j=>{ if(j&&typeof j.configured==='boolean'){ AI.reachable=true; AI.configured=j.configured; AI.provider=j.provider; AI.model=j.model; if(route().startsWith('ray-credit')) render(); } }).catch(()=>{}); }
 const aiLabel = () => claudeLive()?'Live AI · anthropic/Claude (this page)':AI.configured?(AI._failed?'AI unavailable · Rule-based fallback':`Live AI · ${AI.provider}/${AI.model}`):AI.claudeOff?'Rule-based fallback · AI not configured':'Rule-based fallback · AI not configured';
 
 /* ---------- persistence (optional, per browser) ---------- */

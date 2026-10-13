@@ -1,8 +1,8 @@
 {
  "suite": "Browser journeys (Playwright, Chromium)",
  "file": "tests/e2e_journeys.py",
- "ranAt": "2026-10-13T09:49:57+00:00",
- "build": "da9ceb8dc2",
+ "ranAt": "2026-10-13T10:08:19+00:00",
+ "build": "23d0157611",
  "total": 211,
  "passed": 211,
  "failed": 0,
@@ -1053,25 +1053,25 @@
   },
   {
    "journey": "BAR",
-   "name": "#surf-checks → raahi/checks",
+   "name": "#surf-checks → ray-credit/checks",
    "pass": true,
    "detail": ""
   },
   {
    "journey": "BAR",
-   "name": "#surf-desk → raahi/buyer/gupta",
+   "name": "#surf-desk → ray-credit/buyer/gupta",
    "pass": true,
    "detail": ""
   },
   {
    "journey": "BAR",
-   "name": "#surf-how → raahi/how",
+   "name": "#surf-how → ray-credit/how",
    "pass": true,
    "detail": ""
   },
   {
    "journey": "BAR",
-   "name": "#surf-desk → raahi/buyer/gupta",
+   "name": "#surf-desk → ray-credit/buyer/gupta",
    "pass": true,
    "detail": ""
   },
@@ -1083,7 +1083,7 @@
   },
   {
    "journey": "BAR",
-   "name": "#surf-checks → raahi/checks",
+   "name": "#surf-checks → ray-credit/checks",
    "pass": true,
    "detail": ""
   },
@@ -1095,7 +1095,7 @@
   },
   {
    "journey": "BAR",
-   "name": "#surf-desk → raahi/buyer/gupta",
+   "name": "#surf-desk → ray-credit/buyer/gupta",
    "pass": true,
    "detail": ""
   },

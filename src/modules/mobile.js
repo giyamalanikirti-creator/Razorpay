@@ -63,7 +63,7 @@ function appSupport(){ return `<div class="mob-body app"><div class="app-h1">Sup
 function appAccount(){ return `<div class="mob-body app"><div class="app-h1">Account</div><div class="app-card mt12"><b style="color:var(--strong)">${M.name}</b><div class="xs muted">${M.owner} · ${M.mid}</div>${['Business profile','Settlement bank account','Team members','App settings'].map(x=>`<div class="mline"><span>${x}</span><b>${I('right',14,2)}</b></div>`).join('')}</div></div>`; }
 function appStudio(){
   return `<div class="mob-hdr"><button class="mob-ic" onclick="A.mobTab('products')">${I('arrowL',20,2)}</button><div class="grow"><div class="mob-t">Agent Studio</div></div></div><div class="mob-body">
-   <div class="mc" onclick="A.mobGo('rcprod')" style="cursor:pointer"><div class="row between"><span class="row gap8"><span class="thumb th-raahi" style="width:30px;height:30px;border-radius:8px"></span><b style="color:var(--strong)">RAY Credit</b></span>${S.installed?'<span class="mb mb-g">INSTALLED</span>':'<span class="mb mb-n">NEW</span>'}</div><div class="small muted mt8">Decide credit using how buyers actually repay across the Razorpay network.</div></div>
+   <div class="mc" onclick="A.mobGo('rcprod')" style="cursor:pointer"><div class="row between"><span class="row gap8"><span class="thumb th-ray-credit" style="width:30px;height:30px;border-radius:8px"></span><b style="color:var(--strong)">RAY Credit</b></span>${S.installed?'<span class="mb mb-g">INSTALLED</span>':'<span class="mb mb-n">NEW</span>'}</div><div class="small muted mt8">Decide credit using how buyers actually repay across the Razorpay network.</div></div>
    ${[['th-ab','Abandoned Cart Recovery','Recover carts on WhatsApp'],['th-set','Settlement Insights','Daily settlement summaries']].map(a=>`<div class="mc"><span class="row gap8"><span class="thumb ${a[0]}" style="width:30px;height:30px;border-radius:8px"></span><b style="color:var(--strong)">${a[1]}</b></span><div class="small muted mt8">${a[2]}</div></div>`).join('')}</div>`;
 }
 function appRcProd(){
@@ -136,7 +136,7 @@ function mobBuyer(id){
    ${netMobile(id)}
    <div class="mc mt8"><b class="mc-t">Why</b>${why.map(s=>`<div class="mline"><span>${s[0]}</span><b>${s[1]}</b></div>`).join('')}</div>
    <div class="mc mt8"><div class="row between"><b class="mc-t">Repayment</b>${methodChip(id)}</div>${FAILS[id]?(r=>`<div class="mline"><span>${r.inv} · ${inr(r.amount)}</span><b style="color:${r.status==='completed'?'var(--g)':r.needsAction?'var(--r)':'var(--strong)'}">${r.status==='completed'?'Recovered in full':r.label}</b></div>`)(recoveryOf(id)):''}${PLAN[id]?`<div class="mline"><span>${PLAN[id].inv} · ${inr(PLAN[id].amt)}</span><b>Due ${PLAN[id].d} Oct</b></div>${planSteps(id).map(x=>`<div class="mline"><span class="xs">${dayLbl(x[0])} · ${x[1]}</span><b class="xs" style="font-weight:500">${x[3]?x[3].replace(/<[^>]+>/g,'').trim():''}</b></div>`).join('')}`:''}${FAILS[id]?`<button class="mbtn ${failOpen(id)?'p':''} sm mt8" onclick="A.mobGo('recover','${id}')">${failOpen(id)?'Start recovery':'View recovery'}</button>`:''}</div>
-   <div class="col gap8 mt12">${rq&&!S.req[id]?`<button class="mbtn p" onclick="A.mobGo('request','${id}')">Review credit request</button>`:''}${id==='gupta'&&S.gupta.rec==='open'?`<button class="mbtn ${recChanged('gupta')?'p':''}" onclick="A.approveGupta()">Set future limit to ${inr(S.gupta.limitRec)}</button>`:''}${S.chase[id]&&S.chase[id].st==='draft'?`<button class="mbtn ${rq&&!S.req[id]?'':'p'}" onclick="A.mobSheet('follow:${id}')">${ctaLabel(chaseOf(id))}</button>`:''}<button class="mbtn g" onclick="A.closeMobile();go('raahi/buyer/${id}')">Open full profile on desktop</button></div>
+   <div class="col gap8 mt12">${rq&&!S.req[id]?`<button class="mbtn p" onclick="A.mobGo('request','${id}')">Review credit request</button>`:''}${id==='gupta'&&S.gupta.rec==='open'?`<button class="mbtn ${recChanged('gupta')?'p':''}" onclick="A.approveGupta()">Set future limit to ${inr(S.gupta.limitRec)}</button>`:''}${S.chase[id]&&S.chase[id].st==='draft'?`<button class="mbtn ${rq&&!S.req[id]?'':'p'}" onclick="A.mobSheet('follow:${id}')">${ctaLabel(chaseOf(id))}</button>`:''}<button class="mbtn g" onclick="A.closeMobile();go('ray-credit/buyer/${id}')">Open full profile on desktop</button></div>
   </div>`;
 }
 function mobPortfolio(){
@@ -211,8 +211,8 @@ A.mobMatch=()=>{ S.mob.sheet=null; A.prMatchRzp('verma'); mobRender(); };
 /* ---------- prototype surface switcher (navigation only) ---------- */
 /* bottom bar: three surfaces, then reference pages, then presenter tools. Each button does one obvious thing:
    Desktop always lands on a desktop screen (the last one you used, never Checks or How it works). */
-const SURF_PAGES = ['raahi/checks','raahi/how'];
-let _lastDesk = 'raahi/overview';
+const SURF_PAGES = ['ray-credit/checks','ray-credit/how'];
+let _lastDesk = 'ray-credit/overview';
 window.addEventListener('hashchange',()=>{ const r=route(); if(!SURF_PAGES.includes(r)&&!r.startsWith('pay/')) _lastDesk=r; });
 function surfRender(){
   const r=document.getElementById('surf-root'); if(!r) return;
@@ -221,7 +221,7 @@ function surfRender(){
   const b=(k,ic,label,fn,title,id)=>`<button class="${cur===k?'on':''}" ${id?`id="${id}"`:''} aria-pressed="${cur===k}" title="${title}" onclick="${fn}">${I(ic,13,2.2)}<span>${label}</span></button>`;
   r.innerHTML=`<div class="surf" role="toolbar" aria-label="Prototype navigation"><span class="surf-l" onclick="A.about()" title="What runs here, what is sample data and what is simulated" aria-label="About this prototype"><span class="surf-lt">Prototype · sample data</span> ${I('info',11,2.2)}</span>
    <span class="surf-g">${b('desk','grid','Desktop',"A.surf('desk')",'Razorpay dashboard on desktop','surf-desk')}${b('wa','chat','WhatsApp',"A.surf('wa')",'RAY on WhatsApp','surf-wa')}${b('mob','phone','Mobile',"A.surf('mob')",'RAY Credit for Mobile','surf-mob')}</span>
-   <span class="surf-g">${b('raahi/how','doc','How it works',"A.surf('how')",'What RAY reads, decides and what is real','surf-how')}${b('raahi/checks','shield','Checks',"A.surf('checks')",'Tests run live and recorded','surf-checks')}</span>
+   <span class="surf-g">${b('ray-credit/how','doc','How it works',"A.surf('how')",'What RAY reads, decides and what is real','surf-how')}${b('ray-credit/checks','shield','Checks',"A.surf('checks')",'Tests run live and recorded','surf-checks')}</span>
    <span class="surf-g">${`<button class="surf-x ${S.demoOpen?'on':''}" id="surf-walk" aria-pressed="${!!S.demoOpen}" onclick="S.demoList='core';S.demoOpen=!S.demoOpen;demoRender();surfRender()" title="Guided walkthrough (Shift+D)">${I('play',12,2.4)}<span>Walkthrough</span></button>`}<button class="surf-x" id="surf-reset" onclick="A.resetAsk()" title="Reset this workspace" aria-label="Reset this workspace">${I('refresh',12,2.4)}</button></span></div>`;
 }
 /* one switch for every bar button: close whatever overlay is open, then show the chosen place */
@@ -229,8 +229,8 @@ A.surf=(k)=>{ S.demoOpen=false; if(typeof demoRender==='function') demoRender();
   if(k==='wa'){ if(S.mob) A.closeMobile(); A.openWA(); }
   else if(k==='mob'){ A.closeWA(); if(!S.installed){ S.installed=true; ensureBank(); rr(); } A.openMobile('rc'); }
   else { A.closeWA(); if(S.mob) A.closeMobile(); closeModal();
-    if(k==='how') go('raahi/how');
-    else if(k==='checks'){ S.installed=true; go('raahi/checks'); }
-    else if(SURF_PAGES.includes(route())) go(_lastDesk&&!SURF_PAGES.includes(_lastDesk)?_lastDesk:'raahi/overview'); }
+    if(k==='how') go('ray-credit/how');
+    else if(k==='checks'){ S.installed=true; go('ray-credit/checks'); }
+    else if(SURF_PAGES.includes(route())) go(_lastDesk&&!SURF_PAGES.includes(_lastDesk)?_lastDesk:'ray-credit/overview'); }
   surfRender(); };
 hooks.push(()=>surfRender());

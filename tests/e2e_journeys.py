@@ -33,7 +33,7 @@ async def main():
         wait = page.wait_for_timeout
         main_text = lambda: page.inner_text("#main")
 
-        async def reset(route="raahi/overview"):
+        async def reset(route="ray-credit/overview"):
             await ev("A.reset()"); await wait(150)
             await ev(f"S.installed=true;go('{route}')"); await wait(250)
 
@@ -71,7 +71,7 @@ async def main():
 
         # ---------------- J1 approve ₹60,000 / 14 days applies exact values ----------------
         current["id"] = "J1"
-        await reset("raahi/buyer/gupta")
+        await reset("ray-credit/buyer/gupta")
         check("Recommendation before approval is ₹60,000 · 14 days", await ev("[recOf('gupta').recommendedLimit,recOf('gupta').recommendedTerms].join()") == "60000,14")
         await page.click("button:has-text('Set future limit to ₹60,000')"); await wait(200)
         modal = await page.inner_text("#modal")
@@ -81,7 +81,7 @@ async def main():
         check("Applied limit and terms are exactly ₹60,000 · 14 days", await ev("[S.gupta.limit,S.gupta.curTerms].join()") == "60000,14")
         ap = await ev("evOf('gupta').filter(e=>e.type==='CREDIT_APPROVED').map(e=>e.meta.limit+'/'+e.meta.terms)")
         check("Audit event records ₹60,000 / 14", ap == ["60000/14"], ap)
-        await ev("go('raahi/buyer/gupta')"); await wait(200)
+        await ev("go('ray-credit/buyer/gupta')"); await wait(200)
         t = await main_text()
         check("Profile shows the applied ₹60,000 · 14-day terms", "Future limit ₹60,000 · 14-day terms" in t)
 
@@ -99,7 +99,7 @@ async def main():
 
         # ---------------- J3 undo restores the complete prior state ----------------
         current["id"] = "J3"
-        await ev("go('raahi/buyer/gupta')"); await wait(200)
+        await ev("go('ray-credit/buyer/gupta')"); await wait(200)
         await page.click("#undo-gupta"); await wait(300)
         st = await ev("({l:S.gupta.limit,t:S.gupta.curTerms,rec:S.gupta.rec,req:S.req.gupta||null,dec:decOf('gupta').status,ref:(S.refTermsSet||{}).gupta||null,open:openCount()})")
         check("Undo restores ₹1,00,000 · 30 days", st["l"] == 100000 and st["t"] == 30, st)
@@ -109,21 +109,21 @@ async def main():
         act = await ev("S.act.slice(0,3).map(a=>a.ti).join(' | ')")
         check("Activity shows the undo", "decision undone" in act, act)
         # request page path (the reported bug)
-        await ev("go('raahi/request/gupta')"); await wait(200)
+        await ev("go('ray-credit/request/gupta')"); await wait(200)
         await page.click("#req-rec button:has-text('Approve ₹60,000 limit')"); await wait(200)
         await page.click("#set-limit"); await wait(300); await settle()
-        await ev("go('raahi/request/gupta')"); await wait(200)
+        await ev("go('ray-credit/request/gupta')"); await wait(200)
         check("Request approval applies ₹60,000 · 14 days", await ev("[S.gupta.limit,S.gupta.curTerms,S.req.gupta].join()") == "60000,14,limit")
         await page.click("#req-undo-gupta"); await wait(300)
         check("Request-page Undo restores the limit as well as reopening the request", await ev("[S.gupta.limit,S.gupta.curTerms,S.req.gupta||'open'].join()") == "100000,30,open", await ev("[S.gupta.limit,S.gupta.curTerms,S.req.gupta].join()"))
         # generic buyer and request with terms (offered)
-        await ev("go('raahi/request/mehta')"); await wait(200)
+        await ev("go('ray-credit/request/mehta')"); await wait(200)
         before = await ev("[curLimitOf('mehta'),curTermsOf('mehta')].join()")
         btn = await page.query_selector("#req-rec button.btn-p")
         if btn:
             await btn.click(); await wait(200)
             await page.click("#modal .btn-p"); await wait(300); await settle()
-            await ev("go('raahi/request/mehta')"); await wait(200)
+            await ev("go('ray-credit/request/mehta')"); await wait(200)
             changed = await ev("[curLimitOf('mehta'),curTermsOf('mehta')].join()")
             await page.click("#req-undo-mehta"); await wait(300)
             check("Mehta request decision undo restores limit and terms", await ev("[curLimitOf('mehta'),curTermsOf('mehta')].join()") == before and await ev("!S.req.mehta"), f"before {before} changed {changed}")
@@ -132,7 +132,7 @@ async def main():
 
         # ---------------- J4 double-click applies once ----------------
         current["id"] = "J4"
-        await reset("raahi/buyer/gupta")
+        await reset("ray-credit/buyer/gupta")
         await page.click("button:has-text('Set future limit to ₹60,000')"); await wait(200)
         await page.dblclick("#set-limit", force=True); await wait(400)
         await settle()
@@ -146,7 +146,7 @@ async def main():
 
         # ---------------- J5 / J6 failed collection → partial → full ----------------
         current["id"] = "J5"
-        await reset("raahi/recover/gupta")
+        await reset("ray-credit/recover/gupta")
         check("Failed ₹20,000 collection is open", await ev("recoveryOf('gupta').status") == "open" and await ev("failCount()") >= 1)
         await page.click("#rec-link-btn"); await wait(200)
         await page.click("#rl-send"); await wait(300)
@@ -161,24 +161,24 @@ async def main():
         check("WhatsApp agrees: ₹15,000 still due", "₹15,000 still due" in wa and "₹5,000 received" in wa, wa[:300])
 
         current["id"] = "J6"
-        await ev("go('raahi/recover/gupta')"); await wait(200)
+        await ev("go('ray-credit/recover/gupta')"); await wait(200)
         await page.click("#rec-pay-full"); await wait(300)
         r = await ev("recoveryOf('gupta')")
         check("Paying ₹15,000 completes the recovery", r["balance"] == 0 and r["status"] == "completed" and not r["active"], {k: r[k] for k in ("balance", "status")})
         t = await main_text()
         check("Recovery page says recovered in full and stops steps", "Recovered in full" in t and "Send payment link" not in t and "Buyer pays" not in t)
         check("Recovery page points to the next unpaid invoice INV-24891", "INV-24891" in t)
-        await ev("go('raahi/actions')"); await wait(250)
+        await ev("go('ray-credit/actions')"); await wait(250)
         check("Actions: Gupta no longer in active failed collections", not await page.query_selector("#act-fail-gupta"))
         check("Actions: completed recovery listed as history", "INV-24790 recovered in full" in await main_text())
         check("No open failed collections counted", await ev("failCount()") == 0 and await ev("recoveriesActive().length") == 0)
-        await ev("go('raahi/overview')"); await wait(250)
+        await ev("go('ray-credit/overview')"); await wait(250)
         t = await main_text()
         check("Overview never says 'recovering ₹0'", "recovering ₹0" not in t.lower() and "Recovering ₹0" not in t, re.findall(r".{0,40}ecovering.{0,40}", t))
         check("Overview shows the recovery as completed", "recovered in full" in t.lower())
-        await ev("go('raahi/buyer/gupta')"); await wait(200)
+        await ev("go('ray-credit/buyer/gupta')"); await wait(200)
         check("Buyer profile shows INV-24790 recovered in full", "INV-24790 recovered in full" in await main_text())
-        await ev("go('raahi/activity')"); await wait(200)
+        await ev("go('ray-credit/activity')"); await wait(200)
         check("Activity records the completion", "recovery completed" in await main_text())
 
         # ---------------- J7 WhatsApp, mobile and Ray AI agree with the ledger ----------------
@@ -215,7 +215,7 @@ async def main():
 
         # ---------------- J9 recovery-link minimum ----------------
         current["id"] = "J9"
-        await reset("raahi/recover/gupta")
+        await reset("ray-credit/recover/gupta")
         await page.click("#rec-link-btn"); await wait(200)
         for raw, expect in [("25000", "can’t be more than the ₹20,000 balance"), ("abc", "Enter a number"), ("", "Enter a minimum"), ("0", "more than ₹0"), ("-100", "more than ₹0")]:
             await page.fill("#rl-min", raw); await wait(80)
@@ -244,7 +244,7 @@ async def main():
 
         # ---------------- J10 disconnected bank is never claimed as checked ----------------
         current["id"] = "J10"
-        await reset("raahi/recover/gupta")
+        await reset("ray-credit/recover/gupta")
         check("Bank not connected after skip", await ev("S.bank.st") != "on")
         t = await page.inner_text("#rec-src-gupta")
         check("Recovery page lists the bank as not checked", "Not checked:" in t and "bank account (not connected)" in t, t)
@@ -254,19 +254,19 @@ async def main():
         m = await page.inner_text("#modal")
         check("Link modal never claims a bank check", not re.search(r"RAY checked[^.]*bank", m) and "your bank account, unmatched credits" not in m, m[:300])
         await ev("closeModal()")
-        await ev("go('raahi/actions')"); await wait(200)
+        await ev("go('ray-credit/actions')"); await wait(200)
         await ev("A.approveOne('chawla')"); await wait(200)
         m = await page.inner_text("#modal")
         check("Reminder modal lists checked and unavailable sources", "Not checked:" in m and not re.search(r"RAY checked[^.]*bank", m), m[:400])
         await ev("closeModal()")
         await ev("S.bank.st='on';S.bank.ever=true;rr()"); await wait(150)
-        await ev("go('raahi/recover/gupta')"); await wait(200)
+        await ev("go('ray-credit/recover/gupta')"); await wait(200)
         t = await page.inner_text("#rec-src-gupta")
         check("With the bank connected, the bank is listed as checked with freshness", "your bank account (last fetch" in t.split("Not checked")[0].lower() and "Not checked: Your bank" not in t, t)
 
         # ---------------- J11 matched payments cancel reminders ----------------
         current["id"] = "J11"
-        await reset("raahi/actions")
+        await reset("ray-credit/actions")
         sid = await ev("CHASE.find(c=>c.ch==='wa'&&S.chase[c.id].st==='draft'&&c.invs&&c.invs.length===1&&gateFor(c.id,'whatsapp',c.invs[0].inv).action==='send').id")
         await ev(f"A.approveOne('{sid}')"); await wait(200)
         has10 = await page.query_selector("#modal .send-when[data-w='10']")
@@ -283,7 +283,7 @@ async def main():
             check("Scheduled reminder cancelled by the payment", await ev(f"S.outbox.filter(o=>o.buyerId==='{sid}').slice(-1)[0].status") == "cancelled")
             await ev("A.advanceToMs(RayDates.istMs(S.today,10*60+5))"); await wait(200)
             check("Nothing is sent at the scheduled time", await ev(f"S.outbox.filter(o=>o.buyerId==='{sid}'&&o.status==='sent').length") == 0)
-        await ev("go('raahi/payment/verma')"); await wait(200)
+        await ev("go('ray-credit/payment/verma')"); await wait(200)
         vb = await ev("balOf('verma','INV-24655')")
         await page.click("button:has-text('Match payment')"); await wait(300)
         check("Matching Verma's Razorpay credit updates the invoice in the ledger", await ev("balOf('verma','INV-24655')") < vb and await ev("evOf('verma').some(e=>e.type==='PAYMENT_RECONCILED')"))
@@ -293,14 +293,14 @@ async def main():
 
         # ---------------- J12 restrictions hold at every entry point ----------------
         current["id"] = "J12"
-        await reset("raahi/actions")
+        await reset("ray-credit/actions")
         await ev("S.ctl.dnc=['Gupta Traders','Gupta Kirana Store'];rr()"); await wait(150)
         n0 = await ev("S.outbox.filter(o=>o.status!=='blocked').length")
         await ev("A.approveOne('gupta')"); await wait(200)
         check("Desktop reminder: Send disabled for Do not contact", await ev("!!document.getElementById('send-one')&&document.getElementById('send-one').disabled"))
         await ev("closeModal()")
         check("Bulk send excludes the DNC buyer", await ev("!bulkPlan().send.concat(bulkPlan().queue).some(c=>c.id==='gupta')"))
-        await ev("go('raahi/recover/gupta')"); await wait(200)
+        await ev("go('ray-credit/recover/gupta')"); await wait(200)
         await page.click("#rec-link-btn"); await wait(200)
         check("Recovery link: Send disabled for DNC", await ev("document.getElementById('rl-send').disabled"))
         await ev("closeModal()")
@@ -335,7 +335,7 @@ async def main():
 
         # ---------------- AI fallback: honest, current, never fabricated ----------------
         current["id"] = "AI"
-        await reset("raahi/overview")
+        await reset("ray-credit/overview")
         wa = await wa_ask("what is the weather in Delhi")
         check("Unsupported question: says so, does not guess", "won’t guess" in wa and "Rule-based" in wa, wa[:300])
         check("No claim that live AI works elsewhere", "opened in Claude" not in wa and "open in Claude" not in wa)
@@ -351,7 +351,7 @@ async def main():
 
         # ---------------- REV: reverse a recorded payment from the UI ----------------
         current["id"] = "REV"
-        await reset("raahi/recover/gupta")
+        await reset("ray-credit/recover/gupta")
         await page.click("#rec-link-btn"); await wait(200); await page.click("#rl-send"); await wait(300)
         await page.click("#rec-pay-min"); await wait(300)
         await page.click("#rec-pay-full"); await wait(300)
@@ -369,20 +369,20 @@ async def main():
         check("Recovery page shows the reversed payment and the new status", "Reversed" in t and "₹15,000 received · ₹5,000 remaining" in t)
         r2 = await ev(f"payReverse('{first}','Duplicate entry','test')")
         check("Second reversal of the same payment is rejected", not r2["ok"] and "already reversed" in r2["error"], r2)
-        await ev("go('raahi/activity')"); await wait(250)
+        await ev("go('ray-credit/activity')"); await wait(250)
         t = await main_text()
         check("Activity shows the correction with its reason and 'not a refund'", "Payment reversed · Gupta Traders" in t and "not a refund" in t)
         wa = await wa_ask("Gupta Traders ka payment kya hua?")
         check("WhatsApp answer reflects the corrected ledger", "₹5,000 still due" in wa and "reversed by you" in wa, wa[:300])
         mb = await mob_ask("Gupta Traders ka payment kya hua?")
         check("Mobile answer reflects the corrected ledger", "₹5,000 still due" in mb, mb[:300])
-        await ev("go('raahi/overview')"); await wait(250)
+        await ev("go('ray-credit/overview')"); await wait(250)
         t = await main_text()
         check("Overview shows recovery in progress again (not completed)", "Gupta Traders: ₹15,000 received · ₹5,000 remaining" in t or "₹5,000 remaining" in t, t[:200])
 
         # ---------------- AI: interpreter in rule-based mode (no provider on file://) ----------------
         current["id"] = "AI-RULE"
-        await reset("raahi/buyer/gupta")
+        await reset("ray-credit/buyer/gupta")
         n_ev = await ev("S.led.events.length")
         await page.fill("#ipq-gupta", "Aadha aaj aur baaki Friday.")
         await page.select_option("#ipi-gupta", "INV-24891")
@@ -407,7 +407,7 @@ async def main():
 
         # ---------------- NET: consent and evidence quality through the UI ----------------
         current["id"] = "NET"
-        await reset("raahi/buyer/gupta")
+        await reset("ray-credit/buyer/gupta")
         lim = lambda: ev("[recOf('gupta').recommendedLimit,recOf('gupta').recommendedTerms].join()")
         t = await page.inner_text("#net")
         check("Side-by-side shows ₹75,000 · 21 days (your ledger) and ₹60,000 · 14 days (network)", "₹75,000" in t and "21 days" in t and "₹60,000" in t and "14 days" in t, t[:300])
@@ -420,10 +420,10 @@ async def main():
             await page.click(f"#ncmp-gupta button:has-text('{k}')"); await wait(120)
         check("Scenario preview is read-only: participation, consent, approvals and audit unchanged", await ev("JSON.stringify([S.ctl.net,S.act.length,S.led.events.length,(S.creditOps||[]).length,recOf('gupta').recommendedLimit])") == before, before)
         check("The approvable recommendation stays tied to actual settings while previewing", "Recommendation you would approve: Watch ₹60,000 · 14 days" in await page.inner_text("#ncmp-gupta"))
-        await ev("go('raahi/controls')"); await wait(250)
+        await ev("go('ray-credit/controls')"); await wait(250)
         await page.click("#net-ctl button:has-text('Review permissions')"); await wait(200); await page.click("#modal button:has-text('Turn off')"); await wait(250)
         check("participation off (changed in Controls): recommendation recomputes to 75000,21", await lim() == "75000,21")
-        await ev("go('raahi/buyer/gupta')"); await wait(250)
+        await ev("go('ray-credit/buyer/gupta')"); await wait(250)
         t = await page.inner_text("#net")
         check("Not participating: no network evidence is shown, the reason is", "24–30" not in t and "not taking part" in t, t[:200])
         await page.click("#ncmp-gupta button:has-text('With eligible network evidence')"); await wait(150)
@@ -433,13 +433,13 @@ async def main():
         t = await page.inner_text("#net")
         check("Explains why evidence is excluded (consent revoked)", "excluded" in t.lower() and "24–30" not in t, t[:200])
         await page.click("#net button:has-text('Request consent')"); await wait(150); await page.click("#net button:has-text('Buyer grants consent')"); await wait(150)
-        await ev("go('raahi/buyer/chawla')"); await wait(200); await ev("S.ctl.net=true;rr()"); await wait(200)
+        await ev("go('ray-credit/buyer/chawla')"); await wait(200); await ev("S.ctl.net=true;rr()"); await wait(200)
         t = await page.inner_text("#net")
         check("Chawla: disagreement flagged, limit held (no cut)", "Disagrees" in t and await ev("recOf('chawla').recommendedLimit") == await ev("recAlt('chawla',false).recommendedLimit"))
 
         # ---------------- WALK: the 8-step main story, real clicks; navigation never acts; restart via reset ----------------
         current["id"] = "WALK"
-        await reset("raahi/overview")
+        await reset("ray-credit/overview")
         snap = "JSON.stringify([S.led.events.length,(S.creditOps||[]).length,S.outbox.length,S.promises.length])"
         before = await ev(snap)
         await page.click("#surf-walk"); await wait(200)
@@ -478,11 +478,11 @@ async def main():
         # ---------------- UNDO-UI: approval → undo → repayment setup timing, with real clicks ----------------
         current["id"] = "UNDO-UI"
         st = "JSON.stringify({lim:curLimitOf('gupta'),t:curTermsOf('gupta'),rs:!!S.rs,modal:!!document.getElementById('modal'),mand:!!S.mand.gupta,ev:evOf('gupta').filter(e=>/CREDIT/.test(e.type)).map(e=>e.type).join(',')})"
-        await reset("raahi/request/gupta"); await ev("A.approveGupta()"); await wait(150); await page.click("#set-limit"); await wait(60)
+        await reset("ray-credit/request/gupta"); await ev("A.approveGupta()"); await wait(150); await page.click("#set-limit"); await wait(60)
         await page.click("#req-undo-gupta"); await wait(700)
         o = json.loads(await ev(st))
         check("Approve then undo before the setup appears: no setup opens, values restored, both events kept", o == {"lim":100000,"t":30,"rs":False,"modal":False,"mand":False,"ev":"CREDIT_APPROVED,CREDIT_REVERSED"}, o)
-        await reset("raahi/buyer/gupta"); await ev("A.approveGupta()"); await wait(150); await page.click("#set-limit"); await wait(600)
+        await reset("ray-credit/buyer/gupta"); await ev("A.approveGupta()"); await wait(150); await page.click("#set-limit"); await wait(600)
         m = await page.inner_text("#modal")
         check("Setup opens for the applied decision (₹60,000 · 14 days)", "Set up repayment" in m and "₹60,000" in m and "14 days" in m)
         await ev("A.undoCredit('gupta','RAY on WhatsApp')"); await wait(300)
@@ -491,17 +491,17 @@ async def main():
         check("Activity records the withdrawn setup", "Repayment setup withdrawn · Gupta Traders" in await ev("S.act.map(x=>x.ti).join('|')"))
         await ev("rsRender()"); await wait(150)
         check("The obsolete setup cannot be re-rendered", not await ev("!!document.getElementById('modal')"))
-        await reset("raahi/buyer/gupta"); await ev("A.approveGupta()"); await wait(150); await page.click("#set-limit"); await wait(600)
+        await reset("ray-credit/buyer/gupta"); await ev("A.approveGupta()"); await wait(150); await page.click("#set-limit"); await wait(600)
         await page.click("#modal button:has-text('Continue')"); await wait(150)
         await ev("A.undoCredit('gupta','RAY on WhatsApp')"); await wait(200)
         await ev("A.rsSend()"); await wait(2600)
         o = json.loads(await ev(st))
         check("An obsolete mandate update cannot be sent or activated after undo", not o["mand"] and not o["rs"] and not o["modal"], o)
-        await reset("raahi/buyer/gupta"); await ev("A.approveGupta()"); await wait(150); await page.click("#set-limit"); await wait(40)
-        await ev("go('raahi/overview')"); await wait(700)
+        await reset("ray-credit/buyer/gupta"); await ev("A.approveGupta()"); await wait(150); await page.click("#set-limit"); await wait(40)
+        await ev("go('ray-credit/overview')"); await wait(700)
         o = json.loads(await ev(st))
         check("Navigating away during the transition does not pop up setup on another screen", not o["rs"] and not o["modal"] and o["lim"] == 60000, o)
-        await ev("go('raahi/buyer/gupta')"); await wait(300)
+        await ev("go('ray-credit/buyer/gupta')"); await wait(300)
         check("Setup stays available on the decision via 'Set up repayment'", await page.is_visible("#setup-gupta"))
         await page.dblclick("#undo-gupta"); await wait(300)
         o = json.loads(await ev(st))
@@ -518,7 +518,7 @@ async def main():
 
         # ---------------- OVR: possible-payment override needs a reason; other controls still win ----------------
         current["id"] = "OVR"
-        await reset("raahi/activity")
+        await reset("ray-credit/activity")
         await page.click("button:has-text('Send reminder anyway')"); await wait(200)
         n = await ev("S.outbox.length")
         await page.click("#ovr-send"); await wait(100)
@@ -535,12 +535,12 @@ async def main():
 
         # ---------------- EVID: one evidence source for buyer facts ----------------
         current["id"] = "EVID"
-        await reset("raahi/buyer/gupta")
+        await reset("ray-credit/buyer/gupta")
         pe = await ev("partialEvidence('gupta').summary")
         uw = await ev("uwData('gupta').flatMap(g=>g[2]).find(r=>r[0]==='Partial-payment behaviour')[1]")
         check("Credit assessment and recovery state the same partial-payment evidence", pe in uw and pe in await ev("FAILS.gupta.why"), [pe, uw])
         check("A buyer with no partial-payment evidence gets the product rationale, not invented history", await ev("(()=>{ const id=RayData.FEATURED.map(b=>b.id).find(x=>!partialEvidence(x).any); return !partialEvidence(id).any && partialEvidence(id).summary==='None on record'; })()"))
-        await ev("go('raahi/recover/gupta')"); await wait(250)
+        await ev("go('ray-credit/recover/gupta')"); await wait(250)
         await page.click("#rec-link-btn"); await wait(200); await page.click("#rl-send"); await wait(300); await page.click("#rec-pay-min"); await wait(300)
         t = await main_text()
         check("After a verified ₹5,000, the screen separates recorded payments from the search for more", "₹5,000 already recorded and verified on INV-24790" in t and "No further payment for the remaining ₹15,000" in t)
@@ -548,12 +548,12 @@ async def main():
         current["id"] = "REPEAT"
         outcomes = []
         for run_no in (1, 2):
-            await reset("raahi/buyer/gupta")
+            await reset("ray-credit/buyer/gupta")
             await ev("A.approveGupta()"); await wait(200); await page.click("#set-limit"); await wait(400); await ev("closeModal()"); await wait(100)
-            await ev("go('raahi/recover/gupta')"); await wait(200)
+            await ev("go('ray-credit/recover/gupta')"); await wait(200)
             await page.click("#rec-link-btn"); await wait(200); await page.click("#rl-send"); await wait(300)
             await page.click("#rec-pay-min"); await wait(250); await page.click("#rec-pay-full"); await wait(250)
-            await ev("go('raahi/payment/verma')"); await wait(200)
+            await ev("go('ray-credit/payment/verma')"); await wait(200)
             outcomes.append(await ev("JSON.stringify({lim:curLimitOf('gupta'),terms:curTermsOf('gupta'),appr:evOf('gupta').filter(e=>e.type==='CREDIT_APPROVED').length,pays:S.led.events.filter(e=>['PAYMENT_RECEIVED','PAYMENT_PARTIALLY_RECEIVED'].includes(e.type)).length,bal:balOf('gupta','INV-24790'),out:outOf('gupta'),rec:recoveryOf('gupta').status,refs:Object.keys(S.led.refs).length})"))
         check("Run 1 and run 2 from reset produce identical state (no hidden stale state)", outcomes[0] == outcomes[1], outcomes)
         o = json.loads(outcomes[1])
@@ -584,7 +584,7 @@ async def main():
         p2 = await browser.new_page(viewport={"width": 1440, "height": 900})
         await p2.route("**/api/parse-promise", api_route); await p2.route("**/api/ask", ask_route)
         await p2.goto(f"http://127.0.0.1:{port}/index.html?date={PIN}"); await p2.wait_for_timeout(800)
-        await p2.evaluate("()=>{A.reset();S.installed=true;go('raahi/buyer/gupta')}"); await p2.wait_for_timeout(400)
+        await p2.evaluate("()=>{A.reset();S.installed=true;go('ray-credit/buyer/gupta')}"); await p2.wait_for_timeout(400)
         check("Status label says Live AI with provider/model when the endpoint reports a key", await p2.evaluate("aiLabel()") == "Live AI · openai/gpt-4o-mini")
         n_ev = await p2.evaluate("S.led.events.length")
         await p2.fill("#ipq-gupta", "Aadha aaj aur baaki Friday."); await p2.select_option("#ipi-gupta", "INV-24891"); await p2.click("#ipr-gupta"); await p2.wait_for_timeout(700)
@@ -608,9 +608,9 @@ async def main():
 
         # ---------------- BAR: every bottom-bar button does what its label says, from any place ----------------
         current["id"] = "BAR"
-        await reset("raahi/buyer/gupta")
+        await reset("ray-credit/buyer/gupta")
         bar = "JSON.stringify({r:route(),wa:!!document.getElementById('wa-root').innerHTML,mob:!!S.mob,on:[...document.querySelectorAll('.surf button.on')].map(x=>x.id)})"
-        for sel, want in [("#surf-checks", ("raahi/checks", False, False, "surf-checks")), ("#surf-desk", ("raahi/buyer/gupta", False, False, "surf-desk")), ("#surf-how", ("raahi/how", False, False, "surf-how")), ("#surf-desk", ("raahi/buyer/gupta", False, False, "surf-desk")), ("#surf-wa", (None, True, False, "surf-wa")), ("#surf-checks", ("raahi/checks", False, False, "surf-checks")), ("#surf-mob", (None, False, True, "surf-mob")), ("#surf-desk", ("raahi/buyer/gupta", False, False, "surf-desk"))]:
+        for sel, want in [("#surf-checks", ("ray-credit/checks", False, False, "surf-checks")), ("#surf-desk", ("ray-credit/buyer/gupta", False, False, "surf-desk")), ("#surf-how", ("ray-credit/how", False, False, "surf-how")), ("#surf-desk", ("ray-credit/buyer/gupta", False, False, "surf-desk")), ("#surf-wa", (None, True, False, "surf-wa")), ("#surf-checks", ("ray-credit/checks", False, False, "surf-checks")), ("#surf-mob", (None, False, True, "surf-mob")), ("#surf-desk", ("ray-credit/buyer/gupta", False, False, "surf-desk"))]:
             await page.click(sel); await wait(250); o = json.loads(await ev(bar))
             check(f"{sel} → {want[0] or ('WhatsApp' if want[1] else 'Mobile')}", (want[0] is None or o["r"] == want[0]) and o["wa"] == want[1] and o["mob"] == want[2] and o["on"] == [want[3]], o)
         await page.click("#surf-walk"); await wait(200); check("Walkthrough button opens the story panel", await ev("S.demoOpen"))
@@ -620,14 +620,14 @@ async def main():
 
         # ---------------- REL: one release calculation on every surface (Test A, F) ----------------
         current["id"] = "REL"
-        await reset("raahi/request/gupta")
+        await reset("ray-credit/request/gupta")
         rel = await page.inner_text("#rel-gupta")
         check("Request page: ₹78,400 owed + ₹50,000 requested − ₹60,000 limit", all(x in rel for x in ["₹78,400", "₹50,000", "₹60,000"]), rel[:300])
         check("Request page: collect ₹68,400 before releasing the full order", "Collect before releasing the full order" in rel and "₹68,400" in rel, rel[:400])
         check("Request page: collecting ₹38,400 frees only ₹20,000", "₹38,400 on INV-24891" in rel and "₹20,000 of the order could go on credit" in rel, rel)
         check("Request page: current ₹1,00,000 limit shown separately (₹21,600 available, ₹28,400 to collect)", "₹21,600 available" in rel and "₹28,400" in rel, rel)
         check("No screen tells Rajesh to collect ₹38,400 before the order", "collect ₹38,400" not in (await main_text()).lower() and "Collect ₹38,400" not in await main_text())
-        await ev("go('raahi/overview')"); await wait(250)
+        await ev("go('ray-credit/overview')"); await wait(250)
         card = await page.inner_text("#creq")
         check("Overview request card: same ₹68,400 figure", "collect ₹68,400 first" in card, card[:500])
         wa = await ev("(()=>{A.openWA(); return 1})()"); await wait(150)
@@ -644,16 +644,16 @@ async def main():
         rt = await ray_ask("Gupta Traders")
         check("Ray AI buyer answer: same ₹68,400", "₹68,400" in rt, rt[-500:])
         # recalculates from the ledger when a payment arrives
-        await ev("ledgerPay('gupta','INV-24891',38400,{ref:'rel-test-38400',source:'Test',actor:'Test'})"); await ev("go('raahi/request/gupta')"); await wait(250)
+        await ev("ledgerPay('gupta','INV-24891',38400,{ref:'rel-test-38400',source:'Test',actor:'Test'})"); await ev("go('ray-credit/request/gupta')"); await wait(250)
         rel = await page.inner_text("#rel-gupta")
         check("After ₹38,400 is collected: owed ₹40,000, ₹30,000 to collect, nothing double-counted", "₹40,000" in rel and "₹30,000" in rel and await ev("outOf('gupta')") == 40000, rel[:400])
         # approving the limit does not release the order, undo restores the baseline with no stale request outcome
-        await reset("raahi/request/gupta")
+        await reset("ray-credit/request/gupta")
         await page.click("#req-rec button:has-text('Approve ₹60,000 limit')"); await wait(200); await page.click("#set-limit"); await wait(300); await settle()
-        await ev("go('raahi/request/gupta')"); await wait(200)
+        await ev("go('ray-credit/request/gupta')"); await wait(200)
         check("Approved limit is recorded as 'not extended', not as a released order", await ev("S.req.gupta") == "limit" and "Not extended · limit set to ₹60,000" in await main_text())
         await page.click("#req-undo-gupta"); await wait(300)
-        await ev("go('raahi/overview')"); await wait(250)
+        await ev("go('ray-credit/overview')"); await wait(250)
         ov = await page.inner_text("#creq")
         check("After undo: overview card is open again with the original figures", "Not extended" not in ov.split("Arora")[0] and "collect ₹68,400 first" in ov and await ev("[S.gupta.limit,S.gupta.curTerms].join()") == "100000,30", ov[:400])
         wa = await wa_ask("Gupta Traders ka limit kya hai?")
@@ -661,7 +661,7 @@ async def main():
 
         # ---------------- RECON: a matched payment leaves no stale warning anywhere (Test D, E) ----------------
         current["id"] = "RECON"
-        await reset("raahi/payment/verma")
+        await reset("ray-credit/payment/verma")
         t = await main_text()
         check("Before: warning and possible payment shown", "may be this payment" in t and "Possible payment" in t)
         await page.click("button:has-text('Match payment')"); await wait(300)
@@ -672,10 +672,10 @@ async def main():
         await ev("A.prMatchRzp('verma'); A.matchVerma()"); await wait(200)
         check("Matching again (either path) applies nothing twice", await ev("S.led.events.filter(e=>e.buyerId==='verma'&&RayEvents.MONEY_IN.includes(e.type)).length") == 1 and await ev("balOf('verma','INV-24655')") == 0)
         check("Reminder no longer paused or pending for Verma", not await ev("prPending('verma')") and await ev("gateState('verma').paid"))
-        await ev("go('raahi/actions')"); await wait(250)
+        await ev("go('ray-credit/actions')"); await wait(250)
         t = await main_text(); seg = t[t.find("Verma Retail"):t.find("Verma Retail") + 200]
         check("Actions: Verma shows matched, not 'may already cover this'", "Matched to Razorpay payment" in seg and "may already cover" not in seg, seg)
-        await ev("go('raahi/activity')"); await wait(250)
+        await ev("go('ray-credit/activity')"); await wait(250)
         t = await main_text()
         check("Activity: no 'Needs your review' for Verma, history shows how it was resolved", "Since resolved: ₹26,500 matched to INV-24655" in t and "not yet matched to an invoice" not in t)
         wa = await wa_ask("Has Verma Retail paid?")
@@ -686,8 +686,8 @@ async def main():
 
         # ---------------- uncaught errors across routes ----------------
         current["id"] = "ROUTES"
-        await reset("raahi/overview")
-        for r in ["raahi/overview", "raahi/actions", "raahi/portfolio", "raahi/buyer/gupta", "raahi/buyer/sethi", "raahi/request/gupta", "raahi/request/arora", "raahi/recover/gupta", "raahi/payment/verma", "raahi/payment/citycare", "raahi/activity", "raahi/controls", "raahi/check", "raahi/checks", "raahi/how", "ray", "studio/raahi", "home"]:
+        await reset("ray-credit/overview")
+        for r in ["ray-credit/overview", "ray-credit/actions", "ray-credit/portfolio", "ray-credit/buyer/gupta", "ray-credit/buyer/sethi", "ray-credit/request/gupta", "ray-credit/request/arora", "ray-credit/recover/gupta", "ray-credit/payment/verma", "ray-credit/payment/citycare", "ray-credit/activity", "ray-credit/controls", "ray-credit/check", "ray-credit/checks", "ray-credit/how", "ray", "studio/ray-credit", "home"]:
             await ev(f"go('{r}')"); await wait(120)
         for s in ["rc", "actions", "portfolio", "ask", "apphome"]:
             await ev(f"A.openMobile('{s}')"); await wait(100)

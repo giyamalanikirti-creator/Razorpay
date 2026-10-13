@@ -1,54 +1,54 @@
 {
  "suite": "Responsive layout (Playwright): 1440, 1280, 768, 390 px",
  "file": "tests/responsive.py",
- "ranAt": "2026-10-13T09:51:13+00:00",
- "build": "da9ceb8dc2",
+ "ranAt": "2026-10-13T10:09:35+00:00",
+ "build": "23d0157611",
  "total": 68,
  "passed": 68,
  "failed": 0,
  "cases": [
   {
-   "name": "1440×900 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/overview: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1440×900 raahi/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1440×900 raahi/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1440×900 raahi/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1440×900 raahi/actions: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/actions: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1440×900 raahi/activity: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/activity: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1440×900 raahi/how: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/how: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1440×900 raahi/checks: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/checks: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1440×900 raahi/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1440×900 ray-credit/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
@@ -93,47 +93,47 @@
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/overview: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/actions: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/actions: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/activity: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/activity: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/how: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/how: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/checks: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/checks: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "1280×800 raahi/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "1280×800 ray-credit/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
@@ -178,47 +178,47 @@
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/overview: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/actions: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/actions: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/activity: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/activity: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/how: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/how: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/checks: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/checks: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "768×1024 raahi/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "768×1024 ray-credit/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
@@ -263,47 +263,47 @@
    "detail": ""
   },
   {
-   "name": "390×844 raahi/overview: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/overview: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "390×844 raahi/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/request/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "390×844 raahi/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/buyer/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "390×844 raahi/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/recover/gupta: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "390×844 raahi/actions: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/actions: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "390×844 raahi/activity: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/activity: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "390×844 raahi/how: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/how: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "390×844 raahi/checks: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/checks: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },
   {
-   "name": "390×844 raahi/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
+   "name": "390×844 ray-credit/payment/verma: no horizontal overflow, headings and buttons inside the viewport",
    "pass": true,
    "detail": ""
   },

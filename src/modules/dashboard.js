@@ -53,7 +53,7 @@ const AGENTS = [
  {id:'cart', th:'th-cart', name:'Abandoned Cart Conversion', partners:['superU','nugget'], out:'Recover 25%+ abandoned carts with Voice AI', svc:['rzp','shop','wa'], cats:['Grow Revenue'], desc:'Reaches customers via AI voice call + WhatsApp within 30 minutes of abandonment, pre-creates a payment link, and follows up if the call is missed.'},
  {id:'dispute', th:'th-disp', name:'Dispute Responder', out:'Fight disputes with a 70%+ win rate', svc:['rzp','shop','mail'], cats:['Reduce Losses'], desc:'Auto-responds to chargebacks with optimised evidence to maximise dispute win rates.'},
  {id:'subs', th:'th-sub', name:'Subscription Recovery', out:'Recover 40%+ failed subscription payments', svc:['rzp','mail','wa','sms'], cats:['Grow Revenue','Reduce Losses'], desc:'Analyses failed subscription payments, applies smarter retry logic and triggers targeted customer nudges.'},
- {id:'raahi', th:'th-raahi', name:'RAY Credit', tag:'New', out:'Decide credit using how buyers actually repay across the Razorpay network.', sub:'Network-powered credit intelligence for B2B distributors', svc:['rzp','marg','tally','wa'], cats:['Reduce Losses','Manage Cash','Get Insights']},
+ {id:'ray-credit', th:'th-ray-credit', name:'RAY Credit', tag:'New', out:'Decide credit using how buyers actually repay across the Razorpay network.', sub:'Network-powered credit intelligence for B2B distributors', svc:['rzp','marg','tally','wa'], cats:['Reduce Losses','Manage Cash','Get Insights']},
  {id:'cash', th:'th-cash', name:'Cashflow Forecaster', out:'Predict cash position 3–7 days ahead', svc:['rzp','bank'], cats:['Manage Cash','Get Insights'], desc:'Predicts your cash position 3–7 days ahead with alerts for payroll risk, shortfalls and payout failures.'},
  {id:'settle', th:'th-set', name:'Settlement Insights', out:'Get a daily settlement summary on WhatsApp', svc:['rzp','wa'], cats:['Get Insights','Manage Cash'], desc:'Sends a daily settlement summary via WhatsApp so you can track payouts without checking dashboards.'},
 ];
@@ -61,14 +61,14 @@ function svc(k){return {rzp:`<span class="svc rzp" title="Razorpay"><img src="${
 function studioTabs(t){return `<div class="row between" style="border-bottom:1px solid var(--divider)"><div class="tabs" style="border:0">${[['home','Home'],['my','My Agents'],['connectors','Connectors']].map(([k,l])=>`<button class="${t===k?'on':''}" onclick="go('studio${k==='home'?'':'/'+k}')">${l}</button>`).join('')}</div><span class="pill-beta">Beta</span></div>`}
 const SLIDES=[
  {g:'g1', t:'AI voice call recovers<br>25%+ abandoned carts', th:'th-cart', n:'Abandoned Cart Conversion', id:'cart'},
- {g:'g2', t:'Spot slipping buyers<br>before dues pile up', th:'th-raahi', n:'RAY Credit', id:'raahi', tag:'New'},
+ {g:'g2', t:'Spot slipping buyers<br>before dues pile up', th:'th-ray-credit', n:'RAY Credit', id:'ray-credit', tag:'New'},
  {g:'g3', t:'Predict cashflow 7 days ahead with 85%+ accuracy', th:'th-cash', n:'Cash Flow Prediction', id:'cash'},
 ];
 function pgStudio(t){
-  if(t==='raahi') return pgRAYAgent();
+  if(t==='ray-credit') return pgRAYAgent();
   if(t==='my') return `<div class="page fadein">${studioTabs('my')}
    <div class="card mt24"><table class="table"><thead><tr><th>Agent</th><th>Status</th><th>Connected to</th><th>Last action</th><th>Needs approval</th><th></th></tr></thead><tbody>
-${S.installed?`   <tr class="click" onclick="go('raahi/overview')"><td><div class="row gap8"><span class="thumb th-raahi"></span><span class="nm">RAY Credit</span></div></td><td>${S.paused?'<span class="badge b-n">Paused</span>':'<span class="badge b-g"><span class="dot"></span>Active</span>'}</td><td><div class="row gap4">${svc('rzp')}${svc('marg')}${svc('wa')}</div></td><td class="muted">Today, 9:02 AM · Recommended actions prepared</td><td><span class="badge b-b">${draftCount()} items</span></td><td>${I('right',18)}</td></tr>`:''}
+${S.installed?`   <tr class="click" onclick="go('ray-credit/overview')"><td><div class="row gap8"><span class="thumb th-ray-credit"></span><span class="nm">RAY Credit</span></div></td><td>${S.paused?'<span class="badge b-n">Paused</span>':'<span class="badge b-g"><span class="dot"></span>Active</span>'}</td><td><div class="row gap4">${svc('rzp')}${svc('marg')}${svc('wa')}</div></td><td class="muted">Today, 9:02 AM · Recommended actions prepared</td><td><span class="badge b-b">${draftCount()} items</span></td><td>${I('right',18)}</td></tr>`:''}
    <tr class="click" onclick="toast('Settlement Insights · next summary at 7 PM on WhatsApp')"><td><div class="row gap8"><span class="thumb th-set"></span><span class="nm">Settlement Insights</span></div></td><td><span class="badge b-g"><span class="dot"></span>Active</span></td><td><div class="row gap4">${svc('rzp')}${svc('wa')}</div></td><td class="muted">Yesterday, 7:00 PM · Daily summary sent</td><td class="muted">–</td><td>${I('right',18)}</td></tr>
    </tbody></table></div></div>`;
   if(t==='connectors'){
@@ -78,15 +78,15 @@ ${S.installed?`   <tr class="click" onclick="go('raahi/overview')"><td><div clas
   const f=S.studio.filter; const list=AGENTS.filter(a=>!f||a.cats.includes(f));
   return `<div class="page fadein">${studioTabs('home')}
   <div class="hero-wrap" id="hero"><div class="hero-track" style="transform:translateX(calc(${-S.studio.slide} * (72% + 16px)))">
-   ${SLIDES.map((s,i)=>`<div class="hero ${s.g}" onclick="${s.id==='raahi'?"go('studio/raahi')":`A.agent('${s.id==='cash'?'cash':s.id}')`}"><h2>${s.t}</h2><div class="who"><span class="thumb ${s.th}"></span>${s.n}${s.tag?` <span class="pill-beta">${s.tag}</span>`:''}</div></div>`).join('')}
+   ${SLIDES.map((s,i)=>`<div class="hero ${s.g}" onclick="${s.id==='ray-credit'?"go('studio/ray-credit')":`A.agent('${s.id==='cash'?'cash':s.id}')`}"><h2>${s.t}</h2><div class="who"><span class="thumb ${s.th}"></span>${s.n}${s.tag?` <span class="pill-beta">${s.tag}</span>`:''}</div></div>`).join('')}
   </div>
   <button class="hero-nav" style="left:12px" onclick="A.slide(-1)">${I('left',16,2)}</button>
   <button class="hero-nav" style="left:calc(72% - 23px)" onclick="A.slide(1)">${I('right',16,2)}</button></div>
   <div class="hero-dots">${SLIDES.map((s,i)=>`<i class="${i===S.studio.slide?'on':''}"></i>`).join('')}</div>
   <div class="h2 mt32" style="font-size:20px">Explore Agents</div>
   <div class="row gap8 mt16">${['Reduce Losses','Grow Revenue','Get Insights','Manage Cash'].map(c=>`<button class="chip ${f===c?'on':''}" onclick="A.sfilter('${c}')">${c}</button>`).join('')}</div>
-  <div class="grid g3 mt20">${list.map(a=>`<button class="agent-card" onclick="${a.id==='raahi'?"go('studio/raahi')":`A.agent('${a.id}')`}" ${a.id==='raahi'?'id="card-raahi"':''}>
-    <div class="row gap8"><span class="thumb ${a.th}"></span><span class="an">${a.name}</span>${(a.partners||[]).map(p=>`<span class="partner">${p}</span>`).join('')}${a.id==='raahi'&&S.installed?'<span class="badge b-g">Installed</span>':a.tag?`<span class="pill-beta">${a.tag}</span>`:''}</div>
+  <div class="grid g3 mt20">${list.map(a=>`<button class="agent-card" onclick="${a.id==='ray-credit'?"go('studio/ray-credit')":`A.agent('${a.id}')`}" ${a.id==='ray-credit'?'id="card-ray-credit"':''}>
+    <div class="row gap8"><span class="thumb ${a.th}"></span><span class="an">${a.name}</span>${(a.partners||[]).map(p=>`<span class="partner">${p}</span>`).join('')}${a.id==='ray-credit'&&S.installed?'<span class="badge b-g">Installed</span>':a.tag?`<span class="pill-beta">${a.tag}</span>`:''}</div>
     <div class="ao">${a.out}</div>${a.sub?`<div class="small muted mt4">${a.sub}</div>`:''}
     <div class="af">${a.svc.map(svc).join('')}<span style="margin-left:auto;color:var(--faint)">${I('right',17)}</span></div></button>`).join('')}</div>
   </div>`;

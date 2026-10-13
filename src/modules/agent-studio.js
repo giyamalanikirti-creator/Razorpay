@@ -20,7 +20,7 @@ function pgRAYAgent(){
   <div class="row gap10"><span class="h1" style="font-size:30px">RAY Credit</span><span class="ag-beta">Beta</span>${inst?'<span class="badge b-g"><span class="dot"></span>Installed</span>':''}</div>
   <div class="muted mt4" style="font-size:15px">Network-powered credit intelligence for B2B distributors</div>
   <div class="row gap8 mt12 wrap">${chip('rzp','Razorpay')}${chip('marg','Marg / Tally')}${chip('wa','WhatsApp')}<span class="faint">·</span><span class="ag-free">${I('spark',12,2)} Free access during beta</span></div>
-  <div class="row gap8 mt20">${inst?`<button class="btn btn-p" onclick="go('raahi/overview')">Open agent</button><button class="btn btn-s" onclick="go('raahi/controls')">Settings</button>`:`<button class="btn btn-p" id="install-raahi" onclick="A.installRAY()">Install Agent</button>`}</div>
+  <div class="row gap8 mt20">${inst?`<button class="btn btn-p" onclick="go('ray-credit/overview')">Open agent</button><button class="btn btn-s" onclick="go('ray-credit/controls')">Settings</button>`:`<button class="btn btn-p" id="install-ray-credit" onclick="A.installRAY()">Install Agent</button>`}</div>
   <hr class="hr mt24">
   <div class="ag-body">
    <div class="ag-head mt24">Decide credit using how buyers actually repay across the Razorpay network.</div>
@@ -90,4 +90,4 @@ A.installDo=()=>{ const s=S.inst;
   document.querySelector('.modal-b').innerHTML=`<div style="padding:22px 0">${thinking('Reading 1,184 open invoices · building 642 credit profiles…')}</div>`; document.querySelector('.modal-f').style.display='none';
   setTimeout(()=>{ closeModal(); S.installed=true; S.ctl.auto=s.auto; S.inst=null;
     log({ic:'agent',ti:'RAY Credit installed from Agent Studio',de:`${s.ledger==='tally'?'Tally':s.ledger==='xls'?'Receivables upload':'Marg ERP'} connected · bank ${S.bank.st==='on'?'connected':'not connected yet'} · ${s.auto==='review'?'Review first':'Routine automation'}`,src:['led'],who:'Installed by '+M.owner});
-    go('raahi/overview'); toast('RAY Credit is ready · 642 credit profiles built'); },1800); };
+    go('ray-credit/overview'); toast('RAY Credit is ready · 642 credit profiles built'); },1800); };

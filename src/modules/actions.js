@@ -1,5 +1,5 @@
 /* ================= RAY CREDIT & COLLECTIONS · actions ================= */
-const onRAY = () => route().startsWith('raahi');
+const onRAY = () => route().startsWith('ray-credit');
 const rr = () => { render(); if(document.getElementById('wa-root').innerHTML) waRender(); };
 
 A.pauseToggle=()=>{
@@ -86,7 +86,7 @@ A.approveAll=()=>{const p=bulkPlan(), n=p.send.length+p.queue.length;
    <div class="xs muted mt12">${S.stale?'Ledger is stale, so nothing can be sent until it is refreshed.':'Each message is tailored to the buyer and includes a payment link. Controls are checked again at the moment of sending. Salesperson visits are assigned separately.'}</div>`,
    actions:[{label:'Review individually',fn:()=>{closeModal();A.reviewAll()}},{label:`Send ${n} reminder${n===1?'':'s'}`,cls:'btn-p',id:'bulk-ok',disabled:!n||blocked(),fn:()=>{closeModal();const r=bulkDo('Dashboard');rr();toast(`${r.wa} sent${r.queued?` · ${r.queued} queued`:''}${r.held?` · ${r.held} blocked`:''} · logged in Activity`)}}]});
 };
-A.reviewAll=()=>{CHASE.forEach(c=>S.chase[c.id].open=c.ch==='wa'||c.held);if(!route().startsWith('raahi/actions')) go('raahi/actions'); else rr(); setTimeout(()=>{const e=document.getElementById('grp-early');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},80)};
+A.reviewAll=()=>{CHASE.forEach(c=>S.chase[c.id].open=c.ch==='wa'||c.held);if(!route().startsWith('ray-credit/actions')) go('ray-credit/actions'); else rr(); setTimeout(()=>{const e=document.getElementById('grp-early');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},80)};
 A.matchVerma=()=>A.prMatchRzp('verma'); /* one match path for every surface (reconciliation.js) */
 
 /* ---- promise loop: the buyer's reply is interpreted by the AI endpoint (or the labelled fallback) ---- */
@@ -96,7 +96,7 @@ function guptaReplySoon(){ if(S.gupta.promise) return; setTimeout(()=>{ if(S.gup
   interpretMessage('gupta',{buyerId:'gupta', buyerName:'Gupta Traders', message:GUPTA_REPLY, inv:'INV-24891', outstanding:balOf('gupta','INV-24891'), messageDate:S.today}).then(st=>{
     if(!S.wa.msgs||!st||st.status!=='done') return; const f=st.fields;
     waPush({from:'ray',html:`Gupta Traders replied:\n<i>“${GUPTA_REPLY}”</i>\n\n${st.mode==='ai'?`I read this (AI · ${st.model})`:'My rule-based parser read this (live AI unavailable)'} as ${f.firstAmt?`<b>${inr(f.firstAmt)} ${f.firstDate===S.today?'today':'on '+RayDates.fmtDay(f.firstDate)}</b>`:'no amount today'}${f.laterAmt?` and <b>${inr(f.laterAmt)} by ${f.laterDate?RayDates.fmtLong(f.laterDate):'an unstated date'}</b>`:''}. Shall I record it?`,btns:[{l:'Confirm',a:'waConfirmPromise'},{l:'Review',a:'waReviewPromise'}]}); });
-  if(onRAY()) rr(); toast('Gupta Traders replied to the reminder',{label:'View',fn:()=>go('raahi/activity')}); },3500)}
+  if(onRAY()) rr(); toast('Gupta Traders replied to the reminder',{label:'View',fn:()=>go('ray-credit/activity')}); },3500)}
 A.confirmPromise=()=>{ const st=S.interp.gupta; if(!st||st.status!=='done'||S.gupta.promise==='saved') return; A.ipConfirm('gupta'); };
 A.editPromise=()=>{ const st=S.interp.gupta; if(!st||st.status!=='done') return; const saved=S.promises.find(p=>p.key==='gupta'&&p.status==='confirmed'); if(saved) return A.ipReopen('gupta');
   const f=st.fields;

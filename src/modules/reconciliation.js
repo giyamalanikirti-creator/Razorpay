@@ -77,7 +77,7 @@ A.overrideStart=(id)=>{ const c=chem(id), p=PAYREV[id], inv=(p&&p.inv)||chaseInv
    <div class="field mt8"><label for="ovr-note">Note <span class="muted">(required for “Other”)</span></label><input class="input" id="ovr-note" maxlength="140"></div>
    <label class="row gap8 mt12 small" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="ovr-ok" style="margin-top:3px"> <span>I am overriding a possible-payment warning. The reason, invoice and unresolved payment evidence will be logged with my name.</span></label>
    <div class="xs mt8" id="ovr-err" role="alert" style="color:var(--r);font-weight:600"></div>
-   <div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="prClose();go('raahi/payment/${id}')">Review payment instead</button><button class="btn btn-d" id="ovr-send" ${other?'disabled':''} onclick="A.overrideSend('${id}')">Send with override</button></div></div>`); };
+   <div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="prClose();go('ray-credit/payment/${id}')">Review payment instead</button><button class="btn btn-d" id="ovr-send" ${other?'disabled':''} onclick="A.overrideSend('${id}')">Send with override</button></div></div>`); };
 A.overrideSend=(id)=>{ const c=chem(id), p=PAYREV[id], inv=(p&&p.inv)||chaseInv(id), reason=(document.getElementById('ovr-reason')||{}).value||'', note=((document.getElementById('ovr-note')||{}).value||'').trim(), ok=(document.getElementById('ovr-ok')||{}).checked, err=document.getElementById('ovr-err');
   const fail=m=>{ if(err) err.textContent=m; else toast(m); };
   if(!reason) return fail('Choose a reason for overriding the warning.'); if(reason==='Other'&&note.length<5) return fail('Add a short note for “Other”.'); if(!ok) return fail('Confirm that you are overriding a possible-payment warning.');
@@ -120,6 +120,6 @@ function prOutcome(id){ const p=PAYREV[id], st=prS(id), i=invOf(id,p.inv), bal=i
   return p.note; }
 function vPayReview(id){
   if(!PAYREV[id]) return '<div class="empty">Not found</div>';
-  return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('raahi/actions','grp-check')">${I('arrowL',14,2)} Reconciliation · Payment review</a></div>
+  return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('ray-credit/actions','grp-check')">${I('arrowL',14,2)} Reconciliation · Payment review</a></div>
    <div style="max-width:900px">${pageHead('Review payment','Confirm whether the buyer has already paid before anyone is chased.')}<div class="card pad mt16">${prBody(id,false)}</div></div>`;
 }

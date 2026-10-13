@@ -123,7 +123,7 @@ function learnCard(){
       <div class="small muted mt8">Affects only the first follow-up for ${p.band} buyers’ invoices that are not yet due. Existing invoice due dates, terms and credit limits do not change. ${extra?`If you approve, ${extra} more ${p.band} buyer${extra===1?'':'s'} get an early follow-up in today’s plan.`:(()=>{const k=rayAllBuyers().reduce((a,b)=>{const r=recOf(b.id);if(!r||r.band!==p.band)return a;return a+invsOf(b.id).filter(i=>i.bal-(i.disputed||0)>0&&planDays(i.due)>p.from&&planDays(i.due)<=30).length;},0);return `No buyer changes today. It applies to the next ${k} ${p.band} invoice${k===1?'':'s'} due this month, which get their first follow-up ${p.to-p.from} days sooner.`;})()}</div>
       ${table(p.st,p.from,p.to)}
       <div class="xs muted mt8">${basis} Repayment events update each buyer’s signals and rerun the policy; no model is trained. Credit limits, bands and invoice contracts are not changed by this.</div>
-      <div class="row gap8 mt16 wrap"><button class="btn btn-p btn-sm" onclick="polApprove('${p.band}',${p.to})" ${blocked()?'disabled':''}>Approve change</button><button class="btn btn-g btn-sm" onclick="polDismiss('${p.band}',${p.to})">Not now</button><button class="btn btn-g btn-sm" onclick="go('raahi/controls');setTimeout(()=>{const e=document.getElementById('pol-ctl');e&&e.scrollIntoView({behavior:'smooth'})},150)">See policy versions</button></div></div>`; }
+      <div class="row gap8 mt16 wrap"><button class="btn btn-p btn-sm" onclick="polApprove('${p.band}',${p.to})" ${blocked()?'disabled':''}>Approve change</button><button class="btn btn-g btn-sm" onclick="polDismiss('${p.band}',${p.to})">Not now</button><button class="btn btn-g btn-sm" onclick="go('ray-credit/controls');setTimeout(()=>{const e=document.getElementById('pol-ctl');e&&e.scrollIntoView({behavior:'smooth'})},150)">See policy versions</button></div></div>`; }
   const notes=policyNoChange();
   return `<div class="card pad mt16" id="learn-card"><div class="row gap8">${stage('LEARN')}<span class="h3">Follow-up policy v${S.pol.v}</span>${S.pol.v>1?`<span class="badge b-g">${I('check',11,2.6)} ${esc(last.change)}</span>`:''}</div>
     <div class="small muted mt8">${S.pol.v>1?`${esc(last.by)} · ${esc(last.at)}. `:''}RAY checks reminder outcomes after every collection and suggests a change only when a different timing does at least 8 points better on 30 or more reminders.</div>
@@ -165,7 +165,7 @@ function vHow(){
    ${readinessBox()}
    <div class="card mt16" style="overflow:hidden"><div class="pad-s" style="border-bottom:1px solid var(--border-subtle)"><span class="h3">Status of each part right now</span></div><table class="table"><tbody>${rows.map(r=>`<tr><td class="small" style="color:var(--strong)">${r[0]}</td><td><span class="badge ${r[2]}">${r[1]}</span></td></tr>`).join('')}</tbody></table></div>
    <div class="card pad mt16"><div class="h3">Where to look</div><div class="small muted mt8">Actions shows today’s plan and its ranking. A buyer profile shows every signal and the rule it triggered. Activity shows what RAY did and learned. Controls holds your limits, consent and policy versions. Checks runs the rules live.</div>
-   <div class="row gap8 mt12 wrap"><button class="btn btn-s btn-sm" onclick="go('raahi/actions')">Actions</button><button class="btn btn-s btn-sm" onclick="go('raahi/buyer/gupta')">Example buyer</button><button class="btn btn-s btn-sm" onclick="go('raahi/controls')">Controls</button><button class="btn btn-s btn-sm" onclick="go('raahi/checks')">Checks</button></div></div>
+   <div class="row gap8 mt12 wrap"><button class="btn btn-s btn-sm" onclick="go('ray-credit/actions')">Actions</button><button class="btn btn-s btn-sm" onclick="go('ray-credit/buyer/gupta')">Example buyer</button><button class="btn btn-s btn-sm" onclick="go('ray-credit/controls')">Controls</button><button class="btn btn-s btn-sm" onclick="go('ray-credit/checks')">Checks</button></div></div>
    ${mechanismBox()}
    ${pilotBox(true)}
    ${evalTemplate()}
@@ -211,11 +211,11 @@ function pilotBox(full){ const N=POL.network;
 /* how the mechanism works, using only what this page can show live; no time savings or uplift are claimed */
 function mechanismBox(){ const st=pfStats(), blocked=(S.outbox||[]).filter(o=>o.status==='blocked').length+(S.act||[]).filter(x=>/not sent$/.test(x.ti||'')).length, holds=Object.keys(PAYREV).filter(id=>prPending(id)).length;
   const rows=[
-    ['Find what is owed','Staff add up invoices and part-payments by hand across the ledger and bank',`RAY derives balances from ledger events: ${lakhs(st.outstanding)} across ${st.openInvoices.toLocaleString('en-IN')} open invoices right now`,"go('raahi/portfolio')"],
-    ['Decide who to chase first','Staff scan overdue lists and decide priorities from memory','RAY ranks every buyer with dues by amount, repayment risk and urgency (today’s plan)',"go('raahi/actions')"],
-    ['Set credit for a slipping buyer','Limits change after the problem is visible in your own ledger','RAY explains each recommendation and, with eligible consented evidence, can see slowdowns elsewhere earlier',"goSec('raahi/buyer/gupta','net')"],
-    ['Handle “I already paid”','Staff chase, then reconcile claims manually',`RAY holds reminders while a claim or possible payment is unreviewed (${holds} on hold now) and never treats a claim as received`,"go('raahi/payment/verma')"],
-    ['Avoid wrong reminders','Reminders go out to buyers who paid, are on Do not contact, or at night',`Every send passes the same controls${blocked?`; ${blocked} blocked in this session`:''}`,"go('raahi/controls')"]];
+    ['Find what is owed','Staff add up invoices and part-payments by hand across the ledger and bank',`RAY derives balances from ledger events: ${lakhs(st.outstanding)} across ${st.openInvoices.toLocaleString('en-IN')} open invoices right now`,"go('ray-credit/portfolio')"],
+    ['Decide who to chase first','Staff scan overdue lists and decide priorities from memory','RAY ranks every buyer with dues by amount, repayment risk and urgency (today’s plan)',"go('ray-credit/actions')"],
+    ['Set credit for a slipping buyer','Limits change after the problem is visible in your own ledger','RAY explains each recommendation and, with eligible consented evidence, can see slowdowns elsewhere earlier',"goSec('ray-credit/buyer/gupta','net')"],
+    ['Handle “I already paid”','Staff chase, then reconcile claims manually',`RAY holds reminders while a claim or possible payment is unreviewed (${holds} on hold now) and never treats a claim as received`,"go('ray-credit/payment/verma')"],
+    ['Avoid wrong reminders','Reminders go out to buyers who paid, are on Do not contact, or at night',`Every send passes the same controls${blocked?`; ${blocked} blocked in this session`:''}`,"go('ray-credit/controls')"]];
   return `<div class="card mt16" id="mechanism" style="overflow:hidden"><div class="pad-s row between wrap gap8" style="border-bottom:1px solid var(--border-subtle)"><span class="h3">How RAY could change the work · mechanism, not a measured result</span><span class="badge b-n">Illustrative · no measured time savings or uplift</span></div>
    <div style="overflow-x:auto"><table class="table"><thead><tr><th>Task</th><th>Without RAY</th><th>With RAY (what this prototype does)</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td class="small" style="font-weight:600;color:var(--strong)">${r[0]}</td><td class="small muted">${r[1]}</td><td class="small">${r[2]}</td><td class="r"><button class="btn btn-g btn-sm" onclick="${r[3]}">See it</button></td></tr>`).join('')}</tbody></table></div></div>`; }
 /* empty evaluation template for a real user test; results stay blank until a test is run */
@@ -244,7 +244,7 @@ function pgRAY(tab,id){
   if(tab==='bank') return `<div class="page fadein">${bankPage(id)}</div>`;
   if(tab==='buyers') tab='portfolio'; if(tab==='chase') tab='actions';
   const body={overview:vOverview,request:()=>vRequest(id),payment:()=>vPayReview(id),collect:()=>vCollect(id),invoice:()=>vKirInvoice(),recover:()=>vRecover(id),portfolio:vPortfolio,buyer:()=>vProfile(id),check:vCheck,actions:vChase,activity:()=>id==='bank'?vBankFeed():vActivity(),controls:vControls,checks:vChecks,how:vHow}[tab]||vOverview;
-  return `<div class="page fadein">${raahiHeader(tab)}${banners()}${body()}</div>`;
+  return `<div class="page fadein">${rayHeader(tab)}${banners()}${body()}</div>`;
 }
 
 /* ---------- Broken promise alert ---------- */
@@ -262,7 +262,7 @@ function brokenAlert(compact){
    </div>
    <div class="mt12" style="padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:8px"><span class="xs muted" style="font-weight:500">Next order</span><div style="font-weight:600;color:var(--strong);margin-top:2px">${nextOrderLine('gupta', r.recommendedLimit)}</div><div class="xs muted mt4">${I('lock',12)} Supply is never paused automatically.</div></div>
    ${compact?'':`<div class="xs muted mt12">${due?`Promise for ${RayDates.fmtDay(due)} recorded as missed. `:''}The policy re-ran on the new evidence; see “What changed since the last decision”.</div>`}
-   <div class="row gap8 mt16">${compact?`<button class="btn btn-p btn-sm" onclick="go('raahi/buyer/gupta')">Review credit</button>`:`<button class="btn btn-p btn-sm" onclick="A.approveGupta()" ${blocked()?'disabled':''}>Set future limit to ${inr(r.recommendedLimit)}</button>`}<button class="btn btn-s btn-sm" onclick="A.keepLimit()">Keep current limit</button></div>
+   <div class="row gap8 mt16">${compact?`<button class="btn btn-p btn-sm" onclick="go('ray-credit/buyer/gupta')">Review credit</button>`:`<button class="btn btn-p btn-sm" onclick="A.approveGupta()" ${blocked()?'disabled':''}>Set future limit to ${inr(r.recommendedLimit)}</button>`}<button class="btn btn-s btn-sm" onclick="A.keepLimit()">Keep current limit</button></div>
   </div></div>`;
 }
 /* ---------- Overview cards ---------- */
@@ -285,13 +285,13 @@ hooks.push(()=>{document.querySelectorAll('.chart').forEach(ch=>{const tip=ch.qu
 function chemActivity(name){
   const items=S.act.filter(a=>a.chem===name||(a.ti||'').includes(name)).slice(0,6);
   if(!items.length) return '';
-  return `<div class="card mt16"><div class="row between pad-s" style="border-bottom:1px solid var(--border-subtle)"><span class="h3">Activity</span><a class="link small" onclick="go('raahi/activity')">View all</a></div><div class="feed">${items.map(feedItem).join('')}</div></div>`;
+  return `<div class="card mt16"><div class="row between pad-s" style="border-bottom:1px solid var(--border-subtle)"><span class="h3">Activity</span><a class="link small" onclick="go('ray-credit/activity')">View all</a></div><div class="feed">${items.map(feedItem).join('')}</div></div>`;
 }
 /* ---------- Buyer profile · any buyer ---------- */
 function vProfileGeneric(id){
   const c=chemView(chem(id)); if(!c) return '<div class="empty">Not found</div>';
-  const back=`<div class="crumb mt20" style="margin-bottom:0"><a onclick="go('raahi/portfolio')">${I('arrowL',14,2)} Credit Portfolio</a></div>`;
-  if(c.unchecked){ const r=recOf('newlife'); return `${back}<div class="card pad mt16" style="max-width:640px"><span class="lbl">Buyer profile</span><div class="row gap8 mt4"><span class="h1" style="font-size:24px">${c.name}</span><span class="badge b-n">New buyer · Unrated</span></div><div class="xs muted mt8">Network check: ${NET_STATE_LABEL[sigOf('newlife').consent]||'consent needed'}</div><p class="muted mt8">First order requested. RAY’s starter recommendation is ${inr(r.recommendedLimit)} on ${r.recommendedTerms}-day terms; a consented network check can change it. Not final until you approve.</p><button class="btn btn-p mt16" onclick="go('raahi/check')">Run credit check</button></div>${howPanel('newlife')}`; }
+  const back=`<div class="crumb mt20" style="margin-bottom:0"><a onclick="go('ray-credit/portfolio')">${I('arrowL',14,2)} Credit Portfolio</a></div>`;
+  if(c.unchecked){ const r=recOf('newlife'); return `${back}<div class="card pad mt16" style="max-width:640px"><span class="lbl">Buyer profile</span><div class="row gap8 mt4"><span class="h1" style="font-size:24px">${c.name}</span><span class="badge b-n">New buyer · Unrated</span></div><div class="xs muted mt8">Network check: ${NET_STATE_LABEL[sigOf('newlife').consent]||'consent needed'}</div><p class="muted mt8">First order requested. RAY’s starter recommendation is ${inr(r.recommendedLimit)} on ${r.recommendedTerms}-day terms; a consented network check can change it. Not final until you approve.</p><button class="btn btn-p mt16" onclick="go('ray-credit/check')">Run credit check</button></div>${howPanel('newlife')}`; }
   const ids=IDS[c.id]||{}, ver=S.verified[c.id], gstBad=ids.gs==='Cancelled'||(BUY[c.id]&&BUY[c.id].gst==='cancelled'), on=netOn();
   const r=recOf(c.id), s=sigOf(c.id), p=pfView(c), lim=c.limit;
   const sk=src=>/network/i.test(src)?'net':/Razorpay/.test(src)?'rzp':/conversation/i.test(src)?'conv':/GST/.test(src)?'gst':'led';
@@ -312,7 +312,7 @@ function vProfileGeneric(id){
   const rq=creq(c.id)&&!S.req[c.id];
   const lines=`<div class="kvline"><span>Future credit limit</span><b class="num">${p.rec?`${inr(p.rec)} <span class="xs muted" style="font-weight:500">from ${inr(lim)}</span>`:`${inr(r.recommendedLimit)} <span class="xs muted" style="font-weight:500">${r.recommendedLimit===lim?'no change':'decided'}</span>`}</b></div><div class="kvline"><span>Terms for new credit</span><b class="num">${r.recommendedTerms} days${r.recommendedTerms!==curTermsOf(c.id)?` <span class="xs muted" style="font-weight:500">from ${curTermsOf(c.id)}</span>`:''}</b></div><div class="kvline"><span>Next step</span><b>${p.next}</b></div><div class="kvline"><span>Confidence</span><b>${r.confidence}</b></div>`;
   let btns='';
-  if(rq) btns=`<button class="btn btn-p" onclick="go('raahi/request/${c.id}')">Review credit request</button><button class="btn btn-g" onclick="toast('Saved for later')">Review later</button>`;
+  if(rq) btns=`<button class="btn btn-p" onclick="go('ray-credit/request/${c.id}')">Review credit request</button><button class="btn btn-g" onclick="toast('Saved for later')">Review later</button>`;
   else if(gstBad&&!ver) btns=`<button class="btn btn-p" onclick="A.verifyId('${c.id}')">Mark GST status as verified</button><button class="btn btn-g" onclick="toast('Saved for later')">Review later</button>`;
   else if(p.rec||(r.action==='terms'&&(decOf(c.id).status==='baseline'||recChanged(c.id)))) btns=`<button class="btn btn-p" onclick="A.setLimit('${c.id}')" ${blocked()?'disabled':''}>${p.rec?`Set future limit to ${inr(p.rec)}`:`Apply ${r.recommendedTerms}-day terms`}</button><button class="btn btn-s" onclick="A.keepLimitG('${c.id}')">Keep current ${p.rec?'limit':'terms'}</button><button class="btn btn-g" onclick="toast('Saved for later')">Review later</button>`;
   else if(chOpen) btns=`<button class="btn btn-p" onclick="A.actOn('${c.id}')">${ctaLabel(ch)}</button><button class="btn btn-g" onclick="toast('Saved for later')">Review later</button>`;
@@ -326,7 +326,7 @@ function vProfileGeneric(id){
   <div class="grid g-21 mt16"><div class="card pad"><div class="row between"><span class="h2" style="font-size:18px">${c.band==='Reliable'&&!gstBad?'Repayment behaviour':'Why RAY is concerned'}</span><span class="ai-tag">${clover(14)} RAY</span></div><div class="mt16">${sig.map((x,i)=>`<div class="signal"><span class="n" style="${c.band==='Reliable'&&!gstBad?'background:var(--g-bg);color:var(--g)':''}${x[2]==='gst'?';background:var(--r-bg);color:var(--r)':''}">${i+1}</span><div class="grow"><h5>${x[0]}</h5><div class="small muted mt4">${esc(x[1])}</div></div><span class="src ${srcN[x[2]][0]}">${srcN[x[2]][1]}</span></div>`).join('')}</div></div>
    <div class="card pad rec"><span class="lbl">Recommended</span><div class="say mt12">${say}</div>${p.rec&&p.rec<lim?overLimitNote(c.out,p.rec,c.name):''}<div class="mt16">${lines}</div>${btns?`<div class="row gap8 mt20 wrap">${btns}</div>`:''}${undoBar(c.id)}<div class="xs muted mt12 row gap4">${I('lock',12)} RAY never changes a limit or pauses supply without your approval.</div></div></div>
   ${howPanel(c.id)}
-  ${c.id==='guptak'?`<div class="alert info mt16"><span class="ic">${I('receipt',17)}</span><div class="grow"><h4>INV-2048 · ${inr(balOf('guptak','INV-2048'))} · ${Math.max(0,RayDates.diffDays(S.today,D('2026-10-02')))} days overdue</h4><div class="small muted">${kirS().kind?COMMIT_ST[kirS().commit]+' · '+PAY_ST[kirS().pay]:'RAY recommends a payment link with a payment-plan option.'}</div></div><button class="btn btn-p btn-sm" onclick="go('raahi/invoice/INV-2048')">Open invoice</button></div>`:''}
+  ${c.id==='guptak'?`<div class="alert info mt16"><span class="ic">${I('receipt',17)}</span><div class="grow"><h4>INV-2048 · ${inr(balOf('guptak','INV-2048'))} · ${Math.max(0,RayDates.diffDays(S.today,D('2026-10-02')))} days overdue</h4><div class="small muted">${kirS().kind?COMMIT_ST[kirS().commit]+' · '+PAY_ST[kirS().pay]:'RAY recommends a payment link with a payment-plan option.'}</div></div><button class="btn btn-p btn-sm" onclick="go('ray-credit/invoice/INV-2048')">Open invoice</button></div>`:''}
   ${PLAN[c.id]?`<div class="mt16">${planCard(c.id)}</div>`:''}
   ${invTable(c.id)}
   ${outcomeCard(c.id)}${paymentsCard(c.id)}
@@ -335,7 +335,7 @@ function vProfileGeneric(id){
   ${chemActivity(c.name)}`;
 }
 function unmatchedAlert(){
-  return `<div class="alert warn mt16"><span class="ic">${I('pause',17)}</span><div class="grow"><div class="row gap8"><span class="badge b-a">REMINDER PAUSED</span><span class="xs muted">Verma Retail · ${inr(balOf('verma',(PAYREV.verma||{}).inv))} ${vermaDueTxt()}</span></div><div class="small mt8" style="color:var(--strong)">We found a recent ${inr((PAYREV.verma||{}).amt||0)} credit that may belong to Verma Retail. Confirm it before sending a reminder.</div><div class="xs muted mt4">${sourcesLine('verma','INV-24655')}</div></div><button class="btn btn-p btn-sm" onclick="go('raahi/payment/verma')">Review payment</button><button class="btn btn-s btn-sm" onclick="A.sendAnyway('verma')">Send reminder anyway</button></div>`;
+  return `<div class="alert warn mt16"><span class="ic">${I('pause',17)}</span><div class="grow"><div class="row gap8"><span class="badge b-a">REMINDER PAUSED</span><span class="xs muted">Verma Retail · ${inr(balOf('verma',(PAYREV.verma||{}).inv))} ${vermaDueTxt()}</span></div><div class="small mt8" style="color:var(--strong)">We found a recent ${inr((PAYREV.verma||{}).amt||0)} credit that may belong to Verma Retail. Confirm it before sending a reminder.</div><div class="xs muted mt4">${sourcesLine('verma','INV-24655')}</div></div><button class="btn btn-p btn-sm" onclick="go('ray-credit/payment/verma')">Review payment</button><button class="btn btn-s btn-sm" onclick="A.sendAnyway('verma')">Send reminder anyway</button></div>`;
 }
 
 /* ---------- New buyer check ---------- */
@@ -344,19 +344,19 @@ function vCheck(){
   const c=S.check, st=c.step;
   const found = st!=='input' && st!=='looking';
   const known = st==='known';
-  return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="go('raahi/portfolio')">${I('arrowL',14,2)} Credit Portfolio</a></div>
+  return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="go('ray-credit/portfolio')">${I('arrowL',14,2)} Credit Portfolio</a></div>
   <div style="max-width:1000px">
   ${pageHead('Check a new buyer','Get a recommended credit limit and terms before the first order.')}
   <div class="card pad mt20"><div class="field"><label>Enter buyer’s GSTIN, business name or phone</label><div class="row gap8"><input class="input" id="idq" style="max-width:380px;font-variant-numeric:tabular-nums;letter-spacing:.03em" placeholder="${ID_EX[0]}" value="${esc(c.q||'')}" ${found?'disabled':''} onkeydown="if(event.key==='Enter')A.lookup()"><button class="btn btn-p" onclick="A.lookup()" ${found?'disabled':''}>Check buyer</button>${found?`<button class="btn btn-g" onclick="S.check={step:'input',q:''};rr()">New search</button>`:''}</div><span class="xs muted">Use whichever identifier you have, for example 03ABCDE1234F1Z5, Gupta Traders or 98XXXX4410. RAY looks up public GST records first. The optional network check needs the buyer’s consent.</span></div>
    ${st==='looking'?`<div class="mt16">${thinking('Looking up GST records…')}</div>`:''}
    ${found?`<div class="mt20">${identityInset(c.who,{title:true,by:c.by})}</div>`:''}
   </div>
-  ${known?`<div class="alert info mt16"><span class="ic">${I('user',17)}</span><div class="grow"><h4>${chem(c.who).name} is already your buyer</h4><div class="small muted">RAY already tracks its repayment behaviour. Open the profile for its band, limit and signals.</div></div><button class="btn btn-p btn-sm" onclick="go('raahi/buyer/${c.who}')">View profile</button></div>`:''}
+  ${known?`<div class="alert info mt16"><span class="ic">${I('user',17)}</span><div class="grow"><h4>${chem(c.who).name} is already your buyer</h4><div class="small muted">RAY already tracks its repayment behaviour. Open the profile for its band, limit and signals.</div></div><button class="btn btn-p btn-sm" onclick="go('ray-credit/buyer/${c.who}')">View profile</button></div>`:''}
   ${found&&!known?consentBlock():''}
   ${['result','approved'].includes(st)?checkResult():''}
   </div>`;
 }
-hooks.push(r=>{ clearInterval(window._phT); if(r==='raahi/check'){ let i=0; window._phT=setInterval(()=>{const el=document.getElementById('idq'); if(!el||el.disabled){return} i=(i+1)%ID_EX.length; el.placeholder=ID_EX[i];},1800);} });
+hooks.push(r=>{ clearInterval(window._phT); if(r==='ray-credit/check'){ let i=0; window._phT=setInterval(()=>{const el=document.getElementById('idq'); if(!el||el.disabled){return} i=(i+1)%ID_EX.length; el.placeholder=ID_EX[i];},1800);} });
 function consentBlock(){
   const st=S.check.step, c=sigOf('newlife').consent;
   if(S.check.core&&!['found','waiting'].includes(st)) return c==='denied'?`<div class="row gap8 mt16"><span class="badge b-n">${I('ban',11,2.4)} New Life Stores declined consent · network not used</span><button class="btn btn-g btn-sm" onclick="A.consentSim('newlife','request');S.check.step='waiting';rr()">Ask again</button></div>`:!netOn()?`<div class="row gap8 mt16"><span class="badge b-n">Razorpay network is off · your data only</span></div>`:'';
@@ -375,7 +375,7 @@ function checkResult(){
     ${sig.map((x,i)=>`<div class="signal"><span class="n" style="background:var(--g-bg);color:var(--g)">${i+1}</span><div class="grow"><h5>${x[0]}</h5><div class="small muted mt4">${esc(x[1])}</div></div><span class="src ${x[2]}">${x[3]}</span></div>`).join('')}</div>
    <div class="mt16">${netCompare('newlife')}</div>${netStory('newlife')}
    <div class="alert neutral mt16" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('shield',15)}</span><div class="small grow"><b style="color:var(--strong)">Illustrative policy, not a formal credit score.</b> <span class="muted">Credit bureau data is not used.</span></div></div>
-   ${ap?`<div class="alert ok mt16"><span class="ic">${I('check',17,2.4)}</span><div class="grow"><h4>Credit terms approved</h4><div class="small muted">${inr(S.check.limit)} · ${S.check.terms} days · added to Marg ERP and your Credit Portfolio.</div></div><button class="btn btn-s btn-sm" onclick="S.cf.band='All';go('raahi/portfolio')">View in Credit Portfolio</button></div>`
+   ${ap?`<div class="alert ok mt16"><span class="ic">${I('check',17,2.4)}</span><div class="grow"><h4>Credit terms approved</h4><div class="small muted">${inr(S.check.limit)} · ${S.check.terms} days · added to Marg ERP and your Credit Portfolio.</div></div><button class="btn btn-s btn-sm" onclick="S.cf.band='All';go('ray-credit/portfolio')">View in Credit Portfolio</button></div>`
      :`<div class="row gap8 mt20"><button class="btn btn-p" onclick="A.approveTerms()" ${blocked()?'disabled':''}>Extend ${inr(L)} credit</button><button class="btn btn-s" onclick="A.editTerms()">Edit</button><button class="btn btn-g" onclick="toast('Saved for later')">Review later</button></div>`}
   </div>${howPanel('newlife')}`;
 }
@@ -408,7 +408,7 @@ function chaseBody(c){
    <div class="small muted mt8">${ch.band==='Reliable'?'Reliable buyer, friendly routine tone.':ch.band==='Watch'?'Watch: polite, specific, no pressure.':'Risky: in-person conversation, no threats.'} ${c.ch==='wa'?'Payment link included.':''}</div>
    <div class="row gap8 mt8 wrap"><span class="src led">Own ledger</span><span class="src rzp">Razorpay payment history</span>${c.net&&netOn()?'<span class="src net">Razorpay network signal</span>':''}${c.risk?'<span class="src conv">Buyer conversations</span>':''}</div>
    ${st.st==='draft'?(()=>{ const g=sm?gateFor(c.id,'salesperson'):gateFor(c.id,'whatsapp',chaseInv(c.id)); return g.action!=='send'?`<div class="small mt8" style="color:${g.action==='queue'?'#9a5b00':'var(--r)'};font-weight:500">${I(g.action==='queue'?'clock':'ban',13,2)} ${esc(gateNote(g))}</div>`:''; })():''}
-   ${c.id==='gupta'&&S.gupta.promise&&!['saved','paid','broken'].includes(S.gupta.promise)?`<button class="btn btn-s btn-sm mt12" onclick="go('raahi/activity')">${clover(14)} See how RAY read the reply</button>`:''}
+   ${c.id==='gupta'&&S.gupta.promise&&!['saved','paid','broken'].includes(S.gupta.promise)?`<button class="btn btn-s btn-sm mt12" onclick="go('ray-credit/activity')">${clover(14)} See how RAY read the reply</button>`:''}
    ${st.st==='draft'?`<div class="row gap8 mt16 wrap">${sm?'':`<button class="btn btn-s btn-sm" onclick="S.chase['${c.id}'].editing=true;render()">${I('edit',14)} Edit message</button>`}<button class="btn btn-g btn-sm" onclick="A.chaseSet('${c.id}','skipped')">Dismiss</button><button class="btn btn-g btn-sm" onclick="S.chase['${c.id}'].open=false;rr();toast('Saved for later')">Review later</button><button class="btn btn-p btn-sm" onclick="A.approveOne('${c.id}')" ${blocked()?'disabled':''}>${ctaLabel(c)}</button></div>`:''}`;
   return `<div>${left}</div><div>${why}</div>`;
 }
@@ -430,9 +430,9 @@ const doneLine = t => `<span class="state-line" style="color:var(--g)">${I('chec
 function creditActionRows(){
   const g=S.gupta, ck=['result','approved'].includes(S.check.step);
   return [
-   ...CREQ.map((r,k)=>{const c=chemView(chem(r.id)), d=S.req[r.id]; return aRow(k,{id:'act-req-'+r.id,name:c.name,band:c.band,area:reqSrc(),amt:inr(r.amt),kind:'Credit request',kc:'k-credit',reason:(v=>`${v.verdict==='EXTEND'?'Extend':v.verdict==='REVIEW TERMS'?'Review terms':'Do not extend yet'} · ${(v.reasons[0]||'').toLowerCase()}`)(reqV(r)),chan:'WhatsApp request',chanIc:'chat',right:d?doneLine(reqDone(d,r.id)):`<button class="btn btn-s btn-sm" onclick="go('raahi/request/${r.id}')">Review decision</button>`});}),
+   ...CREQ.map((r,k)=>{const c=chemView(chem(r.id)), d=S.req[r.id]; return aRow(k,{id:'act-req-'+r.id,name:c.name,band:c.band,area:reqSrc(),amt:inr(r.amt),kind:'Credit request',kc:'k-credit',reason:(v=>`${v.verdict==='EXTEND'?'Extend':v.verdict==='REVIEW TERMS'?'Review terms':'Do not extend yet'} · ${(v.reasons[0]||'').toLowerCase()}`)(reqV(r)),chan:'WhatsApp request',chanIc:'chat',right:d?doneLine(reqDone(d,r.id)):`<button class="btn btn-s btn-sm" onclick="go('ray-credit/request/${r.id}')">Review decision</button>`});}),
    aRow(3,{name:'New Life Stores',band:ck?'Reliable':null,area:ck?'New buyer · checked':'New buyer · Unrated',amt:inr(nlLimit()),kind:'New credit',kc:'k-credit',reason:ck?`Credit check complete · ${inr(nlLimit())} on ${nlTerms()}-day terms`:`Starter ${inr(recOf('newlife').recommendedLimit)} · ${recOf('newlife').recommendedTerms} days · network check needs consent · not final until you approve`,chan:'Credit decision',chanIc:'shield',
-     right:S.newLife?doneLine('Credit terms approved'):`<button class="btn btn-s btn-sm" onclick="go('raahi/check')">${ck?'Review credit terms':'Run credit check'}</button>`}),
+     right:S.newLife?doneLine('Credit terms approved'):`<button class="btn btn-s btn-sm" onclick="go('ray-credit/check')">${ck?'Review credit terms':'Run credit check'}</button>`}),
   ].join('');
 }
 function matchRows(){
@@ -440,7 +440,7 @@ function matchRows(){
   Object.keys(PAYREV).forEach(pid=>{ const p=PAYREV[pid], c=chemView(chem(pid)), st=prS(pid), done=!prPending(pid);
     const kind=done?'Reviewed':p.kind==='unmatched_credit'?'Reminder paused':p.kind==='cheque_recorded'?'Cheque recorded':'Payment not confirmed';
     const why=done?(st.st?PR_ST[st.st]:'Matched to Razorpay payment'):p.kind==='unmatched_credit'?`A recent ${inr(p.possible.amt)} Razorpay credit may already cover this`:p.kind==='cheque_recorded'?`Salesperson recorded a ${inr(p.sp.amt)} cheque on ${p.sp.date} · not yet in the bank`:`${p.dueTxt} · confirm payment before sending a reminder`;
-    rows.push(aRow(rows.length,{id:'act-pr-'+pid,name:c.name,band:c.band,area:p.inv,amt:inr(p.amt),kind,kc:done?'k-credit':'k-held',reason:why,chan:'Reconciliation',chanIc:'match',right:done?doneLine(st.st?PR_ST[st.st]:'Matched')+`<button class="btn btn-g btn-sm" onclick="go('raahi/payment/${pid}')">View</button>`:`<button class="btn btn-p btn-sm" onclick="go('raahi/payment/${pid}')">Review payment</button>`})); });
+    rows.push(aRow(rows.length,{id:'act-pr-'+pid,name:c.name,band:c.band,area:p.inv,amt:inr(p.amt),kind,kc:done?'k-credit':'k-held',reason:why,chan:'Reconciliation',chanIc:'match',right:done?doneLine(st.st?PR_ST[st.st]:'Matched')+`<button class="btn btn-g btn-sm" onclick="go('ray-credit/payment/${pid}')">View</button>`:`<button class="btn btn-p btn-sm" onclick="go('ray-credit/payment/${pid}')">Review payment</button>`})); });
   if(!b.ever) rows.push(aRow(rows.length,{name:'3 possible payments',area:'Outside Razorpay',amt:'₹75,600',kind:'Bank account',kc:'k-held',reason:'Buyers may have paid by UPI apps, NEFT or cheque into your bank. Connect your business bank account to confirm.',chan:'Bank account',chanIc:'bank',right:`<button class="btn btn-s btn-sm" onclick="A.bankStart()">Connect bank account</button>`}));
   else ['r3','r5','r4'].forEach((rid,i)=>{ const r=b.rows.find(x=>x.id===rid); const who=r.to?chem(r.to).name:'Unknown payer';
     rows.push(aRow(rows.length,{name:r.st==='matched'?chem(r.to).name:who,area:r.payer,amt:inr(r.amt),kind:r.st==='suggested'?'Suggested match':r.st==='matched'?'Matched':r.st==='notrecv'?'Excluded':'Unmatched credit',kc:r.st==='matched'?'k-credit':'k-held',reason:r.st==='suggested'?`${r.payer} · ${r.ref} · likely ${r.inv}`:r.st==='matched'?`${r.inv} · RAY will recognise this payer next time`:r.st==='notrecv'?'Marked as not a buyer payment':`${r.payer} · ${r.ref} · no confident match yet`,chan:'Bank account',chanIc:'bank',
@@ -546,7 +546,7 @@ function vControls(){
   <div class="settings-sec" id="fin-ctl"><div class="sh"><h3>Trade credit and financing</h3><p>RAY Credit manages your own trade-credit terms. It is not a lender.</p></div><div><div class="small" style="color:var(--text)">If invoice advances, working capital loans or financed buyer credit are offered, they are <b style="color:var(--strong)">provided by a regulated lending partner</b>, through a separate consent and lending journey. Ordinary credit decisions for your buyers never need a lender.</div><div class="row gap6 mt8 xs muted">${I('lock',12)} Any lending or financial commitment always needs your approval.</div></div></div>
   ${complianceSection()}
   ${policySection()}
-  <div class="settings-sec"><div class="sh"><h3>Activity &amp; audit</h3><p>Every action shows its reason, source and approval.</p></div><div><button class="btn btn-s" onclick="go('raahi/activity')">${I('hist',16)} View every RAY action</button></div></div>
+  <div class="settings-sec"><div class="sh"><h3>Activity &amp; audit</h3><p>Every action shows its reason, source and approval.</p></div><div><button class="btn btn-s" onclick="go('ray-credit/activity')">${I('hist',16)} View every RAY action</button></div></div>
   <div class="settings-sec"><div class="sh"><h3>Pause RAY</h3><p>Stops new RAY actions immediately. Existing payments continue normally.</p></div><div>${S.paused?`<div class="row gap12"><span class="badge b-n">${I('pause',11,2.4)} Paused</span><button class="btn btn-s" onclick="A.pauseToggle()">Resume RAY</button></div>`:`<button class="btn btn-d" onclick="A.pauseToggle()">${I('pause',15)} Pause RAY</button>`}</div></div>
   </div>`;
 }

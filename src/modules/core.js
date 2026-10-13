@@ -200,7 +200,7 @@ function planHead(){
    <div class="col gap4" style="align-items:flex-end">${btn}<span class="xs muted" style="text-align:right">${esc(note)}</span></div></div></div>`;
 }
 function planMoreRow(gk){ const m=(S.planMore||{})[gk]; if(!m||!m.n) return '';
-  return `<div class="chase"><div class="chase-h" style="cursor:default;grid-template-columns:28px minmax(0,1fr) auto"><span class="rank">+</span><div class="small muted">${m.n} more buyer${m.n===1?'':'s'} · ${lakhs(m.amt)} · lower priority today. RAY keeps scoring them and moves them up when their signals change.</div><button class="btn btn-g btn-sm" onclick="go('raahi/portfolio')">View portfolio</button></div></div>`; }
+  return `<div class="chase"><div class="chase-h" style="cursor:default;grid-template-columns:28px minmax(0,1fr) auto"><span class="rank">+</span><div class="small muted">${m.n} more buyer${m.n===1?'':'s'} · ${lakhs(m.amt)} · lower priority today. RAY keeps scoring them and moves them up when their signals change.</div><button class="btn btn-g btn-sm" onclick="go('ray-credit/portfolio')">View portfolio</button></div></div>`; }
 
 function checkDraft(m,c){
   if(m.length<20||m.length>420) return false;
@@ -319,7 +319,7 @@ function render(nav){
   if(r.startsWith('pay/')&&typeof kirPage==='function'){ document.body.classList.add('paymode'); const tr=document.getElementById('toasts'); if(tr) tr.innerHTML=''; pr.innerHTML=kirPage(); pr.scrollTop=0; lastRoute=r; afterRender(r); return; }
   document.body.classList.remove('paymode'); if(pr) pr.innerHTML='';
   const isRay=r.startsWith('ray');
-  if(isRay&&!lastRoute.startsWith('ray')){ S.rayFrom=lastRoute.startsWith('raahi')?'raahi':'home'; S.rayFromRoute=lastRoute.startsWith('raahi')?lastRoute:'home'; }
+  if(isRay&&!lastRoute.startsWith('ray')){ S.rayFrom=lastRoute.startsWith('ray-credit')?'ray-credit':'home'; S.rayFromRoute=lastRoute.startsWith('ray-credit')?lastRoute:'home'; }
   document.getElementById('topnav').innerHTML=topnav(r);
   document.getElementById('sheet').className='sheet';
   document.getElementById('side').style.display=isRay?'none':'flex';
@@ -331,7 +331,7 @@ function render(nav){
   else if(a==='settlements') html=pgSettlements();
   else if(a==='reports') html=pgReports();
   else if(a==='studio') html=pgStudio(b||'home');
-  else if(a==='raahi') html=pgRAY(b||'overview', c);
+  else if(a==='ray-credit') html=pgRAY(b||'overview', c);
   else if(a==='ray') html=pgRay();
   else html=pgPlaceholder(a);
   main.innerHTML=html;
@@ -344,13 +344,13 @@ const hooks=[]; function afterRender(r){ hooks.forEach(f=>f(r)); }
 /* ================= SHELL ================= */
 function topnav(r){
   const isRay=r.startsWith('ray');
-  if(isRay&&!lastRoute.startsWith('ray')){ S.rayFrom=lastRoute.startsWith('raahi')?'raahi':'home'; S.rayFromRoute=lastRoute.startsWith('raahi')?lastRoute:'home'; }
+  if(isRay&&!lastRoute.startsWith('ray')){ S.rayFrom=lastRoute.startsWith('ray-credit')?'ray-credit':'home'; S.rayFromRoute=lastRoute.startsWith('ray-credit')?lastRoute:'home'; }
   const items=[['ray',`${clover(15)} Ray AI <span class="beta">BETA</span>`,isRay],['home',`${I('receipt',17)} Payments`,!isRay&&!['banking','payroll'].includes(r)],['banking',`<span style="font-weight:700">✕</span> Banking+`,r==='banking'],['payroll',`${I('wallet',17)} Payroll ${I('ext',13)}`,r==='payroll'],['more',`More ${I('down',15,2)}`,false]];
   return items.map(([k,l,on])=>`<button class="${on?'on':''}" onclick="${k==='more'?'A.moreMenu(event)':`go('${k}')`}">${l}</button>`).join('');
 }
 function sidebar(r){
   const a=r.split('/')[0];
-  const on=k=> (k===a||(k==='studio'&&a==='raahi'))?'on':'';
+  const on=k=> (k===a||(k==='studio'&&a==='ray-credit'))?'on':'';
   const n=(k,ic,l,extra='')=>`<button class="navi ${on(k)}" onclick="go('${k}')">${I(ic,20)}<span>${l}</span>${extra}</button>`;
   return `${n('home','home','Home')}${n('transactions','txn','Transactions')}${n('settlements','settle','Settlements')}${n('reports','report','Reports')}${n('studio','agent','Agent Studio','<span class="pill-beta" style="margin-left:auto">Beta</span>')}
   <div class="sect">Payment products</div>
@@ -363,8 +363,8 @@ function shellInit(){
   const gs=document.getElementById('gsq'), res=document.getElementById('gsr');
   gs.addEventListener('input',()=>{
     const q=gs.value.trim().toLowerCase(); if(!q){res.classList.remove('open');return}
-    const pages=[['RAY Credit','raahi/overview','Agent Studio'],['Agent Studio','studio','Payments'],['Ray AI','ray','Ray'],['Actions','raahi/actions','RAY'],['Credit Portfolio','raahi/portfolio','RAY'],['Transactions','transactions','Payments'],['Reports','reports','Payments']];
-    const hits=[...CHEM.concat(GENV).filter(c=>c.name.toLowerCase().includes(q)).slice(0,5).map(c=>[c.name,'raahi/buyer/'+c.id,c.synthetic?'Generated record':'Buyer · RAY']),...pages.filter(p=>p[0].toLowerCase().includes(q))].slice(0,6);
+    const pages=[['RAY Credit','ray-credit/overview','Agent Studio'],['Agent Studio','studio','Payments'],['Ray AI','ray','Ray'],['Actions','ray-credit/actions','RAY'],['Credit Portfolio','ray-credit/portfolio','RAY'],['Transactions','transactions','Payments'],['Reports','reports','Payments']];
+    const hits=[...CHEM.concat(GENV).filter(c=>c.name.toLowerCase().includes(q)).slice(0,5).map(c=>[c.name,'ray-credit/buyer/'+c.id,c.synthetic?'Generated record':'Buyer · RAY']),...pages.filter(p=>p[0].toLowerCase().includes(q))].slice(0,6);
     res.innerHTML=hits.length?hits.map(h=>`<button onclick="go('${h[1]}');document.getElementById('gsq').value='';document.getElementById('gsr').classList.remove('open')">${I(h[1].includes('buyer')?'user':'search',16)}<span>${h[0]}</span><small>${h[2]}</small></button>`).join(''):`<div style="padding:10px 12px;color:var(--muted)">No results for “${esc(q)}”</div>`;
     res.classList.add('open');
   });

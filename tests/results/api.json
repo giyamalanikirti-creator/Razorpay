@@ -1,10 +1,10 @@
 {
  "suite": "API tests with a mocked AI provider (no network, no key)",
  "file": "tests/api.test.js, tests/ask-api.test.js",
- "ranAt": "2026-10-13T09:48:05+00:00",
- "build": "da9ceb8dc2",
- "total": 24,
- "passed": 24,
+ "ranAt": "2026-10-13T10:06:28+00:00",
+ "build": "23d0157611",
+ "total": 27,
+ "passed": 27,
  "failed": 0,
  "skipped": 0,
  "cases": [
@@ -88,6 +88,24 @@
   },
   {
    "name": "Gemini: upstream failures fall back honestly, never as a fake answer",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "GET ?selftest=1 exercises the provider and reports the real result",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "GET ?selftest=1 surfaces a provider failure instead of hiding it",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "A plain GET is unchanged by the selftest branch",
    "pass": true,
    "skipped": false,
    "detail": ""

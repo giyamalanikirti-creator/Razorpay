@@ -232,8 +232,8 @@ svg{flex-shrink:0}
 .th-cash{background:linear-gradient(135deg,#f3b7cd,#f6e1ea 55%,#c9a6f0)}
 .th-rto{background:linear-gradient(135deg,#ffd29a,#fff0d9 55%,#f0b07a)}
 .th-set{background:linear-gradient(135deg,#9cc4f6,#e1edfc 55%,#7fb0ee)}
-.th-raahi{background:conic-gradient(from 200deg at 35% 40%,#a4ead3,#c9ecfb,#d9cdfa,#b2efd9,#a4ead3)}
-.th-raahi::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 70% 70%,rgba(255,255,255,.75) 0 18%,transparent 19%),radial-gradient(circle at 34% 34%,rgba(255,255,255,.45) 0 26%,transparent 27%)}
+.th-ray-credit{background:conic-gradient(from 200deg at 35% 40%,#a4ead3,#c9ecfb,#d9cdfa,#b2efd9,#a4ead3)}
+.th-ray-credit::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 70% 70%,rgba(255,255,255,.75) 0 18%,transparent 19%),radial-gradient(circle at 34% 34%,rgba(255,255,255,.45) 0 26%,transparent 27%)}
 .thumb.lg{width:48px;height:48px;border-radius:11px}
 .svc{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-size:9.5px;font-weight:700;color:#fff;flex-shrink:0}
 .svc.rzp{background:#0b1c3d}

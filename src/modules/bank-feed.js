@@ -35,18 +35,18 @@ A.canCannot=()=>modal({wide:true,title:'What RAY can and can’t do with your ba
 function bankEntry(){
   if(S.bank.st==='off') return `<div class="alert info mt16" id="bank-entry"><span class="ic">${I('bank',17)}</span><div class="grow"><h4>3 possible payments may be in your bank account.</h4><div class="small muted">Connect your business bank account so RAY can confirm incoming payments and reconcile invoices.</div></div><button class="btn btn-s btn-sm" onclick="A.bankStart()">Connect bank account</button></div>`;
   if(S.bank.st==='on') return `<div class="alert ok mt16"><span class="ic">${I('bank',17)}</span><div class="grow"><h4>Bank account connected · ${BANK_FULL}</h4><div class="small muted">${S.bank.sugg} suggested matches need your confirmation · last synced ${S.bank.last}</div></div><button class="btn btn-s btn-sm" onclick="A.reviewSugg()">Review suggestions</button></div>`;
-  return `<div class="alert neutral mt16"><span class="ic">${I('pause',17)}</span><div class="grow"><h4>Bank feed paused.</h4><div class="small muted">RAY can’t automatically confirm payments received outside Razorpay.</div></div><button class="btn btn-s btn-sm" onclick="go('raahi/controls');setTimeout(()=>document.getElementById('bank').scrollIntoView({behavior:'smooth'}),80)">Manage</button></div>`;
+  return `<div class="alert neutral mt16"><span class="ic">${I('pause',17)}</span><div class="grow"><h4>Bank feed paused.</h4><div class="small muted">RAY can’t automatically confirm payments received outside Razorpay.</div></div><button class="btn btn-s btn-sm" onclick="go('ray-credit/controls');setTimeout(()=>document.getElementById('bank').scrollIntoView({behavior:'smooth'}),80)">Manage</button></div>`;
 }
-A.bankStart=()=>{ A.closeWA&&A.closeWA(); closeModal(); go('raahi/bank'); };
+A.bankStart=()=>{ A.closeWA&&A.closeWA(); closeModal(); go('ray-credit/bank'); };
 
 /* ---------- Razorpay-native connect flow ---------- */
 function bankPage(sub){
-  const crumb=`<div class="crumb"><a onclick="go('studio')">Agent Studio</a>${I('right',13,2)}<a onclick="go('raahi/overview')">RAY Credit</a>${I('right',13,2)}<a onclick="go('raahi/activity/bank')">Bank feed</a>${I('right',13,2)}<b>${sub==='sync'?'Sync':'Connect bank account'}</b></div>`;
+  const crumb=`<div class="crumb"><a onclick="go('studio')">Agent Studio</a>${I('right',13,2)}<a onclick="go('ray-credit/overview')">RAY Credit</a>${I('right',13,2)}<a onclick="go('ray-credit/activity/bank')">Bank feed</a>${I('right',13,2)}<b>${sub==='sync'?'Sync':'Connect bank account'}</b></div>`;
   if(sub==='auth') return `${crumb}<div style="max-width:720px">${flowSteps(3)}
    <div class="card pad mt20"><div class="row gap12"><span class="banktile">${I('bank',20)}</span><div><div class="h2">Authorise access to ${BANK_FULL}</div><div class="small muted">Step 3 of 4 · approve in your bank’s corporate internet banking</div></div></div>
     <div class="pr-kv mt20"><div><span>Account</span><b>${BANK_FULL}</b></div><div><span>Business</span><b>${M.name}</b></div><div><span>RAY uses</span><b>Transaction information for reconciliation</b></div></div>
     <div class="ol-note mt16"><span style="color:var(--link);flex-shrink:0">${I('lock',14,2)}</span><span>${CB_TRUST}</span></div>
-    <div class="row gap8 mt20" id="cb-auth"><button class="btn btn-p" onclick="A.cbAuth()">Authorise in net banking</button><button class="btn btn-g" onclick="go('raahi/bank')">Back</button></div>
+    <div class="row gap8 mt20" id="cb-auth"><button class="btn btn-p" onclick="A.cbAuth()">Authorise in net banking</button><button class="btn btn-g" onclick="go('ray-credit/bank')">Back</button></div>
     <p class="xs muted mt12">${I('shield',12)} Razorpay never sees your banking password. You approve the connection inside your bank.</p>
    </div><div class="mt12">${aaTag()}</div></div>`;
   if(sub==='sync') return `${crumb}<div style="max-width:760px">${flowSteps(4)}${syncCard()}</div>`;
@@ -59,9 +59,9 @@ function bankPage(sub){
    <div class="card pad mt16"><div class="h3">Choose the account</div><div class="col gap8 mt12">${acc('icici',BANK_FULL,M.name+' · supported for Connected Banking+','<span class="badge b-g">Business account</span>')}${acc('rzpx','RazorpayX Current Account','Open a new current account. Payments appear in real time.','<span class="badge b-n">Real-time</span>')}${acc('upload','Another bank','Upload a bank statement instead. RAY reads the credits and suggests matches.','<span class="badge b-n">Statement</span>')}</div>
 </div>
    <div class="card pad mt16 trustbox"><div class="row gap12"><span class="trust-ic">${I('shield',20)}</span><div class="grow"><div style="font-family:var(--display);font-size:19px;font-weight:600;color:var(--strong)">RAY reads transactions. It cannot move money.</div><div class="muted mt4">${CB_TRUST}</div></div><a class="link small" onclick="A.canCannot()">What RAY can and can’t do</a></div><div class="mt12">${aaTag()}</div></div>
-   <div class="row gap8 mt20">${on?`<span class="badge b-g">Already connected · ${BANK_NAME}</span><button class="btn btn-s" onclick="go('raahi/activity/bank')">Go to bank feed</button>`:`<button class="btn btn-p" onclick="S.bank.pick==='upload'?A.uploadStmt():S.bank.pick==='rzpx'?toast('Opens RazorpayX Current Account sign-up'):A.cbAuth()">Continue</button><button class="btn btn-g" onclick="history.length>1?history.back():go('raahi/overview')">Not now</button>`}</div></div>`;
+   <div class="row gap8 mt20">${on?`<span class="badge b-g">Already connected · ${BANK_NAME}</span><button class="btn btn-s" onclick="go('ray-credit/activity/bank')">Go to bank feed</button>`:`<button class="btn btn-p" onclick="S.bank.pick==='upload'?A.uploadStmt():S.bank.pick==='rzpx'?toast('Opens RazorpayX Current Account sign-up'):A.cbAuth()">Continue</button><button class="btn btn-g" onclick="history.length>1?history.back():go('ray-credit/overview')">Not now</button>`}</div></div>`;
 }
-A.cbAuth=()=>{ const el=document.getElementById('cb-auth'); if(el) el.innerHTML=thinking('Waiting for approval from your bank…'); setTimeout(()=>{ S.bank.sync=0; S.bank.st='syncing'; go('raahi/bank/sync'); },1600); };
+A.cbAuth=()=>{ const el=document.getElementById('cb-auth'); if(el) el.innerHTML=thinking('Waiting for approval from your bank…'); setTimeout(()=>{ S.bank.sync=0; S.bank.st='syncing'; go('ray-credit/bank/sync'); },1600); };
 function syncCard(){
   const s=S.bank.sync;
   const stages=[['Fetching the last 6 months of credits…','1,284 credits found'],['Matching 1,284 credits to invoices…','1,201 matched automatically'],['Learning payer names and UPI IDs…','37 buyers recognised']];
@@ -69,13 +69,13 @@ function syncCard(){
    <div class="mt20">${stages.map((x,i)=>{const n=i+1; const st=s>n?'done':s===n?'cur':'todo'; return `<div class="row gap12" style="padding:12px 0;border-top:1px solid var(--border-subtle)">${st==='done'?`<span class="sdot done">${I('check',12,3)}</span><span style="font-weight:500;color:var(--strong)">${x[1]}</span>`:st==='cur'?thinking(x[0]):`<span class="sdot"></span><span class="faint">${x[0]}</span>`}</div>`}).join('')}</div>
    ${s>=4?`<div class="grid g3 mt16" style="gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden">${[['1,201','Matched automatically','var(--g)'],['61','Suggested matches','var(--a)','Need your confirmation'],['22','Unidentified','var(--n)']].map((m,i)=>`<div style="padding:16px 18px;border-left:${i?'1px solid var(--border-subtle)':'0'}"><div class="mid num">${m[0]}</div><div class="small" style="font-weight:600;color:${m[2]}">${m[1]}</div>${m[3]?`<div class="xs muted">${m[3]}</div>`:''}</div>`).join('')}</div>
     <p class="muted mt12">New credits now appear in your bank feed shortly after they arrive.</p>
-    <div class="row gap8 mt16"><button class="btn btn-p" onclick="A.reviewSugg()">Review suggestions</button><button class="btn btn-s" onclick="S.bank.filter='All';go('raahi/activity/bank')">Go to bank feed</button></div>`:''}
+    <div class="row gap8 mt16"><button class="btn btn-p" onclick="A.reviewSugg()">Review suggestions</button><button class="btn btn-s" onclick="S.bank.filter='All';go('ray-credit/activity/bank')">Go to bank feed</button></div>`:''}
    <div class="mt16">${aaTag()}</div></div>`;
 }
-hooks.push(r=>{ if(r==='raahi/bank/sync'&&S.bank.sync===0){ S.bank.sync=1; rr();
-  setTimeout(()=>{S.bank.sync=2; if(route()==='raahi/bank/sync') rr();},1700);
-  setTimeout(()=>{S.bank.sync=3; if(route()==='raahi/bank/sync') rr();},3300);
-  setTimeout(()=>{S.bank.sync=4; completeConnection(); if(route()==='raahi/bank/sync') rr();},4800); } });
+hooks.push(r=>{ if(r==='ray-credit/bank/sync'&&S.bank.sync===0){ S.bank.sync=1; rr();
+  setTimeout(()=>{S.bank.sync=2; if(route()==='ray-credit/bank/sync') rr();},1700);
+  setTimeout(()=>{S.bank.sync=3; if(route()==='ray-credit/bank/sync') rr();},3300);
+  setTimeout(()=>{S.bank.sync=4; completeConnection(); if(route()==='ray-credit/bank/sync') rr();},4800); } });
 function completeConnection(){
   if(S.bank.ever&&S.bank.st==='on') return;
   S.bank.st='on'; S.bank.ever=true; S.adj.arora=42800;
@@ -99,13 +99,13 @@ function payGupta(via){
   toast(`${inr(amt)} from Gupta Traders matched to INV-24891`);
 }
 /* legacy overlay hooks kept as no-ops so older entry points stay safe */
-A.aaGo=()=>go('raahi/bank/auth');
-A.aaRenew=()=>{ A.closeWA&&A.closeWA(); goSec('raahi/controls','bank'); };
+A.aaGo=()=>go('ray-credit/bank/auth');
+A.aaRenew=()=>{ A.closeWA&&A.closeWA(); goSec('ray-credit/controls','bank'); };
 A.aaClose=(to)=>{ const r=document.getElementById('aa-root'); if(r) r.innerHTML=''; S.aa=null; if(to) go(to); };
 function aaRender(){ const r=document.getElementById('aa-root'); if(r) r.innerHTML=''; }
 
 /* ---------- Bank feed screen (RAY → Activity → Bank feed) ---------- */
-function actSeg(w){ return `<div class="seg mt24"><button class="${w==='audit'?'on':''}" onclick="go('raahi/activity')">Audit trail</button><button class="${w==='bank'?'on':''}" onclick="go('raahi/activity/bank')">Bank feed${bankOn()?` <span class="tcount">${S.bank.sugg+S.bank.unid}</span>`:''}</button></div>`; }
+function actSeg(w){ return `<div class="seg mt24"><button class="${w==='audit'?'on':''}" onclick="go('ray-credit/activity')">Audit trail</button><button class="${w==='bank'?'on':''}" onclick="go('ray-credit/activity/bank')">Bank feed${bankOn()?` <span class="tcount">${S.bank.sugg+S.bank.unid}</span>`:''}</button></div>`; }
 function revokedBanner(){
   return `<div class="alert neutral mt16"><span class="ic">${I('pause',17)}</span><div class="grow"><h4>Bank feed paused.</h4><div class="small muted">RAY can’t automatically confirm payments received outside Razorpay.</div></div>${S.bank.st==='paused'?`<button class="btn btn-p btn-sm" onclick="A.bankResume()">Resume</button>`:`<button class="btn btn-s btn-sm" onclick="A.uploadStmt()">${I('dl',14)} Upload statement</button><button class="btn btn-p btn-sm" onclick="A.bankStart()">Reconnect</button>`}</div>`;
 }
@@ -118,19 +118,19 @@ function vBankFeed(){
   return `${actSeg('bank')}${b.st!=='on'?revokedBanner():''}
   <div class="card pad mt16"><div class="row gap16 wrap"><span class="banktile">${I('bank',20)}</span><div class="grow"><div class="row gap8"><span class="h2">Bank feed</span>${b.st==='on'?'<span class="badge b-g"><span class="dot"></span>Connected</span>':b.st==='paused'?'<span class="badge b-n">Paused</span>':'<span class="badge b-r">Disconnected</span>'}</div><div class="small muted mt4">${BANK_FULL} · Source: RazorpayX Connected Banking+</div></div>
    <div class="kv"><span class="k">Last synced</span><span style="font-weight:600;color:var(--strong)">${b.last}</span></div><div class="vdiv"></div><div class="kv"><span class="k">Next sync</span><span style="font-weight:600;color:var(--strong)">${b.st==='on'?b.next:'–'}</span></div>
-   <button class="btn btn-s" onclick="A.bankSync(this)" ${b.st==='on'?'':'disabled'}>${I('refresh',15)} Sync now</button><button class="btn btn-s" onclick="go('raahi/controls');setTimeout(()=>document.getElementById('bank').scrollIntoView({behavior:'smooth'}),80)">Manage</button></div>
+   <button class="btn btn-s" onclick="A.bankSync(this)" ${b.st==='on'?'':'disabled'}>${I('refresh',15)} Sync now</button><button class="btn btn-s" onclick="go('ray-credit/controls');setTimeout(()=>document.getElementById('bank').scrollIntoView({behavior:'smooth'}),80)">Manage</button></div>
    <div class="mt12">${aaTag()}</div></div>
   <div class="grid mt16 bankgrid" style="grid-template-columns:minmax(0,1fr);align-items:start">
    <div class="card bf-card"><div class="row gap6 pad-s" style="border-bottom:1px solid var(--border-subtle)">${chip('All','All')}${chip('Matched','Matched',1201+(b.sugg<61?61-b.sugg:0))}${chip('Suggested','Suggested',b.sugg)}${chip('Unidentified','Unidentified',b.unid)}<span class="grow"></span><span class="xs muted">Credits only · debits are never shown</span></div>
     <table class="table bf"><thead><tr><th>Time</th><th>Payer</th><th class="r">Amount</th><th>Matched to</th><th>Status</th><th></th></tr></thead><tbody>
     ${rows.length?rows.map(r=>{const ch=r.to&&chem(r.to); return `<tr id="row-${r.id}"><td class="small"><span class="muted">${r.d==='Today'?'':'Yest. '}</span>${r.t}</td><td><div class="nm" style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">${r.payer}</div><div class="xs muted num">${r.ref}</div></td><td class="r num nm">${inr(r.amt)}</td>
-     <td>${r.st==='matched'&&ch?`<a onclick="go('raahi/buyer/${r.to}')" style="font-weight:600">${ch.name}</a><div class="xs muted">${r.inv}</div>`:r.st==='suggested'?`<span class="muted">${ch.name}?</span><div class="xs muted">${r.inv}</div>`:'<span class="faint">–</span>'}</td>
+     <td>${r.st==='matched'&&ch?`<a onclick="go('ray-credit/buyer/${r.to}')" style="font-weight:600">${ch.name}</a><div class="xs muted">${r.inv}</div>`:r.st==='suggested'?`<span class="muted">${ch.name}?</span><div class="xs muted">${r.inv}</div>`:'<span class="faint">–</span>'}</td>
      <td>${stc(r)}</td><td class="r">${r.st==='suggested'?`<button class="btn btn-s btn-sm" onclick="A.bankSuggest('${r.id}')" ${b.st==='on'?'':'disabled'}>Confirm</button>`:r.st==='unid'?`<button class="btn btn-s btn-sm" onclick="A.bankAssign('${r.id}')">Assign</button>`:''}</td></tr>`}).join(''):`<tr><td colspan="6"><div class="empty">No credits in this view today.</div></td></tr>`}
     </tbody></table>
     <div class="pad-s small muted" style="border-top:1px solid var(--border-subtle)">Showing today and yesterday · 1,284 credits fetched from the last 6 months · older suggestions are in the Suggested filter</div></div>
 </div>`;
 }
-A.reviewSugg=()=>{ S.bank.filter='Suggested'; go('raahi/activity/bank'); setTimeout(()=>{ if(S.bank.rows.find(r=>r.id==='r3'&&r.st==='suggested')) A.bankSuggest('r3'); },250); };
+A.reviewSugg=()=>{ S.bank.filter='Suggested'; go('ray-credit/activity/bank'); setTimeout(()=>{ if(S.bank.rows.find(r=>r.id==='r3'&&r.st==='suggested')) A.bankSuggest('r3'); },250); };
 A.bankSync=(btn)=>{ btn.outerHTML=thinking('Checking '+BANK_NAME+'…'); setTimeout(()=>{ S.bank.fetch.unshift(['10:58 AM','No new credits']); S.bank.last='10:58 AM'; S.bank.next='11:58 AM'; rr(); toast('Synced · no new credits since 10:42 AM'); },1300); };
 A.bankSuggest=(id)=>{ const r=S.bank.rows.find(x=>x.id===id), ch=chem(r.to);
   modal({title:'Confirm this match?',body:`<div class="row between" style="padding:14px 16px;border:1px solid var(--border);border-radius:10px"><div><div class="xs muted">Payment</div><div class="mid num">${inr(r.amt)}</div><div class="small muted" style="font-family:ui-monospace,Menlo,monospace">${r.payer} · ${r.ref} · ${r.t}</div></div><span class="src aa">${BANK_NAME} · Connected Banking+</span></div>
@@ -231,6 +231,6 @@ function cbRender(){
 A.cbStart=(ctx,acct)=>{ S.cbf={ctx,step:ctx==='page'?'otp':'pick',acct:acct||'icici'}; cbRender(); };
 A.cbCancel=(closed)=>{ const ctx=S.cbf&&S.cbf.ctx; S.cbf=null; if(!closed) closeModal(); if(ctx==='inst'&&S.inst){ instRender(); } };
 A.cbAuthorise=()=>{ const f=S.cbf;
-  if(f.ctx==='page'){ S.cbf=null; closeModal(); S.bank.sync=0; S.bank.st='syncing'; go('raahi/bank/sync'); return; }
+  if(f.ctx==='page'){ S.cbf=null; closeModal(); S.bank.sync=0; S.bank.st='syncing'; go('ray-credit/bank/sync'); return; }
   f.step='sync'; cbRender(); setTimeout(()=>{ if(!S.cbf) return; S.bank.sync=4; completeConnection(); if(S.inst) S.inst.bank=true; S.cbf.step='done'; cbRender(); },1800); };
 A.cbAuth=()=>A.cbStart('page',S.bank.pick&&S.bank.pick!=='upload'&&S.bank.pick!=='rzpx'?S.bank.pick:'icici');
