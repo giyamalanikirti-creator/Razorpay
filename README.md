@@ -132,15 +132,4 @@ npm run test:all                # all suites, results embedded into the Checks p
 npm run eval                    # interpreter evaluation; live model only with an API key
 ```
 
-## Deploying
 
-Static `index.html` at the root plus one serverless function in `api/`. On Vercel no framework preset or build command is needed; every push to `main` redeploys.
-
-Environment variables (Vercel → Settings → Environment Variables):
-
-| Variable | Needed for | Default |
-|---|---|---|
-| `OPENAI_API_KEY` | live AI interpretation and free-form answers | none (app uses the labelled rule-based reader and answers) |
-| `OPENAI_MODEL` | choosing the model | `gpt-4o-mini` |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_PROVIDER` | optional alternative provider | |
-| `AI_TIMEOUT_MS` | provider timeout | `12000` |
