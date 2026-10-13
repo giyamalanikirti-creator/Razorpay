@@ -14,7 +14,7 @@
  * Rate limit: 20 requests/minute per IP, held in memory per warm serverless instance. It is best-effort only:
  * instances do not share counts and a cold start resets them. Production needs a shared store (e.g. Redis/KV).
  */
-const { providerConfig, send, geminiJson } = require('./parse-promise.js');
+const { providerConfig, send, geminiJson, toGeminiSchema } = require('./parse-promise.js');
 
 const MAX_BODY = 48 * 1024;
 const RATE = { windowMs: 60000, max: 20 };
@@ -86,7 +86,7 @@ async function callAnthropic(cfg, b, signal, f) {
 async function callGemini(cfg, b, signal, f) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
   const r = await f(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: 'user', parts: [{ text: userMsg(b) }] }], generationConfig: { temperature: 0, maxOutputTokens: 600, responseMimeType: 'application/json', responseSchema: SCHEMA } }) });
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: 'user', parts: [{ text: userMsg(b) }] }], generationConfig: { temperature: 0, maxOutputTokens: 600, responseMimeType: 'application/json', responseSchema: toGeminiSchema(SCHEMA) } }) });
   if (r.status === 429) throw Object.assign(new Error('rate'), { code: 'RATE_LIMITED' });
   if (!r.ok) { let detail = ''; try { const t = await r.text(); const j = JSON.parse(t); detail = (j && j.error && j.error.message) || t.slice(0, 300); } catch (e) {} throw Object.assign(new Error('upstream ' + r.status + (detail ? ': ' + detail : '')), { code: 'UPSTREAM_ERROR', status: r.status, detail }); }
   return geminiJson(await r.json());

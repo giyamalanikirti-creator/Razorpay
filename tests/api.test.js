@@ -138,3 +138,19 @@ test('Gemini: a non-200 passes the provider error message through, not just the 
   assert.equal(r.statusCode, 502); assert.equal(r.body.status, 404);
   assert.match(r.body.message || '', /models\/gemini-x is not found/, 'the real reason reaches the response');
 });
+
+test('toGeminiSchema translates OpenAI-style schema to Gemini dialect', () => {
+  const { toGeminiSchema } = require('../api/parse-promise.js');
+  const rules = require('../lib/promise-rules.js');
+  const g = toGeminiSchema(rules.SCHEMA);
+  assert.ok(!('additionalProperties' in g), 'additionalProperties is dropped');
+  const walk = (o) => { if (o && typeof o === 'object' && !Array.isArray(o)) { assert.ok(!('additionalProperties' in o), 'nested additionalProperties removed'); for (const v of Object.values(o)) walk(v); } if (Array.isArray(o)) o.forEach(walk); };
+  walk(g);
+  const f = g.properties.promisedAmountNow;
+  assert.equal(f.type, 'NUMBER', 'nullable type array collapses to the non-null type, uppercased');
+  assert.equal(f.nullable, true, 'and sets nullable: true');
+  assert.equal(g.properties.intent.type, 'STRING', 'plain string types also uppercase');
+  assert.deepEqual(g.properties.intent.enum, rules.SCHEMA.properties.intent.enum, 'enum values preserved verbatim');
+  assert.equal(g.properties.evidenceSpans.items.type, 'STRING', 'array items translated too');
+  assert.deepEqual(g.required, rules.SCHEMA.required, 'required list untouched');
+});

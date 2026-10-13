@@ -104,6 +104,29 @@ async function callAnthropic(cfg, input, signal, fetchImpl) {
   return block.input;
 }
 
+/* Google rejects a few JSON Schema idioms OpenAI accepts: additionalProperties is not a field it recognises,
+   and nullable fields must use `nullable: true` instead of a type array like ["number","null"]. Translate the
+   schema the rule file exports (which other providers accept as-is) into Gemini's dialect, recursively, so the
+   same source of truth drives all three providers. */
+function toGeminiSchema(s) {
+  if (Array.isArray(s)) return s.map(toGeminiSchema);
+  if (!s || typeof s !== 'object') return s;
+  const out = {}; let nullable = false;
+  for (const [k, v] of Object.entries(s)) {
+    if (k === 'additionalProperties') continue;
+    if (k === 'type' && Array.isArray(v)) {
+      const nonNull = v.filter((t) => t !== 'null');
+      if (v.includes('null')) nullable = true;
+      out.type = nonNull.length === 1 ? nonNull[0].toUpperCase() : nonNull[0];
+      continue;
+    }
+    if (k === 'type' && typeof v === 'string') { out.type = v.toUpperCase(); continue; }
+    out[k] = toGeminiSchema(v);
+  }
+  if (nullable) out.nullable = true;
+  return out;
+}
+
 /* Google AI Studio (Gemini). Standard generateContent endpoint:
    POST /v1beta/models/{model}:generateContent, body { contents, systemInstruction, generationConfig }.
    responseMimeType + responseSchema give back structured JSON as text in the first candidate. */
@@ -115,7 +138,7 @@ async function callGemini(cfg, input, signal, fetchImpl) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: rules.SYSTEM_PROMPT }] },
       contents: [{ role: 'user', parts: [{ text: rules.buildUserPrompt(input) }] }],
-      generationConfig: { temperature: 0, maxOutputTokens: 800, responseMimeType: 'application/json', responseSchema: rules.SCHEMA },
+      generationConfig: { temperature: 0, maxOutputTokens: 800, responseMimeType: 'application/json', responseSchema: toGeminiSchema(rules.SCHEMA) },
     }),
   });
   if (r.status === 429) throw Object.assign(new Error('rate limited'), { code: 'RATE_LIMITED' });
@@ -232,3 +255,4 @@ module.exports._resetRateLimit = () => hits.clear();
 module.exports.send = send;
 module.exports.readBody = readBody;
 module.exports.geminiJson = geminiJson;
+module.exports.toGeminiSchema = toGeminiSchema;
