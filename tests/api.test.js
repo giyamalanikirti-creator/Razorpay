@@ -154,3 +154,18 @@ test('toGeminiSchema translates OpenAI-style schema to Gemini dialect', () => {
   assert.equal(g.properties.evidenceSpans.items.type, 'STRING', 'array items translated too');
   assert.deepEqual(g.required, rules.SCHEMA.required, 'required list untouched');
 });
+
+test('Gemini: a 503 is retried once before failing (and a successful retry returns the parse)', async () => {
+  let n = 0;
+  const flaky = async (url, opts) => { n++; if (n === 1) return { ok: false, status: 503, text: async () => JSON.stringify({ error: { message: 'high demand' } }), json: async () => ({}) }; return { ok: true, status: 200, text: async () => '', json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(good) }] } }] }) }; };
+  const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: flaky });
+  assert.equal(r.statusCode, 200); assert.equal(n, 2, 'exactly one retry when the first attempt 503s');
+  assert.equal(r.body.interpretation.intent, 'promise');
+});
+
+test('Gemini: a 400 is not retried (fault is the request, not the server)', async () => {
+  let n = 0;
+  const bad = async () => { n++; return { ok: false, status: 400, text: async () => JSON.stringify({ error: { message: 'bad schema' } }), json: async () => ({}) }; };
+  const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: bad });
+  assert.equal(n, 1, 'no retry on 400'); assert.ok(r.body.message && /bad schema/.test(r.body.message));
+});

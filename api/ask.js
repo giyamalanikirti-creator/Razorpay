@@ -85,11 +85,15 @@ async function callAnthropic(cfg, b, signal, f) {
 }
 async function callGemini(cfg, b, signal, f) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
-  const r = await f(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
+  const attempt = async () => { const r = await f(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
     body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: 'user', parts: [{ text: userMsg(b) }] }], generationConfig: { temperature: 0, maxOutputTokens: 600, responseMimeType: 'application/json', responseSchema: toGeminiSchema(SCHEMA) } }) });
   if (r.status === 429) throw Object.assign(new Error('rate'), { code: 'RATE_LIMITED' });
   if (!r.ok) { let detail = ''; try { const t = await r.text(); const j = JSON.parse(t); detail = (j && j.error && j.error.message) || t.slice(0, 300); } catch (e) {} throw Object.assign(new Error('upstream ' + r.status + (detail ? ': ' + detail : '')), { code: 'UPSTREAM_ERROR', status: r.status, detail }); }
-  return geminiJson(await r.json());
+  return geminiJson(await r.json()); };
+  try { return await attempt(); } catch (e) {
+    if (e.code === 'UPSTREAM_ERROR' && e.status === 503) { await new Promise((r) => setTimeout(r, 600)); return attempt(); }
+    throw e;
+  }
 }
 /* rupee amounts in the answer must appear in the data the model was given (no invented or computed figures) */
 function unsupportedAmounts(answer, context) {

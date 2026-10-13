@@ -104,6 +104,21 @@ async function callAnthropic(cfg, input, signal, fetchImpl) {
   return block.input;
 }
 
+/* Gemini's own 503s are reported as "usually temporary" by Google. One short retry absorbs most of them
+   without lengthening a successful call. 400s and other errors are the request's fault and are not retried. */
+async function withRetry(call, { tries = 2, baseMs = 600 } = {}) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try { return await call(); }
+    catch (e) {
+      last = e;
+      if (e.code !== 'UPSTREAM_ERROR' || e.status !== 503) throw e;
+      if (i < tries - 1) await new Promise((r) => setTimeout(r, baseMs * Math.pow(2, i)));
+    }
+  }
+  throw last;
+}
+
 /* Google rejects a few JSON Schema idioms OpenAI accepts: additionalProperties is not a field it recognises,
    and nullable fields must use `nullable: true` instead of a type array like ["number","null"]. Translate the
    schema the rule file exports (which other providers accept as-is) into Gemini's dialect, recursively, so the
@@ -132,6 +147,7 @@ function toGeminiSchema(s) {
    responseMimeType + responseSchema give back structured JSON as text in the first candidate. */
 async function callGemini(cfg, input, signal, fetchImpl) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
+  return withRetry(async () => {
   const r = await fetchImpl(url, {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
@@ -150,6 +166,7 @@ async function callGemini(cfg, input, signal, fetchImpl) {
     throw Object.assign(new Error(`upstream ${r.status}${detail ? ': ' + detail : ''}`), { code: 'UPSTREAM_ERROR', status: r.status, detail });
   }
   return geminiJson(await r.json());
+  });
 }
 /* the structured JSON out of a generateContent response, with the Interactions shape kept as a fallback */
 function geminiJson(j) {
@@ -243,7 +260,11 @@ async function handler(req, res, deps = {}) {
     const code = e.name === 'AbortError' ? 'TIMEOUT' : (e.code || 'UPSTREAM_ERROR');
     const status = code === 'TIMEOUT' ? 504 : code === 'RATE_LIMITED' ? 429 : 502;
     console.error(`[parse-promise] ${code}${e.status ? ' ' + e.status : ''}`); // no message content in logs
-    return send(res, status, { ok: false, code, message: code === 'TIMEOUT' ? 'The AI provider took too long to respond.' : code === 'RATE_LIMITED' ? 'The AI provider is rate limiting requests.' : code === 'INVALID_MODEL_OUTPUT' ? 'The model returned invalid output.' : 'The AI provider could not be reached.' });
+    const genericMsg = code === 'TIMEOUT' ? 'The AI provider took too long to respond.' : code === 'RATE_LIMITED' ? 'The AI provider is rate limiting requests.' : code === 'INVALID_MODEL_OUTPUT' ? 'The model returned invalid output.' : 'The AI provider could not be reached.';
+    /* when upstream named a reason (model id wrong, overloaded, quota, etc.) relay it so the UI can show
+       something more actionable than "could not be reached" and so the fallback label can carry the cause. */
+    const message = e.detail ? `${genericMsg} (${String(e.detail).slice(0, 200)})` : genericMsg;
+    return send(res, status, { ok: false, code, status: e.status || null, message });
   } finally { clearTimeout(timer); }
 }
 
