@@ -1,13 +1,67 @@
 {
  "suite": "Unit tests: policy, ledger, reversal, network, interpreter (node --test)",
- "file": "tests/engine.test.js, tests/interpreter.test.js, tests/journeys.test.js, tests/network.test.js, tests/reversal.test.js",
- "ranAt": "2026-10-12T08:45:45+00:00",
- "build": "8badc5daec",
- "total": 62,
- "passed": 62,
+ "file": "tests/credit-math.test.js, tests/engine.test.js, tests/interpreter.test.js, tests/journeys.test.js, tests/network.test.js, tests/reversal.test.js",
+ "ranAt": "2026-10-13T08:22:55+00:00",
+ "build": "d0eae26866",
+ "total": 71,
+ "passed": 71,
  "failed": 0,
  "skipped": 0,
  "cases": [
+  {
+   "name": "Gupta: ₹78,400 owed + ₹50,000 requested − ₹60,000 limit = ₹68,400 to collect for the full order",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Gupta: collecting only ₹38,400 leaves ₹40,000 owed and frees ₹20,000 of the order",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Collecting exactly the required amount releases the full order, and never more than owed",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Balance already below the limit: part fits today, the rest needs a collection",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Order fits fully within the limit: nothing to collect first",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "No additional credit requested",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Requested amount above the limit itself, even with nothing owed: no impossible collection figure",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Zero limit: nothing can go on credit",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
+  {
+   "name": "Invalid or negative values are rejected, not computed",
+   "pass": true,
+   "skipped": false,
+   "detail": ""
+  },
   {
    "name": "1. Gupta Traders, own data only: Watch, ₹75,000, 21-day terms",
    "pass": true,

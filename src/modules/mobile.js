@@ -110,7 +110,7 @@ function mobColl(id){ return `${subHdr('Scheduled collection','rc')}<div class="
 function mobRequest(id){
   const r=creq(id), c=chemView(chem(id)), g=S.gupta, d=S.req[id], on=netOn();
   const sig=reqSignals(r);
-  const v=reqV(r), rr_=v.rec; const rec=v.verdict==='DO NOT EXTEND YET'?['Do not extend additional credit yet.',`Recommended limit ${inr(rr_.recommendedLimit)} · ${rr_.recommendedTerms} days. ${v.next||''}`]:v.verdict==='EXTEND'?[`Extend the ${inr(r.amt)} order.`,`Suggested total limit ${inr(rr_.recommendedLimit)} on ${rr_.recommendedTerms}-day terms.`]:[`Supply ${inr(r.amt)} on shorter terms.`,`${rr_.recommendedTerms} days instead of ${curTermsOf(id)}.`];
+  const v=reqV(r), rr_=v.rec; const rec=v.verdict==='DO NOT EXTEND YET'?['Do not extend additional credit yet.',`Recommended limit ${inr(rr_.recommendedLimit)} · ${rr_.recommendedTerms} days.`]:v.verdict==='EXTEND'?[`Extend the ${inr(r.amt)} order.`,`Suggested total limit ${inr(rr_.recommendedLimit)} on ${rr_.recommendedTerms}-day terms.`]:[`Supply ${inr(r.amt)} on shorter terms.`,`${rr_.recommendedTerms} days instead of ${curTermsOf(id)}.`];
   const acts = d?`<div class="mc ok"><b style="color:var(--g)">${reqDone(d,id)}</b><div class="xs muted mt4">Logged in Activity. RAY has not messaged the buyer.</div></div><button class="mbtn" id="mreq-undo-${id}" onclick="A.reqUndo('${id}')">Undo</button>`
    : id==='gupta'?`<button class="mbtn p" onclick="A.approveGupta()">Approve ${inr(g.limitRec)} limit · ${g.terms} days</button><button class="mbtn" onclick="A.mobSheet('follow')">Start collection follow-up</button><button class="mbtn" onclick="A.mobSheet('keep')">Keep current terms</button><button class="mbtn g" onclick="A.mobSheet('contact')">Contact buyer</button>`
    : v.verdict==='EXTEND'?`<button class="mbtn p" onclick="A.reqDecide('${id}','extended')">Extend ${inr(r.amt)} credit</button><button class="mbtn g" onclick="A.mobSheet('contact')">Contact buyer</button>`
@@ -118,10 +118,10 @@ function mobRequest(id){
   return `${subHdr('Credit request','rc')}<div class="mob-body">
    <div class="row between"><div><div class="mob-h">${c.name}</div><div class="xs muted mt4">${reqSrc()} · ${r.at}</div></div>${mobBand(c.band)}</div>
    <div class="mc mt12"><div class="xs muted">Incoming request</div><div class="mob-amt">${inr(r.amt)} additional credit</div><div class="small mt4">Requested terms: <b style="color:var(--strong)">${id==='gupta'?'Payment Monday':r.terms}</b></div><div class="mquote mt8">“${r.msg}”</div></div>
-   <div class="mgrid mt8"><div><span>Outstanding</span><b>${inr(c.out)}</b></div><div><span>Limit</span><b>${inr(c.limit)}</b></div><div><span>RAY limit</span><b style="color:var(--link)">${inr(recOf(id).recommendedLimit)}</b></div></div>
+   <div class="mgrid mt8"><div><span>Outstanding</span><b>${inr(outOf(id))}</b></div><div><span>Current limit</span><b>${inr(curLimitOf(id))}</b></div><div><span>RAY limit</span><b style="color:var(--link)">${inr(recOf(id).recommendedLimit)}</b></div></div>
    ${netMobile(id)}
    <div class="mc mt8" id="mob-why"><b class="mc-t">Why RAY recommends this</b>${uwMobile(id)}${on?`<div class="xs muted mt8">${I('lock',11)} Network signal is consented and aggregated. No other distributor is shown.</div>`:''}</div>
-   <div class="mc mt8 rec-m"><div class="row between"><b class="mc-t">RAY recommendation</b>${verdictChip(r)}</div><div class="mob-say mt8">${rec[0]}</div><div class="small mt4" style="color:var(--strong)">${rec[1]}</div></div>
+   <div class="mc mt8 rec-m"><div class="row between"><b class="mc-t">RAY recommendation</b>${verdictChip(r)}</div><div class="mob-say mt8">${rec[0]}</div><div class="small mt4" style="color:var(--strong)">${rec[1]}</div>${d?'':releaseBreakdown(r,true)}</div>
    <div class="col gap8 mt12">${acts}</div>
    <div class="xs muted mt12" style="text-align:center">RAY never replies to buyers about credit without your approval.</div>
   </div>`;
@@ -132,7 +132,7 @@ function mobBuyer(id){
   if(!why.length) why.push(['Days to pay',`${c.usual}d → ${c.delay}d`],['Limit used',Math.round(c.out/Math.max(1,c.limit)*100)+'%'],['Razorpay network signal',on?p.net:'Not enabled']);
   return `${subHdr('Buyer profile','portfolio')}<div class="mob-body">
    <div class="row between"><div class="mob-h">${c.name}</div>${mobBand(c.band)}</div><div class="xs muted mt4">${c.area}, Ludhiana · customer since ${c.since}</div>
-   <div class="mgrid mt12"><div><span>Outstanding</span><b>${inr(c.out)}</b></div><div><span>Limit</span><b>${inr(c.limit)}</b></div><div><span>RAY limit</span><b style="color:var(--link)">${p.rec?inr(p.rec):'No change'}</b></div></div>
+   <div class="mgrid mt12"><div><span>Outstanding</span><b>${inr(outOf(id))}</b></div><div><span>Current limit</span><b>${inr(curLimitOf(id))}</b></div><div><span>RAY limit</span><b style="color:var(--link)">${p.rec?inr(p.rec):'No change'}</b></div></div>
    ${netMobile(id)}
    <div class="mc mt8"><b class="mc-t">Why</b>${why.map(s=>`<div class="mline"><span>${s[0]}</span><b>${s[1]}</b></div>`).join('')}</div>
    <div class="mc mt8"><div class="row between"><b class="mc-t">Repayment</b>${methodChip(id)}</div>${FAILS[id]?(r=>`<div class="mline"><span>${r.inv} · ${inr(r.amount)}</span><b style="color:${r.status==='completed'?'var(--g)':r.needsAction?'var(--r)':'var(--strong)'}">${r.status==='completed'?'Recovered in full':r.label}</b></div>`)(recoveryOf(id)):''}${PLAN[id]?`<div class="mline"><span>${PLAN[id].inv} · ${inr(PLAN[id].amt)}</span><b>Due ${PLAN[id].d} Oct</b></div>${planSteps(id).map(x=>`<div class="mline"><span class="xs">${dayLbl(x[0])} · ${x[1]}</span><b class="xs" style="font-weight:500">${x[3]?x[3].replace(/<[^>]+>/g,'').trim():''}</b></div>`).join('')}`:''}${FAILS[id]?`<button class="mbtn ${failOpen(id)?'p':''} sm mt8" onclick="A.mobGo('recover','${id}')">${failOpen(id)?'Start recovery':'View recovery'}</button>`:''}</div>

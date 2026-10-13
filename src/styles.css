@@ -1255,3 +1255,12 @@ body.paymode .pay-root{display:block}
 .surf #surf-walk.on{background:#9fd9c1;color:#10241c}
 @media (max-width:900px){.surf button{padding:0 10px}}
 @media (max-width:600px){.surf-lt{display:none}.surf-l{padding:0 6px}}
+/* credit-release breakdown (one calculation, shown where the decision is made) */
+.rel{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fbfbfc}
+.rel-t{border-top:1px solid var(--border-subtle)}
+.rel-r{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle);font-size:13px;color:var(--text)}
+.rel-r b{color:var(--strong);font-weight:600;white-space:nowrap}
+.rel-r.tot{border-bottom:0;padding-top:8px}
+.rel-r.tot span,.rel-r.tot b{color:var(--strong);font-weight:700}
+.rel-r.tot b{color:var(--link);font-size:15px}
+.rel-s{width:14px;flex-shrink:0;color:var(--muted);font-weight:700;text-align:center}

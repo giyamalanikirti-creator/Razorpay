@@ -156,6 +156,10 @@ Featured scenarios produced by these rules (not special-cased; tests check the p
 
 Two showcase numbers changed because the rules now compute them: Bansal General Store ₹80,000 → ₹60,000 (Risky = 50% of ₹1,20,000), Mehta Enterprises' request is offered on 21-day terms (one step shorter) instead of 14.
 
+### Credit-release arithmetic
+
+`lib/credit-math.js` `releasePlan({outstanding, requested, limit, collected?})` is the only place that computes how much of a requested order can go on credit: headroom = max(0, limit − outstanding); collect before the full order = outstanding + requested − limit (null when the order exceeds the limit itself); `after(c)` gives the balance and releasable amount after a collection. Outstanding always comes from the ledger (`outOf`). Every surface prints the sentence built from this plan (`releaseLine`, `releaseBreakdown`, `nextOrderLine` in `credit-requests.js`). Gupta: ₹78,400 + ₹50,000 − ₹60,000 = ₹68,400; after ₹38,400, ₹20,000 can be released.
+
 ## 6. Consent and data restrictions
 
 * Two separate permissions: the **distributor's participation** (Controls → Razorpay network signal) and **each buyer's consent** (available, pending, denied, revoked, expired, none) plus **coverage** (≥4 participating distributors) and **recency** (≤45 days).

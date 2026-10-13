@@ -4,10 +4,50 @@ const CREQ = [
  {id:'arora', msg:'₹80,000 ka stock chahiye, 21 days credit pe.', amt:80000, terms:'21 days credit', reqTerms:21, at:'Yesterday, 6:40 PM'},
  {id:'mehta', msg:'₹30,000 aur bhej do, month end tak clear kar dunga.', amt:30000, terms:'Month end', at:'Yesterday, 4:15 PM'},
 ];
+/* ---------- how much of a requested order can go out on credit (one calculation: lib/credit-math.js) ----------
+   outstanding comes from the ledger, the limit is the one the decision is about (RAY's recommended limit unless a
+   caller passes another), and every surface prints the same sentence from the same plan. */
+function reqPlan(r, limit){ return RayCreditMath.releasePlan({outstanding:outOf(r.id), requested:r.amt, limit:limit==null?recOf(r.id).recommendedLimit:limit}); }
+/* the payment the buyer is expected to make next: Gupta promised INV-24891 by Monday; others clear the oldest open invoice */
+function reqRefColl(r){ const i=r.id==='gupta'?invOf('gupta','INV-24891'):nextOpenInv(r.id); const a=i?Math.max(0,i.bal-(i.disputed||0)):0; return a>0?{inv:i.inv, amt:a}:null; }
+function releaseLine(p, ref, o={}){
+  if(!p||!p.ok) return `Release check unavailable: ${p?p.error:'missing values'}`;
+  const lim=o.limitLabel||'limit';
+  if(p.noRequest) return 'No additional credit requested.';
+  if(p.withinLimitNow) return `The full ${inr(p.requested)} fits within the ${inr(p.limit)} ${lim} (${inr(p.headroom)} available). Nothing needs to be collected first.`;
+  if(!p.fullFits) return `The ${inr(p.requested)} order is larger than the ${inr(p.limit)} ${lim} itself. Even with every invoice cleared, at most ${inr(p.maxReleasable)} can go on credit; the other ${inr(p.upfrontIfAllCleared)} would need payment upfront or a higher limit.`;
+  let t=`To release the full ${inr(p.requested)} on credit, collect ${inr(p.collectForFull)} first (${inr(p.outstanding)} owed + ${inr(p.requested)} requested − ${inr(p.limit)} ${lim}).`;
+  if(p.releasableNow>0) t=`${inr(p.releasableNow)} of the order fits the ${inr(p.limit)} ${lim} today. `+t;
+  if(ref&&ref.amt<p.collectForFull&&!o.short){ const a=p.after(ref.amt);
+    t+=a.releasable>0?` Collecting the ${inr(ref.amt)} on ${ref.inv} brings the balance to ${inr(a.outstanding)} and frees ${inr(a.releasable)}, so up to ${inr(a.releasable)} of the order could go on credit.`
+      :` Collecting the ${inr(ref.amt)} on ${ref.inv} still leaves ${inr(a.outstanding)} owed, above the limit, so none of the order could go on credit yet.`; }
+  return t; }
+/* the next-order line for a buyer, with or without an open request */
+function nextOrderLine(id, limit){ const r=typeof creq==='function'?creq(id):null; const L=limit==null?recOf(id).recommendedLimit:limit;
+  if(r&&!S.req[id]) return releaseLine(reqPlan(r,L), reqRefColl(r));
+  const p=RayCreditMath.releasePlan({outstanding:outOf(id), requested:0, limit:L}); if(!p.ok) return '';
+  return p.overLimitBy>0?`${inr(p.outstanding)} is owed, ${inr(p.overLimitBy)} above the ${inr(L)} limit. New orders on credit need your approval until at least ${inr(p.overLimitBy)} is collected.`
+    :`${inr(p.headroom)} of credit is available under the ${inr(L)} limit for the next order.`; }
+/* the arithmetic, shown where the decision is made: desktop request page and mobile request screen */
+function releaseBreakdown(r, mob){ const rec=recOf(r.id), p=reqPlan(r), ref=reqRefColl(r);
+  if(!p.ok) return `<div class="rel mt12"><div class="small" style="color:var(--r)">${esc(p.error)}</div></div>`;
+  const row=(sign,k,v,strong)=>`<div class="rel-r${strong?' tot':''}"><span class="rel-s">${sign}</span><span class="grow">${k}</span><b class="num">${v}</b></div>`;
+  const cur=curLimitOf(r.id), pc=cur!==p.limit?RayCreditMath.releasePlan({outstanding:p.outstanding, requested:p.requested, limit:cur}):null;
+  const a=ref&&p.fullFits&&ref.amt<p.collectForFull?p.after(ref.amt):null;
+  const notes=[
+    p.overLimitBy>0?`Available under this limit today: <b class="num">₹0</b>. The balance is already ${inr(p.overLimitBy)} above it.`:`Available under this limit today: <b class="num">${inr(p.headroom)}</b>.`,
+    a?`If the ${inr(ref.amt)} on ${ref.inv} is collected: balance ${inr(a.outstanding)}, so <b class="num">${inr(a.releasable)}</b> of the order could go on credit.`:'',
+    !p.fullFits?`The order is larger than the limit itself: at most ${inr(p.maxReleasable)} can ever go on credit under it.`:'',
+    pc&&pc.ok?`Under the current ${inr(cur)} limit: ${inr(pc.releasableNow)} available today${pc.withinLimitNow?', so the full order fits':pc.fullFits?`; collect ${inr(pc.collectForFull)} to release the full order`:''}.`:'',
+  ].filter(Boolean);
+  return `<div class="rel mt12" id="rel-${r.id}"><div class="small" style="font-weight:600;color:var(--strong)">Can the ${inr(p.requested)} order go out on credit?</div>
+   <div class="rel-t mt8">${row('','Owed today (ledger)',inr(p.outstanding))}${row('+','Requested on credit',inr(p.requested))}${row('−',`RAY recommended limit (${rec.recommendedTerms} days)`,inr(p.limit))}
+   ${p.withinLimitNow?row('=','Collect first','₹0',true):p.fullFits?row('=','Collect before releasing the full order',inr(p.collectForFull),true):row('=','Full order cannot fit this limit','—',true)}</div>
+   <div class="col gap4 mt8">${notes.map(n=>`<div class="xs" style="color:var(--text)">${n}</div>`).join('')}</div>
+   <div class="xs muted mt8">Approving the recommended limit does not release this order. You decide the order separately.</div></div>`; }
 /* verdict, reasons and suggested terms come from the same engine decision as every other screen */
-function reqV(r){ const rec=recOf(r.id), s=sigOf(r.id), v=RayPolicy.requestVerdict(rec,s,{amount:r.amt, terms:r.reqTerms||null});
-  const nx=nextOpenInv(r.id), col=r.id==='gupta'?balOf('gupta','INV-24891'):nx?nx.bal:0;
-  return Object.assign(v,{rec, reasons:shortReasons(r.id), next:v.verdict==='DO NOT EXTEND YET'?`Collect ${inr(col)} before extending further credit.`:null}); }
+function reqV(r){ const rec=recOf(r.id), s=sigOf(r.id), v=RayPolicy.requestVerdict(rec,s,{amount:r.amt, terms:r.reqTerms||null}), plan=reqPlan(r);
+  return Object.assign(v,{rec, plan, reasons:shortReasons(r.id), next:v.verdict==='DO NOT EXTEND YET'?releaseLine(plan, reqRefColl(r)):null, nextShort:v.verdict==='DO NOT EXTEND YET'?releaseLine(plan, null, {short:true}):null}); }
 const creq = id => CREQ.find(r=>r.id===id);
 const reqOpen = () => CREQ.filter(r=>!S.req[r.id]).length;
 const reqSrc = () => S.inbox ? 'From connected WhatsApp Business inbox' : 'Forwarded to RAY';
@@ -29,7 +69,7 @@ function reqCard(r){
    <div class="mt8"><div class="xs muted" style="font-weight:500">RAY recommendation</div><div class="mt4">${verdictChip(r)}</div></div>
    <div class="mt8">${reqTerms(r)}</div>
    <div class="col gap4 mt8">${v.reasons.map(x=>`<div class="row gap6 small" style="align-items:flex-start"><span style="color:${v.tone==='g'?'var(--g)':'var(--a)'};flex-shrink:0;margin-top:2px">${I(v.tone==='g'?'check':'alert',12,2.4)}</span>${x}</div>`).join('')}</div>
-   ${v.next?`<div class="small mt8" style="color:var(--strong);font-weight:500">${v.next}</div>`:''}
+   ${v.nextShort?`<div class="small mt8" style="color:var(--strong);font-weight:500">${v.nextShort}</div>`:''}
    <div class="grow"></div>
    <div class="row between mt12">${d?`<span class="badge ${d==='later'?'b-n':'b-g'}">${reqDone(d,r.id)}</span>`:'<span></span>'}<button class="btn ${d?'btn-g':'btn-s'} btn-sm" onclick="go('raahi/request/${r.id}')">${d?'View':'Review decision'}</button></div></div>`;
 }
@@ -78,7 +118,7 @@ function vRequest(id){
   <div class="card pad mt16 rec" id="req-rec"><div class="row between"><div class="row gap8">${stage('APPROVE')}<span class="h3">RAY recommendation</span></div>${verdictChip(r)}</div>
    <div class="say mt12">${say}</div>
    <div class="rec-lines mt8"><div><span class="muted">Recommended limit</span><b class="num">${inr(rec.recommendedLimit)}</b></div><div><span class="muted">Terms</span><b class="num">${rec.recommendedTerms} days</b></div></div>
-   ${v.next?`<div class="small mt4" style="color:var(--strong);font-weight:500">${v.next.replace('extending further credit','the next delivery')}</div>`:''}
+   ${releaseBreakdown(r)}
    <div class="xs muted mt8">${after} Confidence: ${rec.confidence}.</div>
    ${!d?`<div class="mt12">${netCompare(id)}</div>`:''}
    ${btns}
@@ -89,7 +129,7 @@ A.reqDecide=(id,k)=>{ const c=BUY[id], r=creq(id), v=reqV(r), rec=v.rec, via=(ty
   const after=(res,msg)=>{ if(!res||!res.ok) return; log({ic:k==='extended'||k==='offered'?'check':'shield',ti:`Credit request from ${c.name}: ${reqDone(k,id).toLowerCase()}`,de:`${inr(r.amt)} requested on WhatsApp · RAY recommended ${v.verdict.toLowerCase()} · policy ${POL.version} · buyer not messaged by RAY`,src:['conv','led'],who:'Decided by '+M.owner+' · '+via,chem:c.name, op:res.op&&res.op.opId}); rr(); if(typeof mobRender==='function'&&S.mob) mobRender(); toast(msg||'Decision logged · RAY has not messaged the buyer'); };
   const keep=(why,extra)=>after(creditKeep(id,why,via,Object.assign({req:k, reqAmt:r.amt, title:`Credit request from ${c.name}: ${reqDone(k,id).toLowerCase()}`, toast:'Decision logged · RAY has not messaged the buyer'},extra||{})),extra&&extra.msg);
   if(k==='later'){ S.req[id]='later'; log({ic:'clock',ti:`Credit request from ${c.name} saved for later`,de:`${inr(r.amt)} · stays in Credit decisions`,src:[],who:M.owner+' · '+via,chem:c.name}); rr(); toast('Saved for later'); return; }
-  if(k==='extended'&&v.verdict!=='EXTEND'){ const key=holdProposal(creditProposal(id)); return modal({title:`Extend ${inr(r.amt)} to ${c.name} anyway?`,body:`<p style="color:var(--strong)">RAY recommends against this. Exposure would rise to ${inr(v.exposureAfter)}, above the ${inr(rec.recommendedLimit)} recommended limit.</p><p class="muted small mt8">${shortReasons(id).join(' · ')}. Your override will be logged with the recommendation it overrides. The limit itself does not change.</p>`,actions:[{label:'Cancel'},{label:'Extend anyway',cls:'btn-d',id:'req-override',fn:()=>{closeModal(); keep('Extended against recommendation',{key, override:'extended against recommendation', msg:'Override logged · credit extended'});}}]}); }
+  if(k==='extended'&&v.verdict!=='EXTEND'){ const key=holdProposal(creditProposal(id)); return modal({title:`Extend ${inr(r.amt)} to ${c.name} anyway?`,body:`<p style="color:var(--strong)">RAY recommends against this. Exposure would rise to ${inr(v.exposureAfter)}, above the ${inr(rec.recommendedLimit)} recommended limit.</p><p class="small mt8" style="color:var(--strong)">${v.plan.ok&&v.plan.fullFits?`Under that limit, ${inr(v.plan.collectForFull)} would be collected before releasing the full ${inr(r.amt)}. Extending now releases it with nothing collected.`:releaseLine(v.plan,null,{short:true})}</p><p class="muted small mt8">${shortReasons(id).join(' · ')}. Your override will be logged with the recommendation it overrides. The limit itself does not change.</p>`,actions:[{label:'Cancel'},{label:'Extend anyway',cls:'btn-d',id:'req-override',fn:()=>{closeModal(); keep('Extended against recommendation',{key, override:'extended against recommendation', msg:'Override logged · credit extended'});}}]}); }
   if(k==='extended'){ const key=holdProposal(creditProposal(id)), p=heldProposal(key); return modal({title:`Extend ${inr(r.amt)} credit to ${c.name}?`,body:`<div class="kvline" style="border:0"><span>Credit limit</span><b class="num">${inr(p.from.limit)} → ${inr(p.limit)}</b></div><div class="kvline"><span>Terms</span><b>${p.terms} days</b></div><div class="kvline"><span>Exposure after order</span><b class="num">${inr(v.exposureAfter)}</b></div><p class="xs muted mt12">Updated in your ledger after you confirm. RAY will not message ${c.name}. You confirm the order with them. You can undo this.</p>`,actions:[{label:'Cancel'},{label:`Extend ${inr(r.amt)} credit`,cls:'btn-p',id:'req-extend',fn:()=>{closeModal(); const res=creditApprove(key,via,{req:'extended', reqAmt:r.amt}); if(res&&res.ok) log({ic:'check',ti:`Credit request from ${c.name}: credit extended`,de:`${inr(r.amt)} requested · limit ${inr(p.from.limit)} → ${inr(p.limit)} · buyer not messaged by RAY`,src:['conv','led'],who:'Decided by '+M.owner+' · '+via,chem:c.name});}}]}); }
   if(k==='offered'){ const T=rec.recommendedTerms, key=holdProposal(Object.assign(creditProposal(id),{limit:curLimitOf(id), terms:T, edited:true}));
     return modal({title:`Offer ${inr(r.amt)} to ${c.name} on ${T}-day terms?`,body:`<p class="muted">${shortReasons(id).join(' · ')}. Shorter terms keep exposure in check while you keep supplying. The limit stays ${inr(curLimitOf(id))}.</p><p class="xs muted mt8">RAY will not message the buyer. You share the terms with them. You can undo this.</p>`,actions:[{label:'Cancel'},{label:`Offer on ${T}-day terms`,cls:'btn-p',id:'req-offer',fn:()=>{closeModal(); const res=creditApprove(key,via,{req:'offered', reqAmt:r.amt}); if(res&&res.ok) log({ic:'check',ti:`Credit request from ${c.name}: offered on ${T}-day terms`,de:`${inr(r.amt)} requested · limit unchanged · buyer not messaged by RAY`,src:['conv','led'],who:'Decided by '+M.owner+' · '+via,chem:c.name});}}]}); }

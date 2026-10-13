@@ -181,22 +181,30 @@ function complianceSection(){
       <div class="row gap8" style="align-items:flex-start">${I('lock',14,2)}<span><b style="color:var(--strong)">Before launch.</b> Network sharing needs review under India’s DPDP Act and credit-information rules. Financing stays with a regulated lending partner, through its own consent journey.</span></div>
     </div></div></div>`; }
 /* the eight-week pilot: unchanged defaults, explicit success measures. No pilot has run; nothing here is a result. */
+/* each proposed measure: what is counted (numerator ÷ denominator), over what period, from which record.
+   None has been measured. Risk flags are judged against a fixed horizon, and a buyer who pays after a restriction is
+   not counted as a false flag, because the restriction itself may have caused the payment. */
 const PILOT_MEASURES = [
-  ['Primary','On-time collection rate','Invoices paid on or before the due date ÷ invoices due, against the baseline','At least +5 percentage points (hypothesis)'],
-  ['Secondary','Median days to payment','Invoice date to the verified payment that settles it','Lower than baseline'],
-  ['Secondary','Failed-debit recovery within 7 days','Failed Autopay / eNACH debits fully recovered within 7 days ÷ failed debits','Tracked; no baseline assumed'],
-  ['Secondary','Recommendation adoption','Approved, edited, overridden (with reason) or undone, per recommendation','Tracked; high rejection triggers a review'],
-  ['Secondary','Task time','Measured time for the weekly credit and collections review, before vs during the pilot','Measured; no estimate shown'],
+  {k:'Primary', m:'On-time collection rate', num:'Invoices fully settled by their due date', den:'Invoices due in the cohort', per:'Weekly, against the 8-week baseline', src:'Ledger (verified payments only)', t:'≥ +5 percentage points (hypothesis)'},
+  {k:'Recovery', m:'Failed debits recovered in 7 days', num:'Failed Autopay / eNACH debits fully recovered within 7 days', den:'Failed debits with 7 days of follow-up elapsed', per:'Per debit, rolling', src:'Ledger + mandate events', t:'Tracked; no baseline assumed'},
+  {k:'Decision', m:'Decisions with complete evidence', num:'Credit decisions with no “missing data” item in RAY’s evidence', den:'All credit decisions taken', per:'Whole pilot', src:'Decision records (policy output)', t:'Tracked'},
+  {k:'Decision', m:'Time to decide', num:'Median minutes from a credit request arriving to the owner’s approve, edit or keep', den:'—', per:'Whole pilot', src:'Activity log timestamps', t:'Measured; no estimate shown'},
+  {k:'Adoption', m:'Recommendations accepted', num:'Recommendations approved or edited', den:'Recommendations reviewed (overrides logged with reasons)', per:'Weekly', src:'Decision records', t:'Tracked; high rejection triggers a review'},
+  {k:'Reconciliation', m:'Match accuracy', num:'Payment matches not reversed within 30 days', den:'Payment matches confirmed', per:'30 days after each match', src:'Ledger (reconciled vs reversed events)', t:'Every reversal investigated'},
+  {k:'Guardrail', m:'Unnecessary reminders', num:'Reminders sent after a verified payment, or repeated for the same invoice within 48 hours', den:'Reminders sent', per:'Weekly', src:'Outbox + ledger', t:'Goal is zero; each case reviewed'},
+  {k:'Model quality', m:'Risk-flag precision', num:'Watch / Risky flags followed by 15+ days overdue within 30 days, where no restriction was applied', den:'Watch / Risky flags with no restriction applied', per:'30-day horizon per flag', src:'Decision records + ledger', t:'Target set after the baseline'},
+  {k:'Fairness', m:'Restrictions on buyers who then repaid', num:'Buyers with a lowered limit who paid every invoice on time in the next 60 days', den:'Buyers whose limit was lowered', per:'60 days after each restriction', src:'Decision records + ledger', t:'Reviewed case by case, not counted as errors'},
+  {k:'AI', m:'Corrections to interpreted messages', num:'Interpretations the owner edited or rejected', den:'Interpretations shown for review', per:'Whole pilot', src:'Interpreter review log', t:'Tracked; each correction reviewed'},
 ];
 function pilotBox(full){ const N=POL.network;
   const chip=t=>`<span class="badge b-n">${t}</span>`;
   const facts=[['Proposed cohort','Three consenting B2B distributors, each with about 20 consenting repeat buyers, subject to recruitment and permissions'],['Baseline','Eight weeks of comparable historical activity, where it is legitimately available'],['Pilot','Eight weeks, starting in review-first mode (RAY drafts, the distributor approves everything)'],['Owner','The distributor’s credit or collections lead, with Razorpay product and compliance support if a real pilot is authorised'],['Defaults',`${parseInt(S.ctl.max)||2} reminders per buyer per week · quiet hours ${S.ctl.qf}–${S.ctl.qt} IST · network evidence only with consent, ${N.minCoverage}+ distributors and signals under ${N.maxRecencyDays} days`]];
   return `<div class="card ${full?'pad':'pad-s'} mt16" id="pilot-plan" style="background:#fbfbfc"><div class="row between wrap gap8"><div class="small" style="font-weight:600;color:var(--strong)">Eight-week pilot plan</div><div class="row gap6 wrap">${chip('Proposed pilot')}${chip('Not yet executed')}${chip('Metrics to be measured')}<span class="badge b-a">No validated lift currently available</span></div></div>
     ${full?`<div class="pilot-facts mt12">${facts.map(([k,v])=>`<div><span class="xs muted">${k}</span><div class="small" style="color:var(--strong)">${v}</div></div>`).join('')}</div>`:''}
-    <div style="overflow-x:auto"><table class="table mt12" style="font-size:12.5px" id="pilot-metrics"><thead><tr><th>Outcome</th><th>Metric</th><th>Measurement</th><th>Proposed threshold <span class="muted">(hypothesis)</span></th><th>Measured result</th></tr></thead><tbody>${PILOT_MEASURES.map(m=>`<tr><td class="xs muted">${m[0]}</td><td style="font-weight:600;color:var(--strong);white-space:nowrap">${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td><span class="xs muted">Not yet measured</span></td></tr>`).join('')}</tbody></table></div>
+    <div style="overflow-x:auto"><table class="table mt12" style="font-size:12.5px" id="pilot-metrics"><thead><tr><th>Area</th><th>Metric</th><th>Numerator ÷ denominator</th><th>Period</th><th>Data source</th><th>Proposed threshold <span class="muted">(hypothesis)</span></th><th>Measured result</th></tr></thead><tbody>${PILOT_MEASURES.map(m=>`<tr><td class="xs muted">${m.k}</td><td style="font-weight:600;color:var(--strong)">${m.m}</td><td>${m.num}${m.den!=='—'?` <span class="muted">÷</span> ${m.den}`:''}</td><td class="xs">${m.per}</td><td class="xs">${m.src}</td><td>${m.t}</td><td><span class="xs muted">Not yet measured</span></td></tr>`).join('')}</tbody></table></div>
     <div class="grid g2 mt12" style="gap:12px"><div class="small"><b style="color:var(--strong)">Guardrails</b><div class="xs mt4" style="color:var(--text)">No unauthorised actions: every credit change and message needs approval. Review every reminder sent against a previously settled invoice. Investigate every incorrect payment match and every consent failure.</div></div>
      <div class="small"><b style="color:var(--strong)">Pause criteria</b><div class="xs mt4" style="color:var(--text)">Pause on a material permission failure or an incorrectly confirmed payment. Review the pilot if false reminders repeat or recommendations are rejected at a high rate.</div></div></div>
-    <div class="xs muted mt8">A small before/after pilot gives directional evidence, not causal proof: seasonality, buyer mix and staff changes can move these numbers too. Thresholds are proposals, not results; measures come from the ledger, the outbox and the Activity log.</div></div>`; }
+    <div class="xs muted mt8">A small before/after pilot gives directional evidence, not causal proof: seasonality, buyer mix and staff changes can move these numbers too. Thresholds are proposals, not results; measures come from the ledger, the outbox and the Activity log. A risk flag is judged against its fixed 30-day horizon; a buyer who pays after a restriction is not counted as a wrong flag, because the restriction may be why they paid.</div></div>`; }
 /* how the mechanism works, using only what this page can show live; no time savings or uplift are claimed */
 function mechanismBox(){ const st=pfStats(), blocked=(S.outbox||[]).filter(o=>o.status==='blocked').length+(S.act||[]).filter(x=>/not sent$/.test(x.ti||'')).length, holds=Object.keys(PAYREV).filter(id=>prPending(id)).length;
   const rows=[
@@ -249,7 +257,7 @@ function brokenAlert(compact){
     <div class="kv"><span class="k">Band now</span><span class="row gap6" style="height:28px">${prevBand!==r.band?bandBadge(prevBand)+I('arrowR',14,2):''}${bandBadge(r.band)}</span></div>
     <div class="kv grow"><span class="k">Recommendation</span><span style="font-weight:600;color:var(--strong);height:28px;display:flex;align-items:center">Future limit ${inr(S.gupta.limit)} → ${inr(r.recommendedLimit)} · ${r.recommendedTerms}-day terms</span></div>
    </div>
-   <div class="mt12" style="padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:8px"><span class="xs muted" style="font-weight:500">Next order</span><div style="font-weight:600;color:var(--strong);margin-top:2px">Collect ${inr(still)} still due on INV-24891 before delivery.</div><div class="xs muted mt4">${I('lock',12)} Supply is never paused automatically.</div></div>
+   <div class="mt12" style="padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:8px"><span class="xs muted" style="font-weight:500">Next order</span><div style="font-weight:600;color:var(--strong);margin-top:2px">${nextOrderLine('gupta', r.recommendedLimit)}</div><div class="xs muted mt4">${I('lock',12)} Supply is never paused automatically.</div></div>
    ${compact?'':`<div class="xs muted mt12">${due?`Promise for ${RayDates.fmtDay(due)} recorded as missed. `:''}The policy re-ran on the new evidence; see “What changed since the last decision”.</div>`}
    <div class="row gap8 mt16">${compact?`<button class="btn btn-p btn-sm" onclick="go('raahi/buyer/gupta')">Review credit</button>`:`<button class="btn btn-p btn-sm" onclick="A.approveGupta()" ${blocked()?'disabled':''}>Set future limit to ${inr(r.recommendedLimit)}</button>`}<button class="btn btn-s btn-sm" onclick="A.keepLimit()">Keep current limit</button></div>
   </div></div>`;
@@ -458,8 +466,16 @@ function vChase(){
 function feedItem(a){
   const tone=a.ic==='alert'?'color:var(--r);background:var(--r-bg)':a.ic==='check'||a.ic==='send'?'color:var(--g);background:var(--g-bg)':a.ic==='rupee'?'color:var(--link);background:var(--blue-tint)':'';
   const srcN={led:'Own ledger',rzp:'Razorpay payment history',conv:'Buyer conversations',net:'Razorpay network signal',lend:'Partner data',aa:BANK_NAME+' · Connected Banking+'};
-  return `<div class="fi"><span class="when">${a.d}<br><span class="faint">${a.t}</span></span><span class="fic" style="${tone}">${I(a.ic,15,2)}</span><div><div class="ft">${a.ti}</div><div class="fd">${a.de||''}</div><div class="who">${(a.src||[]).map(s=>`<span class="src ${s}">${srcN[s]}</span>`).join('')}<span>${a.who||''}</span></div></div>${a.st?`<span class="badge b-b">${a.st}</span>`:'<span></span>'}</div>`;
+  /* a history entry about an unmatched credit keeps its original wording, plus how it was resolved, so the audit
+     trail never reads as if a payment that has since been matched is still waiting */
+  const res=a.kind==='unmatched'?unmatchedResolution(a):null;
+  const st=res?res.badge:a.st;
+  return `<div class="fi"><span class="when">${a.d}<br><span class="faint">${a.t}</span></span><span class="fic" style="${tone}">${I(a.ic,15,2)}</span><div><div class="ft">${a.ti}</div><div class="fd">${a.de||''}${res&&res.line?`<div class="xs mt4" style="color:var(--g);font-weight:600">${res.line}</div>`:''}</div><div class="who">${(a.src||[]).map(s=>`<span class="src ${s}">${srcN[s]}</span>`).join('')}<span>${a.who||''}</span></div></div>${st?`<span class="badge ${res&&res.ok?'b-g':'b-b'}">${st}</span>`:'<span></span>'}</div>`;
 }
+function unmatchedResolution(a){ const id=a.buyer||'verma', p=PAYREV[id]; if(!p) return null;
+  const ev=(S.led.events||[]).filter(e=>e.buyerId===id&&e.invoice===p.inv&&RayEvents.MONEY_IN.includes(e.type)&&!RayEvents.isReversed(S.led,e.id)).slice(-1)[0];
+  if(ev) return {ok:true, badge:'Resolved', line:`Since resolved: ${inr(ev.amount)} ${ev.type==='PAYMENT_RECONCILED'?'matched':'recorded'} to ${p.inv} (${ev.ref||ev.source}) · balance ${inr(ev.meta.balanceBefore)} → ${inr(ev.meta.balanceAfter)}`};
+  return prPending(id)?{ok:false, badge:'Needs review', line:''}:null; }
 function loopSteps(){
   const p=S.gupta.promise; const order=['new','reading','understood','saved','paid','plan'];
   const idx={new:1,reading:1,understood:2,saved:3,paid:5,broken:5}[p]??0;

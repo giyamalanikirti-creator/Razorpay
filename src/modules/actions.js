@@ -87,7 +87,7 @@ A.approveAll=()=>{const p=bulkPlan(), n=p.send.length+p.queue.length;
    actions:[{label:'Review individually',fn:()=>{closeModal();A.reviewAll()}},{label:`Send ${n} reminder${n===1?'':'s'}`,cls:'btn-p',id:'bulk-ok',disabled:!n||blocked(),fn:()=>{closeModal();const r=bulkDo('Dashboard');rr();toast(`${r.wa} sent${r.queued?` · ${r.queued} queued`:''}${r.held?` · ${r.held} blocked`:''} · logged in Activity`)}}]});
 };
 A.reviewAll=()=>{CHASE.forEach(c=>S.chase[c.id].open=c.ch==='wa'||c.held);if(!route().startsWith('raahi/actions')) go('raahi/actions'); else rr(); setTimeout(()=>{const e=document.getElementById('grp-early');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},80)};
-A.matchVerma=(btn)=>{btn.outerHTML=thinking('Matching payment…');setTimeout(()=>{S.vermaMatched=true;S.chase.verma.st='matched';recordEvent({type:'PAYMENT_RECONCILED', buyerId:'verma', invoice:'INV-24655', amount:26500, verification:'verified', source:'Razorpay Smart Collect', actor:M.owner, ref:'pay_Q8f2Kx91LmZ4'},{quiet:true});log({ic:'match',ti:'₹26,500 matched to INV-24655',de:'Verma Retail · reminder cancelled, no longer due',src:['rzp','led'],who:'Confirmed by '+M.owner+' · Dashboard',chem:'Verma Retail'});rr();toast('Payment matched · reminder cancelled')},1300)};
+A.matchVerma=()=>A.prMatchRzp('verma'); /* one match path for every surface (reconciliation.js) */
 
 /* ---- promise loop: the buyer's reply is interpreted by the AI endpoint (or the labelled fallback) ---- */
 const GUPTA_REPLY='Aadha abhi bhej raha hoon, baaki Monday pakka.';

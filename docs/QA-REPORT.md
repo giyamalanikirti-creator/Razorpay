@@ -69,3 +69,24 @@ Other fixes in this pass: read-only network preview (participation only in Contr
 | Responsive (1440, 1280, 768, 390) | 56 | 56 | 0 | 0 |
 | Live Checks page | 18 journeys + 36 policy | 54 | 0 | 0 |
 | Eval, rule-based (57 items) | 57 | 100 % on all metrics | — | live model not run |
+
+## 7. Credit-release arithmetic and reconciliation consistency (13 Oct 2026)
+
+**Credit release.** The Gupta request said "collect ₹38,400 before the next delivery" next to a ₹60,000 recommended limit and a ₹50,000 order. That amount does not let the order go out: ₹78,400 owed + ₹50,000 requested − ₹60,000 limit = **₹68,400** must be collected before the full order fits. Collecting ₹38,400 leaves ₹40,000 owed and frees only **₹20,000**. Fix: one pure function, `lib/credit-math.js` `releasePlan()`, used by the request page (new "Can the ₹50,000 order go out on credit?" breakdown), request cards, the Extend-anyway confirmation, the mobile request screen, RAY on WhatsApp (forwarded request, inbox alert, buyer answer), Ray AI and the missed-promise alert. It recalculates from the ledger after every payment, shows the current ₹1,00,000 limit separately (₹21,600 available, ₹28,400 to collect), and handles: balance already under the limit, no request, order larger than the limit itself (no impossible collection figure), zero limit, partial collections and invalid or negative input (rejected). Approving the recommended limit is recorded as "not extended" and does not release the order.
+
+**Reconciliation.** After Verma's ₹26,500 was matched, the payment-review page still showed RAY's "unmatched credit … may be this payment" note, and the audit trail still read "not yet matched to an invoice". Fix: the note is replaced by the outcome (amount, reference, balance ₹26,500 → ₹0, reminder cancelled); history entries keep their original wording plus a "Since resolved" line; the legacy `A.matchVerma` path now uses the same `A.prMatchRzp` command, which refuses a reference that is already applied, so the balance changes exactly once.
+
+**Metrics.** Pilot measures now state numerator, denominator, period and data source, and add decision completeness, time to decide, match accuracy, unnecessary reminders, risk-flag precision on a fixed 30-day horizon (excluding restricted buyers), restrictions on buyers who then repaid (reviewed, not counted as errors) and corrections to interpreted messages. None is measured.
+
+New tests: `tests/credit-math.test.js` (9 unit tests), browser journeys REL (14 checks) and RECON (11), responsive checks for the breakdown and matched state at four widths (12), live Checks J19 and J20.
+
+| Suite | Total | Passed | Failed | Skipped |
+|---|---:|---:|---:|---:|
+| Unit (`npm test`) | 71 | 71 | 0 | 0 |
+| Mocked-provider API | 17 | 17 | 0 | 0 |
+| Live provider | 0 | 0 | 0 | 1 (no key) |
+| Browser journeys (Playwright) | 211 | 211 | 0 | 0 |
+| Smoke + demos | 24 | 24 | 0 | 0 |
+| Responsive (1440, 1280, 768, 390) | 68 | 68 | 0 | 0 |
+| Live Checks page | 20 journeys + 36 policy | 56 | 0 | 0 |
+| Eval, rule-based (57 items) | 57 | 100 % on all metrics | — | live model not run; the rule-based reader was written against this set |

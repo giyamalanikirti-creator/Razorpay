@@ -1,8 +1,8 @@
 {
  "suite": "API tests with a mocked AI provider (no network, no key)",
  "file": "tests/api.test.js, tests/ask-api.test.js",
- "ranAt": "2026-10-12T08:45:45+00:00",
- "build": "8badc5daec",
+ "ranAt": "2026-10-13T08:22:55+00:00",
+ "build": "d0eae26866",
  "total": 17,
  "passed": 17,
  "failed": 0,

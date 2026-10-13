@@ -142,7 +142,7 @@ function planItem(id){
   } else reason=`Routine · ${due}`;
   const ch=['Collect before supply','Salesperson visit'].includes(kind)?'sm':'wa';
   const oldest=invs[0];
-  const note=kind==='Collect before supply'?`Collect ${inr(oldest.bal-(oldest.disputed||0))} from the oldest invoice before the next delivery.`:kind==='Salesperson visit'?`Collect ${inr(dueAmt)} during today’s route.`:'';
+  const note=kind==='Collect before supply'?`Collect the ${inr(oldest.bal-(oldest.disputed||0))} overdue on ${oldest.inv} at the next delivery visit. New orders on credit wait for your approval.`:kind==='Salesperson visit'?`Collect ${inr(dueAmt)} during today’s route.`:'';
   return {id, amt, kind, reason, ch, note, score, risk:broken>0, net, held:kind==='Held', invs:invs.map(i=>({inv:i.inv,due:i.due,bal:i.bal-(i.disputed||0)})), od, nextDue, auto, mandate, band,
     timing:od>0?`${od} days overdue`:nextDue===0?'due today':nextDue===1?'due tomorrow':`due on ${RayDates.fmtShort(oldest.due)} (in ${nextDue} days)`};
 }
@@ -261,7 +261,7 @@ const S0 = () => ({
    {d:'Today', t:'9:02 AM', ic:'spark', ti:'Recommended actions prepared', de:'Credit decisions, collections and payment reviews · 1 reminder paused for payment verification', src:['led','rzp'], who:'RAY', st:'Awaiting approval'},
    {d:'Today', t:'8:45 AM', ic:'refresh', ti:'Ledger synced from Marg ERP', de:`${RayData.stats().openInvoices.toLocaleString('en-IN')} open invoices · ${RayData.stats().buyers} buyers (synthetic)`, src:['led'], who:'Marg ERP connector (demo)'},
    {d:'Yesterday', t:'7:30 PM', ic:'truck', ti:'Cheque collection recorded for City Mart', de:'₹42,000 · cheque #004512 · recorded by Rakesh Sharma on 3 Oct · not yet seen in the bank', src:['led'], who:'Salesperson app', chem:'City Mart'},
-   {d:'Yesterday', t:'6:10 PM', ic:'rupee', ti:'₹26,500 received from Verma Retail', de:'UPI · Razorpay Smart Collect · not yet matched to an invoice', src:['rzp'], who:'Razorpay', kind:'unmatched'},
+   {d:'Yesterday', t:'6:10 PM', ic:'rupee', ti:'₹26,500 received from Verma Retail', de:'UPI · Razorpay Smart Collect · arrived without an invoice reference', src:['rzp'], who:'Razorpay', kind:'unmatched', buyer:'verma'},
    {d:'Sat, 3 Oct', t:'10:02 AM', ic:'alert', ti:'UPI Autopay attempt failed · Gupta Traders', de:'₹20,000 · INV-24790 · insufficient balance · not marked as defaulted · smart recovery started', src:['rzp'], who:'Razorpay UPI Autopay', chem:'Gupta Traders'},
    {d:'Thu, 1 Oct', t:'7:00 PM', ic:'alert', ti:'Bansal General Store moved Watch → Risky', de:'Avg delay 41 days vs usual 22 · 2 broken promises', src:['led','rzp'], who:'RAY'},
    {d:'Thu, 1 Oct', t:'12:40 PM', ic:'check', ti:'Credit limit for Arora Retail raised to ₹1,20,000', de:'RAY recommendation · updated in Marg ERP', src:['led'], who:'Approved by Rajesh Agarwal · Dashboard'},

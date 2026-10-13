@@ -40,6 +40,18 @@ async def main():
                 o = await page.evaluate(OVERFLOW)
                 check(f"{w}×{h} {r}: no horizontal overflow, headings and buttons inside the viewport", o["doc"] <= o["w"] + 1 and not o["bad"], o)
                 await page.screenshot(path=str(SHOTS / f"{w}x{h}_{r.replace('/', '_')}.png"))
+            # the release breakdown and the matched-payment state stay readable at every width
+            await page.evaluate("()=>{A.reset();S.installed=true;go('raahi/request/gupta')}"); await page.wait_for_timeout(300)
+            rel = await page.evaluate("()=>{const e=document.getElementById('rel-gupta'); if(!e) return null; e.scrollIntoView(); const r=e.getBoundingClientRect(); const t=[...e.querySelectorAll('.rel-r b')].map(b=>{const q=b.getBoundingClientRect(); return q.right<=window.innerWidth+1&&q.width>0}); return {left:r.left,right:r.right,w:window.innerWidth,figures:t.every(Boolean),n:t.length,txt:e.innerText.includes('₹68,400')}}")
+            check(f"{w}×{h} release breakdown: ₹68,400 and every figure visible inside the viewport", rel and rel["left"] >= -1 and rel["right"] <= rel["w"] + 1 and rel["figures"] and rel["n"] == 4 and rel["txt"], rel)
+            await page.screenshot(path=str(SHOTS / f"{w}x{h}_release.png"))
+            await page.evaluate("()=>{go('raahi/payment/verma'); A.prMatchRzp('verma')}"); await page.wait_for_timeout(300)
+            mt = await page.evaluate("()=>{const t=document.getElementById('main').innerText; return {matched:t.includes('Matched: ₹26,500'), stale:t.includes('may be this payment'), doc:document.documentElement.scrollWidth, w:window.innerWidth}}")
+            check(f"{w}×{h} matched payment: confirmed state shown, no stale warning, no overflow", mt["matched"] and not mt["stale"] and mt["doc"] <= mt["w"] + 1, mt)
+            await page.evaluate("()=>{A.openMobile(); A.mobGo('request','gupta')}"); await page.wait_for_timeout(300)
+            mm = await page.evaluate("()=>{const e=document.querySelector('#mob-root .rel'); if(!e) return null; const r=e.getBoundingClientRect(); const ph=document.querySelector('#mob-root .phone, #mob-root .mob-screen, #mob-root')?.getBoundingClientRect(); return {inside: r.width>0 && r.right<=window.innerWidth+1, txt:e.innerText.includes('₹68,400')}}")
+            check(f"{w}×{h} mobile request screen shows the same breakdown", mm and mm["inside"] and mm["txt"], mm)
+            await page.evaluate("()=>{A.closeMobile(); A.reset(); S.installed=true}"); await page.wait_for_timeout(200)
             # modals: recovery link and credit approval
             await page.evaluate("()=>go('raahi/recover/gupta')"); await page.wait_for_timeout(250)
             await page.evaluate("()=>A.recLink('gupta')"); await page.wait_for_timeout(250)

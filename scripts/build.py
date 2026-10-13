@@ -12,7 +12,7 @@ SRC = ROOT / "src"
 
 # Load order matters: later modules use helpers defined in earlier ones.
 # Pure logic shared with the API and the tests (no DOM, no app state).
-LIB = ["dates.js", "dataset.js", "policy.js", "events.js", "guards.js", "promise-rules.js"]
+LIB = ["dates.js", "dataset.js", "policy.js", "credit-math.js", "events.js", "guards.js", "promise-rules.js"]
 
 MODULES = [
     "core.js",                 # icons, formatting, display records, state, router, shell

@@ -201,7 +201,7 @@ function overLimitNote(out,lim,name='This buyer'){ const t=overLimitText(name,ou
 function recCard(){
   const g=S.gupta, risky=g.band==='Risky';
   const foot=`<div class="xs muted mt12 row gap4">${I('lock',12)} RAY never changes a limit or pauses supply without your approval.</div>`;
-  const what=`<div class="lbl mt16">If you approve</div><div class="col gap8 mt8 small">${[`Future limit ${inr(g.limitRec)} on ${g.terms}-day terms for new invoices`,'Any additional credit request is flagged for your approval','Follow-up starts 7 days before each due date',risky?`Collect ${inr(g.oldest)} before the next delivery`:'Existing deliveries continue as usual'].map(x=>`<div class="row gap8" style="align-items:flex-start"><span style="color:var(--link);margin-top:2px;flex-shrink:0">${I('check',13,2.4)}</span><span>${x}</span></div>`).join('')}</div>`;
+  const what=`<div class="lbl mt16">If you approve</div><div class="col gap8 mt8 small">${[`Future limit ${inr(g.limitRec)} on ${g.terms}-day terms for new invoices`,'Any additional credit request is flagged for your approval','Follow-up starts 7 days before each due date',risky?'New orders on credit need your approval while the balance is above the limit':'Existing deliveries continue as usual'].map(x=>`<div class="row gap8" style="align-items:flex-start"><span style="color:var(--link);margin-top:2px;flex-shrink:0">${I('check',13,2.4)}</span><span>${x}</span></div>`).join('')}</div>`;
   if(g.rec==='approved') return `<div class="card pad rec"><div class="row between"><span class="lbl">Your decision</span><span class="badge b-g">${I('check',11,2.6)} Future limit set</span></div>
    <div class="say mt12">Future limit ${inr(g.limit)} · ${g.curTerms}-day terms.</div>
    ${overLimitNote(g.out,g.limit,'Gupta Traders')}
@@ -210,7 +210,8 @@ function recCard(){
   if(g.rec==='kept') return `<div class="card pad rec"><div class="row between"><span class="lbl">Your decision</span><span class="badge b-n">Current limit kept</span></div><div class="say mt12">You kept ${inr(g.limit)} on ${g.curTerms}-day terms.</div><div class="muted small mt8">RAY recorded this as an override and will learn from the outcome. It keeps watching Gupta Traders.</div><button class="btn btn-s btn-sm mt16" id="undo-gupta" onclick="A.undoCredit('gupta')">Undo override · show recommendation again</button>${foot}</div>`;
   return `<div class="card pad rec"><div class="row between"><span class="lbl">Your decision</span>${S.later.gupta?'<span class="badge b-n">Saved for later</span>':''}</div>
    <div class="mt12">${netCompare('gupta')}</div>
-   <div class="say mt12">${risky?`Lower the future limit to ${inr(g.limitRec)} and collect ${inr(g.oldest)} before the next delivery.`:'Keep supplying, with lower future exposure, shorter terms and earlier follow-up.'}</div>
+   <div class="say mt12">${risky?`Lower the future limit to ${inr(g.limitRec)}.`:'Keep supplying, with lower future exposure, shorter terms and earlier follow-up.'}</div>
+   ${risky?`<div class="small mt8" style="color:var(--strong)">${nextOrderLine('gupta', g.limitRec)}</div>`:''}
    ${overLimitNote(g.out,g.limitRec,'Gupta Traders')}
    ${what}
    <div class="col gap8 mt20"><button class="btn btn-p" onclick="A.approveGupta()" ${blocked()?'disabled':''}>Set future limit to ${inr(g.limitRec)}</button><div class="row gap8"><button class="btn btn-s grow" onclick="A.keepLimit()">Keep current limit</button><button class="btn btn-g grow" onclick="S.later.gupta=true;rr();toast('Saved for later · stays in Credit decisions')">Review later</button></div></div>

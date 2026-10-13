@@ -1,10 +1,10 @@
 {
  "suite": "Browser journeys (Playwright, Chromium)",
  "file": "tests/e2e_journeys.py",
- "ranAt": "2026-10-12T08:47:30+00:00",
- "build": "8badc5daec",
- "total": 187,
- "passed": 187,
+ "ranAt": "2026-10-13T08:24:45+00:00",
+ "build": "d0eae26866",
+ "total": 211,
+ "passed": 211,
  "failed": 0,
  "cases": [
   {
@@ -1120,6 +1120,150 @@
   {
    "journey": "BAR",
    "name": "'What’s real' opens the disclosure",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "Request page: ₹78,400 owed + ₹50,000 requested − ₹60,000 limit",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "Request page: collect ₹68,400 before releasing the full order",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "Request page: collecting ₹38,400 frees only ₹20,000",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "Request page: current ₹1,00,000 limit shown separately (₹21,600 available, ₹28,400 to collect)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "No screen tells Rajesh to collect ₹38,400 before the order",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "Overview request card: same ₹68,400 figure",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "WhatsApp forwarded request: same ₹68,400 and ₹20,000",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "Mobile request screen: same breakdown",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "Ray AI buyer answer: same ₹68,400",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "After ₹38,400 is collected: owed ₹40,000, ₹30,000 to collect, nothing double-counted",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "Approved limit is recorded as 'not extended', not as a released order",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "After undo: overview card is open again with the original figures",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "REL",
+   "name": "After undo: WhatsApp reports ₹1,00,000 · 30 days, not the undone ₹60,000 approval",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Before: warning and possible payment shown",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Review page: matched state with amount, reference and balance",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Review page: unmatched warning gone",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Balance changed exactly once",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Matching again (either path) applies nothing twice",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Reminder no longer paused or pending for Verma",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Actions: Verma shows matched, not 'may already cover this'",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Activity: no 'Needs your review' for Verma, history shows how it was resolved",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "WhatsApp: Verma paid, nothing outstanding",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Mobile: same answer",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "journey": "RECON",
+   "name": "Mobile action count drops by one review",
    "pass": true,
    "detail": ""
   },

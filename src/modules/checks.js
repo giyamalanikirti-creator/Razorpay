@@ -67,6 +67,12 @@ function journeyChecks(){
     run('J18','Previewing network scenarios changes no setting, consent, approval or audit record',()=>{ const snap=()=>JSON.stringify([S.ctl.net,S.act.length,S.led.events.length,(S.creditOps||[]).length,recOf('gupta').recommendedLimit]); const a=snap();
       A.netPreview('gupta','own'); A.netPreview('gupta','net'); A.netPreview('gupta','own'); const b=snap(); delete NET_PREVIEW.gupta;
       return ok(a===b&&recOf('gupta').recommendedLimit===60000, `before ${a} · after ${b}`); });
+    fresh();
+    run('J19','Releasing Gupta’s ₹50,000 order needs ₹68,400 collected; ₹38,400 frees only ₹20,000',()=>{ const v=reqV(creq('gupta')), p=v.plan, a=p.after(balOf('gupta','INV-24891'));
+      return ok(p.ok&&p.outstanding===78400&&p.limit===60000&&p.collectForFull===68400&&a.releasable===20000&&/collect ₹68,400 first/.test(v.next), `${inr(p.outstanding)} + ${inr(p.requested)} − ${inr(p.limit)} = ${inr(p.collectForFull)} · after ₹38,400: ${inr(a.releasable)} releasable`); });
+    run('J20','Matching Verma’s ₹26,500 clears every unmatched warning and applies once',()=>{ A.prMatchRzp('verma'); A.prMatchRzp('verma'); A.matchVerma();
+      const n=S.led.events.filter(e=>e.buyerId==='verma'&&RayEvents.MONEY_IN.includes(e.type)).length, html=prBody('verma',false);
+      return ok(n===1&&balOf('verma','INV-24655')===0&&!prPending('verma')&&!/may be this payment/.test(html)&&/Matched: ₹26,500/.test(html), `${n} payment event · balance ${inr(balOf('verma','INV-24655'))} · warning ${/may be this payment/.test(html)?'still shown':'gone'}`); });
   } finally {
     S=JSON.parse(saved); _clock=savedClock; Object.assign(window, keep); _recCache={}; _recSig=''; engineSync(); syncChase(true);
   }

@@ -617,6 +617,72 @@ async def main():
         await page.click("#surf-reset"); await wait(200); check("Reset button asks before resetting", await ev("!!document.getElementById('reset-confirm')")); await ev("closeModal()")
         await page.click(".surf-l"); await wait(200); check("'What’s real' opens the disclosure", await ev("!!document.getElementById('modal')")); await ev("closeModal()")
 
+        # ---------------- REL: one release calculation on every surface (Test A, F) ----------------
+        current["id"] = "REL"
+        await reset("raahi/request/gupta")
+        rel = await page.inner_text("#rel-gupta")
+        check("Request page: ₹78,400 owed + ₹50,000 requested − ₹60,000 limit", all(x in rel for x in ["₹78,400", "₹50,000", "₹60,000"]), rel[:300])
+        check("Request page: collect ₹68,400 before releasing the full order", "Collect before releasing the full order" in rel and "₹68,400" in rel, rel[:400])
+        check("Request page: collecting ₹38,400 frees only ₹20,000", "₹38,400 on INV-24891" in rel and "₹20,000 of the order could go on credit" in rel, rel)
+        check("Request page: current ₹1,00,000 limit shown separately (₹21,600 available, ₹28,400 to collect)", "₹21,600 available" in rel and "₹28,400" in rel, rel)
+        check("No screen tells Rajesh to collect ₹38,400 before the order", "collect ₹38,400" not in (await main_text()).lower() and "Collect ₹38,400" not in await main_text())
+        await ev("go('raahi/overview')"); await wait(250)
+        card = await page.inner_text("#creq")
+        check("Overview request card: same ₹68,400 figure", "collect ₹68,400 first" in card, card[:500])
+        wa = await ev("(()=>{A.openWA(); return 1})()"); await wait(150)
+        await ev("A.waForward()")
+        for _ in range(40):
+            await wait(100)
+            if not await ev("S.wa.busy"): break
+        await wait(200)
+        wt = re.sub(r"<[^>]+>", "", await ev("S.wa.msgs.slice(-1)[0].html")); await ev("A.closeWA()")
+        check("WhatsApp forwarded request: same ₹68,400 and ₹20,000", "collect ₹68,400 first" in wt and "₹20,000" in wt, wt[-400:])
+        mt = await page.evaluate("(()=>{A.openMobile(); A.mobGo('request','gupta'); return document.getElementById('mob-root').innerText})()"); await ev("A.closeMobile()")
+        check("Mobile request screen: same breakdown", "₹68,400" in mt and "₹20,000 of the order could go on credit" in mt, mt[-600:])
+        await ev("go('ray')"); await wait(200)
+        rt = await ray_ask("Gupta Traders")
+        check("Ray AI buyer answer: same ₹68,400", "₹68,400" in rt, rt[-500:])
+        # recalculates from the ledger when a payment arrives
+        await ev("ledgerPay('gupta','INV-24891',38400,{ref:'rel-test-38400',source:'Test',actor:'Test'})"); await ev("go('raahi/request/gupta')"); await wait(250)
+        rel = await page.inner_text("#rel-gupta")
+        check("After ₹38,400 is collected: owed ₹40,000, ₹30,000 to collect, nothing double-counted", "₹40,000" in rel and "₹30,000" in rel and await ev("outOf('gupta')") == 40000, rel[:400])
+        # approving the limit does not release the order, undo restores the baseline with no stale request outcome
+        await reset("raahi/request/gupta")
+        await page.click("#req-rec button:has-text('Approve ₹60,000 limit')"); await wait(200); await page.click("#set-limit"); await wait(300); await settle()
+        await ev("go('raahi/request/gupta')"); await wait(200)
+        check("Approved limit is recorded as 'not extended', not as a released order", await ev("S.req.gupta") == "limit" and "Not extended · limit set to ₹60,000" in await main_text())
+        await page.click("#req-undo-gupta"); await wait(300)
+        await ev("go('raahi/overview')"); await wait(250)
+        ov = await page.inner_text("#creq")
+        check("After undo: overview card is open again with the original figures", "Not extended" not in ov.split("Arora")[0] and "collect ₹68,400 first" in ov and await ev("[S.gupta.limit,S.gupta.curTerms].join()") == "100000,30", ov[:400])
+        wa = await wa_ask("Gupta Traders ka limit kya hai?")
+        check("After undo: WhatsApp reports ₹1,00,000 · 30 days, not the undone ₹60,000 approval", "₹1,00,000" in wa and "30 days" in wa, wa[:400])
+
+        # ---------------- RECON: a matched payment leaves no stale warning anywhere (Test D, E) ----------------
+        current["id"] = "RECON"
+        await reset("raahi/payment/verma")
+        t = await main_text()
+        check("Before: warning and possible payment shown", "may be this payment" in t and "Possible payment" in t)
+        await page.click("button:has-text('Match payment')"); await wait(300)
+        t = await main_text()
+        check("Review page: matched state with amount, reference and balance", "Matched: ₹26,500" in t and "pay_Q8f2Kx91LmZ4" in t and "₹26,500 → ₹0" in t, t[:600])
+        check("Review page: unmatched warning gone", "may be this payment" not in t and "Possible payment" not in t and "Payment not confirmed" not in t)
+        check("Balance changed exactly once", await ev("balOf('verma','INV-24655')") == 0 and await ev("S.led.events.filter(e=>e.buyerId==='verma'&&e.type==='PAYMENT_RECONCILED').length") == 1)
+        await ev("A.prMatchRzp('verma'); A.matchVerma()"); await wait(200)
+        check("Matching again (either path) applies nothing twice", await ev("S.led.events.filter(e=>e.buyerId==='verma'&&RayEvents.MONEY_IN.includes(e.type)).length") == 1 and await ev("balOf('verma','INV-24655')") == 0)
+        check("Reminder no longer paused or pending for Verma", not await ev("prPending('verma')") and await ev("gateState('verma').paid"))
+        await ev("go('raahi/actions')"); await wait(250)
+        t = await main_text(); seg = t[t.find("Verma Retail"):t.find("Verma Retail") + 200]
+        check("Actions: Verma shows matched, not 'may already cover this'", "Matched to Razorpay payment" in seg and "may already cover" not in seg, seg)
+        await ev("go('raahi/activity')"); await wait(250)
+        t = await main_text()
+        check("Activity: no 'Needs your review' for Verma, history shows how it was resolved", "Since resolved: ₹26,500 matched to INV-24655" in t and "not yet matched to an invoice" not in t)
+        wa = await wa_ask("Has Verma Retail paid?")
+        check("WhatsApp: Verma paid, nothing outstanding", "nothing outstanding" in wa and "₹26,500 received" in wa, wa[:300])
+        mb = await mob_ask("Has Verma Retail paid?")
+        check("Mobile: same answer", "nothing outstanding" in mb, mb[:300])
+        check("Mobile action count drops by one review", await ev("Object.keys(PAYREV).filter(prPending).length") == 3)
+
         # ---------------- uncaught errors across routes ----------------
         current["id"] = "ROUTES"
         await reset("raahi/overview")

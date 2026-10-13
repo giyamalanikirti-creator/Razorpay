@@ -32,7 +32,8 @@ A.prMatch=(id,k)=>{ const c=chem(id), p=PAYREV[id], cd=p.cands[k];
   log({ic:'match',ti:`Payment matched to ${p.inv} from bank feed`,de:`${c.name} · ${inr(cd.amt)} · ${cd.from} · ${cd.ref} · balance ${inr(r.event.meta.balanceBefore)} → ${inr(r.event.meta.balanceAfter)}${r.event.meta.balanceAfter===0?' · reminders for this invoice cancelled':' · '+inr(r.event.meta.balanceAfter)+' still due'} · RAY will recognise this payer next time`,src:['aa'],who:'Confirmed by '+prWho(),chem:c.name}); prClose(); prRefresh(); toast(r.event.meta.balanceAfter===0?`Matched · ${p.inv} paid · reminders cancelled`:`Matched · ${inr(r.event.meta.balanceAfter)} still due`); };
 A.prReviewCand=(id,k)=>{ const c=chem(id), p=PAYREV[id], cd=p.cands[k];
   prOpen(`<div class="pr-sh"><h3>Is this ${c.name}’s payment?</h3><div class="pr-kv"><div><span>Amount</span><b class="num">${inr(cd.amt)}</b></div><div><span>From</span><b>${cd.from}</b></div><div><span>Received</span><b>${cd.t}</b></div></div><p class="small muted mt12">Low confidence: the amount is ₹${(p.amt-cd.amt).toLocaleString('en-IN')} short of ${p.inv} and the payer name only partly matches.</p><div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Not this buyer</button><button class="btn btn-p" onclick="A.prMatch('${id}',${k})">Match payment</button></div></div>`); };
-A.prMatchRzp=(id)=>{ const c=chem(id), p=PAYREV[id], pos=p.possible; if(!pos) return;
+A.prMatchRzp=(id)=>{ const c=chem(id), p=PAYREV[id], pos=p&&p.possible; if(!pos) return;
+  if(RayEvents.refInUse(S.led, pos.ref)) { prRefresh(); return toast(`${pos.ref} is already matched to ${p.inv}. Nothing applied twice.`); }
   const r=ledgerPay(id, p.inv, pos.amt, {type:'PAYMENT_RECONCILED', source:'Razorpay Smart Collect', actor:prWho(), ref:pos.ref}); if(!r.ok) return toast(r.error);
   const st=prS(id); st.st='rzp'; if(id==='verma') S.vermaMatched=true;
   log({ic:'match',ti:`Payment matched to ${p.inv}`,de:`${c.name} · ${inr(pos.amt)} · Razorpay Smart Collect · ${pos.ref} · balance ${inr(r.event.meta.balanceBefore)} → ${inr(r.event.meta.balanceAfter)}${r.event.meta.balanceAfter===0?' · reminders cancelled':''}`,src:['rzp'],who:'Confirmed by '+prWho(),chem:c.name}); prRefresh(); toast(r.event.meta.balanceAfter===0?'Payment matched · reminder cancelled':`Matched · ${inr(r.event.meta.balanceAfter)} still due`); };
@@ -102,12 +103,20 @@ function prBody(id,mob){
   const possible = id==='verma'&&!S.vermaMatched ? `<div class="pr-cand mt12"><div class="grow"><div class="row gap8"><b class="num" style="color:var(--strong)">${inr(p.possible.amt)}</b><span class="badge b-a">Possible payment</span></div><div class="xs muted mt4">${p.possible.t} · ${p.possible.from} · ${p.possible.ref}</div></div>${btn('btn-s','Match payment',`A.prMatchRzp('${id}')`)}</div>`:'';
   const actions = done ? `<div class="alert ok mt12" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('check',15,2.4)}</span><div class="grow small"><b style="color:var(--strong)">${prStatusBadge(id).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()}</b><div class="muted">Logged in Activity.</div></div>${st.st==='scheduled'?`<button class="btn btn-g btn-sm" onclick="S.pr['${id}']={st:null,check:null};${S.chase[id]?`S.chase['${id}'].st='draft';`:''}log({ic:'refresh',ti:'Follow-up reminder removed',de:'${c.name} · ${p.inv}',src:[],who:prWho()});prRefresh()">Undo</button>`:''}</div>`
    : `<div class="pr-acts ${mob?'mob':''}">${btn('btn-s','Mark as received',`A.prMark('${id}')`)}${btn(bankOn?'btn-p':'btn-s','Check bank statement',`A.prCheck('${id}')`)}${btn('btn-s','Remind later',`A.prLater('${id}')`)}${btn('btn-g','Send reminder',`A.prSend('${id}')`)}</div>`;
-  return `<div class="pr-kv ${mob?'mob':''}"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Invoice</span><b>${p.inv}</b></div><div><span>Amount</span><b class="num">${inr(p.amt)}</b></div><div><span>Due</span><b>${p.due}</b><em>${p.dueTxt}</em></div></div>
+  return `<div class="pr-kv ${mob?'mob':''}"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Invoice</span><b>${p.inv}</b></div><div><span>Amount</span><b class="num">${inr(p.amt)}</b></div><div><span>Due</span><b>${p.due}</b><em${(invOf(id,p.inv)||{}).bal===0?' style="color:var(--g)"':''}>${(invOf(id,p.inv)||{}).bal===0?'Paid in full':p.dueTxt}</em></div></div>
    <div class="row gap8 mt12 wrap"><span class="xs muted" style="font-weight:600">Status</span>${prStatusBadge(id)}</div>
-   <div class="pr-note mt12"><span class="ai-tag">${clover(13)} RAY</span><span class="small" style="color:var(--strong)">${p.note}</span></div>
+   <div class="pr-note mt12"><span class="ai-tag">${clover(13)} RAY</span><span class="small" style="color:var(--strong)">${done?prOutcome(id):p.note}</span></div>
    ${possible}${spCard}${res}${actions}
    <div class="xs muted mt12 row gap4" style="align-items:flex-start">${I('shield',12)} <span>${done?'Confirm payment first, chase second.':sourcesLine(id,p.inv)}</span></div>`;
 }
+/* what happened, in one sentence, once the review is resolved (replaces the "possible payment" note) */
+function prOutcome(id){ const p=PAYREV[id], st=prS(id), i=invOf(id,p.inv), bal=i?i.bal:0;
+  const ev=(S.led.events||[]).filter(e=>e.buyerId===id&&e.invoice===p.inv&&RayEvents.MONEY_IN.includes(e.type)&&!RayEvents.isReversed(S.led,e.id)).slice(-1)[0];
+  const tail=bal===0?'Nothing is due on this invoice, so its reminder is cancelled.':`${inr(bal)} is still due on ${p.inv}; reminders continue for that amount only.`;
+  if(ev) return `${ev.type==='PAYMENT_RECONCILED'?'Matched':'Recorded'}: ${inr(ev.amount)} from ${ev.source}${ev.ref&&!/^manual-/.test(ev.ref)?` (${ev.ref})`:''} applied to ${p.inv}. Balance ${inr(ev.meta.balanceBefore)} → ${inr(ev.meta.balanceAfter)}. ${tail}`;
+  if(st.st==='scheduled') return `No payment recorded yet. You chose to review this again on ${st.when}; RAY has not contacted the buyer.`;
+  if(st.st==='sent') return `No payment recorded yet. A reminder for ${inr(bal)} was sent (simulated delivery).`;
+  return p.note; }
 function vPayReview(id){
   if(!PAYREV[id]) return '<div class="empty">Not found</div>';
   return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('raahi/actions','grp-check')">${I('arrowL',14,2)} Reconciliation · Payment review</a></div>

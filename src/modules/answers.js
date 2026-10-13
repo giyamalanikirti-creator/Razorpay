@@ -86,7 +86,7 @@ function creditAnswer(id, hi){
   else if(!r.network.eligible&&BUY[id].network) lines.push(`Network evidence not used: ${r.network.reason}.`);
   const over=overLimitText(b.name, s.out, r.recommendedLimit); if(over&&r.recommendedLimit<cs.limit) lines.push(over);
   if(cs.op&&cs.op.kind==='approved') lines.push(`You set ${inr(cs.op.to.limit)} · ${cs.op.to.terms} days (${cs.op.via}, ${cs.op.at}).${recChanged(id)?' The recommendation has changed since.':''}`);
-  if(rq&&!S.req[id]){ const v=reqV(rq); lines.push(`Open request: ${inr(rq.amt)} more credit. RAY’s verdict: ${v.verdict.toLowerCase()} (exposure would be ${inr(v.exposureAfter)}). Needs your decision.`); }
+  if(rq&&!S.req[id]){ const v=reqV(rq); lines.push(`Open request: ${inr(rq.amt)} more credit. RAY’s verdict: ${v.verdict.toLowerCase()} (exposure would be ${inr(v.exposureAfter)}). ${releaseLine(v.plan, reqRefColl(rq))} Needs your decision.`); }
   return {kind:'credit', ids:[id], lead:hi?(r.band==='Reliable'?'Theek hai, policy ke andar hai.':'Abhi aur credit dene se pehle dekh lijiye.'):null, lines,
     actions:[rq&&!S.req[id]?{label:'Review credit request', route:`raahi/request/${id}`, mob:['request',id]}:actBuyer(id)]}; }
 
