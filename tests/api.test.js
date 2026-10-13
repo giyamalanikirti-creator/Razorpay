@@ -68,7 +68,7 @@ test('Mocked provider: body over the size limit and wrong types are rejected bef
 });
 
 /* ---------- Gemini provider (Google AI Studio) ---------- */
-const gemini = (content, status = 200) => async (url, opts) => { gemini.last = { url, opts }; return { ok: status < 400, status, json: async () => ({ id: 'v1_x', object: 'interaction', status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: typeof content === 'string' ? content : JSON.stringify(content) }] }] }) }; };
+const gemini = (content, status = 200, errorBody = null) => async (url, opts) => { gemini.last = { url, opts }; return { ok: status < 400, status, text: async () => (errorBody ? JSON.stringify({ error: { code: status, message: errorBody } }) : ''), json: async () => ({ candidates: [{ content: { parts: [{ text: typeof content === 'string' ? content : JSON.stringify(content) }] }, finishReason: 'STOP' }] }) }; };
 
 test('GEMINI_API_KEY alone selects Gemini and its default model', async () => {
   const r = await call({ method: 'GET' }, { env: { GEMINI_API_KEY: 'AIza-secret' } });
@@ -82,15 +82,15 @@ test('Gemini: the request carries the schema, the key header and no key in the U
   const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(good) });
   assert.equal(r.statusCode, 200); assert.equal(r.body.mode, 'ai'); assert.equal(r.body.provider, 'gemini');
   assert.equal(r.body.interpretation.promisedAmountNow, 19200); assert.equal(r.body.paymentVerified, false);
-  assert.equal(gemini.last.url, 'https://generativelanguage.googleapis.com/v1beta/interactions');
+  assert.ok(gemini.last.url.startsWith('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent'), gemini.last.url);
   assert.ok(!gemini.last.url.includes('k'), 'the key is sent as a header, never as a query parameter');
   assert.equal(gemini.last.opts.headers['x-goog-api-key'], 'k');
   const sent = JSON.parse(gemini.last.opts.body);
-  assert.equal(sent.response_format.mime_type, 'application/json');
-  assert.equal(sent.response_format.schema.properties.intent.type, 'string');
-  assert.equal(sent.generation_config.thinking_level, 'minimal');
-  assert.ok(sent.system_instruction.includes('untrusted'));
-  assert.ok(sent.input.includes('<buyer_message>'));
+  assert.equal(sent.generationConfig.responseMimeType, 'application/json');
+  assert.equal(sent.generationConfig.responseSchema.properties.intent.type, 'string');
+  assert.equal(sent.generationConfig.temperature, 0);
+  assert.ok(sent.systemInstruction.parts[0].text.includes('untrusted'));
+  assert.ok(sent.contents[0].parts[0].text.includes('<buyer_message>'));
 });
 
 test('Gemini: the same deterministic checks strip a fabricated amount', async () => {
@@ -100,10 +100,10 @@ test('Gemini: the same deterministic checks strip a fabricated amount', async ()
 });
 
 test('Gemini: JSON found in any step, and a thinking-only reply is rejected', async () => {
-  const wrapped = async () => ({ ok: true, status: 200, json: async () => ({ steps: [{ type: 'thinking', content: [{ type: 'text', text: 'considering the message' }] }, { type: 'model_output', content: [{ type: 'text', text: JSON.stringify(good) }] }] }) });
+  const wrapped = async () => ({ ok: true, status: 200, text: async () => '', json: async () => ({ candidates: [{ content: { parts: [{ text: 'thinking out loud' }, { text: JSON.stringify(good) }] } }] }) });
   const r = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: wrapped });
   assert.equal(r.statusCode, 200); assert.equal(r.body.interpretation.intent, 'promise');
-  const empty = async () => ({ ok: true, status: 200, json: async () => ({ steps: [{ type: 'model_output', content: [{ type: 'text', text: 'sorry, no JSON here' }] }] }) });
+  const empty = async () => ({ ok: true, status: 200, text: async () => '', json: async () => ({ candidates: [{ content: { parts: [{ text: 'sorry, no JSON here' }] } }] }) });
   const bad = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: empty });
   assert.equal(bad.statusCode, 502); assert.equal(bad.body.code, 'INVALID_MODEL_OUTPUT');
 });
@@ -131,4 +131,10 @@ test('GET ?selftest=1 surfaces a provider failure instead of hiding it', async (
 test('A plain GET is unchanged by the selftest branch', async () => {
   const r = await call({ method: 'GET', url: '/api/parse-promise' }, { env: { GEMINI_API_KEY: 'k' } });
   assert.deepEqual(r.body, { configured: true, provider: 'gemini', model: 'gemini-3.5-flash-lite' });
+});
+
+test('Gemini: a non-200 passes the provider error message through, not just the status', async () => {
+  const r = await call({ method: 'GET', url: '/api/parse-promise?selftest=1' }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(good, 404, 'models/gemini-x is not found for API version v1beta') });
+  assert.equal(r.statusCode, 502); assert.equal(r.body.status, 404);
+  assert.match(r.body.message || '', /models\/gemini-x is not found/, 'the real reason reaches the response');
 });

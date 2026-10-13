@@ -104,27 +104,40 @@ async function callAnthropic(cfg, input, signal, fetchImpl) {
   return block.input;
 }
 
-/* Google AI Studio (Gemini). Interactions API with a response_format schema; the JSON comes back as text
-   inside a model_output step, so the first content item that parses as JSON is used. */
+/* Google AI Studio (Gemini). Standard generateContent endpoint:
+   POST /v1beta/models/{model}:generateContent, body { contents, systemInstruction, generationConfig }.
+   responseMimeType + responseSchema give back structured JSON as text in the first candidate. */
 async function callGemini(cfg, input, signal, fetchImpl) {
-  const r = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/interactions`, {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
+  const r = await fetchImpl(url, {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
     body: JSON.stringify({
-      model: cfg.model,
-      system_instruction: rules.SYSTEM_PROMPT,
-      input: rules.buildUserPrompt(input),
-      response_format: { type: 'text', mime_type: 'application/json', schema: rules.SCHEMA },
-      generation_config: { max_output_tokens: 800, seed: 7, thinking_level: 'minimal', thinking_summaries: 'none' },
+      systemInstruction: { parts: [{ text: rules.SYSTEM_PROMPT }] },
+      contents: [{ role: 'user', parts: [{ text: rules.buildUserPrompt(input) }] }],
+      generationConfig: { temperature: 0, maxOutputTokens: 800, responseMimeType: 'application/json', responseSchema: rules.SCHEMA },
     }),
   });
   if (r.status === 429) throw Object.assign(new Error('rate limited'), { code: 'RATE_LIMITED' });
-  if (!r.ok) throw Object.assign(new Error('upstream ' + r.status), { code: 'UPSTREAM_ERROR', status: r.status });
-  const j = await r.json();
-  return geminiJson(j);
+  if (!r.ok) {
+    /* the provider's own error body carries why: "model not found", "invalid request", quota, etc. Pass it
+       through so the self-test and the fallback label can say what went wrong, not just "upstream 503". */
+    let detail = '';
+    try { const b = await r.text(); const j = JSON.parse(b); detail = (j && j.error && j.error.message) ? j.error.message : b.slice(0, 300); } catch (e) { /* body unreadable */ }
+    throw Object.assign(new Error(`upstream ${r.status}${detail ? ': ' + detail : ''}`), { code: 'UPSTREAM_ERROR', status: r.status, detail });
+  }
+  return geminiJson(await r.json());
 }
-/* the structured payload out of an Interaction response, whatever step it lands in */
+/* the structured JSON out of a generateContent response, with the Interactions shape kept as a fallback */
 function geminiJson(j) {
+  const cands = (j && j.candidates) || [];
+  for (const c of cands) {
+    for (const part of (c && c.content && c.content.parts) || []) {
+      if (part && typeof part.text === 'string') { try { return JSON.parse(part.text); } catch (e) { /* keep looking */ } }
+      if (part && part.functionCall && part.functionCall.args && typeof part.functionCall.args === 'object') return part.functionCall.args;
+    }
+  }
+  /* older Interactions-style response, kept for compatibility */
   const steps = (j && j.steps) || [];
   for (const st of steps) {
     for (const c of (st && st.content) || []) {
@@ -168,7 +181,7 @@ async function selftest(cfg, env, fetchImpl, res) {
       promisedDate: i.promisedDate, canConfirm: v.canConfirm, paymentVerified: v.paymentVerified });
   } catch (e) {
     return send(res, 502, { ok: false, provider: cfg.provider, model: cfg.model, ms: Date.now() - started,
-      code: e.code || (e.name === 'AbortError' ? 'TIMEOUT' : 'AI_FAILED'), status: e.status || null, message: String(e.message || '').slice(0, 200) });
+      code: e.code || (e.name === 'AbortError' ? 'TIMEOUT' : 'AI_FAILED'), status: e.status || null, detail: e.detail || null, message: String(e.message || '').slice(0, 400) });
   } finally { clearTimeout(timer); }
 }
 

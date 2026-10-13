@@ -84,10 +84,11 @@ async function callAnthropic(cfg, b, signal, f) {
   return blk.input;
 }
 async function callGemini(cfg, b, signal, f) {
-  const r = await f('https://generativelanguage.googleapis.com/v1beta/interactions', { method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
-    body: JSON.stringify({ model: cfg.model, system_instruction: SYSTEM, input: userMsg(b), response_format: { type: 'text', mime_type: 'application/json', schema: SCHEMA }, generation_config: { max_output_tokens: 600, seed: 7, thinking_level: 'minimal', thinking_summaries: 'none' } }) });
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`;
+  const r = await f(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: 'user', parts: [{ text: userMsg(b) }] }], generationConfig: { temperature: 0, maxOutputTokens: 600, responseMimeType: 'application/json', responseSchema: SCHEMA } }) });
   if (r.status === 429) throw Object.assign(new Error('rate'), { code: 'RATE_LIMITED' });
-  if (!r.ok) throw Object.assign(new Error('upstream'), { code: 'UPSTREAM_ERROR', status: r.status });
+  if (!r.ok) { let detail = ''; try { const t = await r.text(); const j = JSON.parse(t); detail = (j && j.error && j.error.message) || t.slice(0, 300); } catch (e) {} throw Object.assign(new Error('upstream ' + r.status + (detail ? ': ' + detail : '')), { code: 'UPSTREAM_ERROR', status: r.status, detail }); }
   return geminiJson(await r.json());
 }
 /* rupee amounts in the answer must appear in the data the model was given (no invented or computed figures) */
