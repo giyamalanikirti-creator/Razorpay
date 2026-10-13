@@ -187,12 +187,11 @@ hooks.push(()=>{ clearTimeout(window._psT); window._psT=setTimeout(persistSave,3
 function engBoot(){
   if(!persistLoad()) engInit(); else engineSync();
   syncChase(true); clockChip(); aiCheck();
-  /* judges following the submission link should land directly on the RAY Credit workspace, not on the
-     Razorpay dashboard home. If no hash was provided at all (the base URL), install the agent and route
-     to the workspace. Any explicit hash (someone bookmarked #home, clicked a sidebar link, or opened a
-     deep link) is left alone so the Agent Studio story and the home page remain reachable. */
+  /* judges following the submission link should land on the Agent Studio page for RAY Credit, not on
+     the Razorpay dashboard home. The agent is intentionally shown in its uninstalled state so the first
+     visible action is "Install agent" — the start of the merchant story. The home page and deep links
+     still work. */
   if(!location.hash || location.hash === '#') {
-    S.installed = true;
     location.hash = 'studio/ray-credit';
   }
 }
