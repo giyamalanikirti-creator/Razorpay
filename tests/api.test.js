@@ -87,7 +87,7 @@ test('Gemini: the request carries the schema, the key header and no key in the U
   assert.equal(gemini.last.opts.headers['x-goog-api-key'], 'k');
   const sent = JSON.parse(gemini.last.opts.body);
   assert.equal(sent.generationConfig.responseMimeType, 'application/json');
-  assert.equal(sent.generationConfig.responseSchema.properties.intent.type, 'string');
+  assert.equal(sent.generationConfig.responseSchema.properties.intent.type, 'STRING');
   assert.equal(sent.generationConfig.temperature, 0);
   assert.ok(sent.systemInstruction.parts[0].text.includes('untrusted'));
   assert.ok(sent.contents[0].parts[0].text.includes('<buyer_message>'));
