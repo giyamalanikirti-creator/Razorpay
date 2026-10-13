@@ -5,7 +5,7 @@
  * the merchant's current RAY data. The model may only explain that data; it never changes anything.
  *
  * Environment variables (same as /api/parse-promise; the key never reaches the browser)
- *   OPENAI_API_KEY / OPENAI_MODEL (default gpt-4o-mini) · ANTHROPIC_API_KEY / ANTHROPIC_MODEL (default claude-haiku-4-5)
+ *   OPENAI_API_KEY / OPENAI_MODEL (default gpt-4o-mini) · ANTHROPIC_API_KEY / ANTHROPIC_MODEL (default claude-haiku-5-5)
  *   AI_PROVIDER ("openai" | "anthropic") · AI_TIMEOUT_MS (default 12000)
  *
  * GET returns { configured, provider, model }. Missing key → 503 AI_NOT_CONFIGURED (the page falls back to rules).

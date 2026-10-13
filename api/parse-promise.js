@@ -7,7 +7,7 @@
  *   OPENAI_API_KEY      required for live AI (OpenAI provider, default)
  *   OPENAI_MODEL        optional, default gpt-4o-mini
  *   ANTHROPIC_API_KEY   optional alternative provider
- *   ANTHROPIC_MODEL     optional, default claude-haiku-4-5
+ *   ANTHROPIC_MODEL     optional, default claude-haiku-5-5
  *   AI_PROVIDER         optional: "openai" | "anthropic" (default: whichever key is set, OpenAI first)
  *   AI_TIMEOUT_MS       optional, default 12000
  *
@@ -24,9 +24,9 @@ const hits = new Map(); // best-effort, per warm instance
 
 function providerConfig(env = process.env) {
   const pref = (env.AI_PROVIDER || '').toLowerCase();
-  if ((pref === 'anthropic' || (!pref && !env.OPENAI_API_KEY)) && env.ANTHROPIC_API_KEY) return { provider: 'anthropic', key: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL || 'claude-haiku-4-5' };
+  if ((pref === 'anthropic' || (!pref && !env.OPENAI_API_KEY)) && env.ANTHROPIC_API_KEY) return { provider: 'anthropic', key: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL || 'claude-haiku-5-5' };
   if (env.OPENAI_API_KEY && pref !== 'anthropic') return { provider: 'openai', key: env.OPENAI_API_KEY, model: env.OPENAI_MODEL || 'gpt-4o-mini' };
-  return { provider: pref || 'openai', key: null, model: pref === 'anthropic' ? (env.ANTHROPIC_MODEL || 'claude-haiku-4-5') : (env.OPENAI_MODEL || 'gpt-4o-mini') };
+  return { provider: pref || 'openai', key: null, model: pref === 'anthropic' ? (env.ANTHROPIC_MODEL || 'claude-haiku-5-5') : (env.OPENAI_MODEL || 'gpt-4o-mini') };
 }
 
 function send(res, status, body) {

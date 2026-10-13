@@ -254,7 +254,7 @@ The project still deploys as static `index.html` at the repository root, plus on
 | `OPENAI_API_KEY` | for live AI | none | OpenAI key, server-side only |
 | `OPENAI_MODEL` | no | `gpt-4o-mini` | any model that supports JSON-schema structured outputs |
 | `ANTHROPIC_API_KEY` | optional | none | alternative provider |
-| `ANTHROPIC_MODEL` | no | `claude-haiku-4-5` | |
+| `ANTHROPIC_MODEL` | no | `claude-haiku-5-5` | |
 | `AI_PROVIDER` | no | OpenAI if its key is set | `openai` or `anthropic` |
 | `AI_TIMEOUT_MS` | no | `12000` | provider timeout |
 
