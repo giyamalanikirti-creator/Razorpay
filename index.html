@@ -3047,7 +3047,7 @@ function popMenu(anchor, items, head='', right){
  * lib/promise-rules.js                    interpreter checks + labelled rule-based fallback
  * Every screen (desktop, Ray AI, WhatsApp, mobile) reads recommendations through recOf(id).
  */
-const BUILD_ID = '23d0157611';
+const BUILD_ID = '2da6fe8182';
 const POL = RayPolicy.POLICY;
 const BUY = {}; RayData.ALL.forEach(b=>BUY[b.id]=b); BUY.newlife=RayData.NEW_BUYER;
 const GEN = RayData.GENERATED;
@@ -3226,7 +3226,19 @@ function persistLoad(){ try{ const raw=localStorage.getItem(PERSIST_KEY); if(!ra
 function persistClear(){ try{ localStorage.removeItem(PERSIST_KEY); }catch(e){} }
 hooks.push(()=>{ clearTimeout(window._psT); window._psT=setTimeout(persistSave,300); });
 
-function engBoot(){ if(!persistLoad()) engInit(); else engineSync(); syncChase(true); clockChip(); aiCheck(); }
+function engBoot(){
+  if(!persistLoad()) engInit(); else engineSync();
+  syncChase(true); clockChip(); aiCheck();
+  /* judges following the submission link should land directly on the RAY Credit workspace, not on the
+     Razorpay dashboard home. If no hash was provided and the agent has not been actively uninstalled,
+     mark it installed and route to the workspace. The home and Agent Studio pages remain reachable from
+     the sidebar and breadcrumb. A ?date= query parameter is preserved by setting the hash and leaving
+     the current URL otherwise alone. */
+  if((!location.hash || location.hash === '#' || location.hash === '#home') && S.installed !== false) {
+    S.installed = true;
+    location.hash = 'ray-credit/overview';
+  }
+}
 /* header clock: today's date and the current time, refreshed every half minute */
 function clockChip(){ const dc=document.getElementById('datechip'), tc=document.getElementById('timechip');
   if(dc) dc.textContent=S.date; if(tc) tc.textContent=RayDates.fmtTime(RayDates.nowMinIST()); }

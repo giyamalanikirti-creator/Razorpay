@@ -1,8 +1,8 @@
 {
  "suite": "Browser journeys (Playwright, Chromium)",
  "file": "tests/e2e_journeys.py",
- "ranAt": "2026-10-13T10:08:19+00:00",
- "build": "23d0157611",
+ "ranAt": "2026-10-13T13:29:12+00:00",
+ "build": "2da6fe8182",
  "total": 211,
  "passed": 211,
  "failed": 0,
