@@ -13,7 +13,8 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
-PAGE = (ROOT / "index.html").as_uri()
+PIN = "2026-10-05"   # the date the scenario was authored against; the app runs on the real date without it
+PAGE = (ROOT / "index.html").as_uri() + f"?date={PIN}"
 results = []
 current = {"id": None}
 
@@ -570,7 +571,7 @@ async def main():
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         mode = {"fail": False}
         good = {"ok": True, "mode": "ai", "provider": "openai", "model": "gpt-4o-mini", "canConfirm": True, "paymentVerified": False, "requiresMerchantConfirmation": True, "checks": [],
-                "interpretation": {"intent": "promise", "promisedAmountNow": 19200, "firstPaymentDate": "2026-10-05", "promisedAmountLater": 19200, "promisedDate": "2026-10-09", "claimedAmount": None, "currency": "INR", "isConditional": False, "amountInferred": True, "dateInferred": True, "needsClarification": False, "confidenceLabel": "medium", "evidenceSpans": ["Aadha aaj", "baaki Friday"], "reasoningSummary": "Half today, rest Friday.", "suggestedNextAction": "confirm_commitment"}}
+                "interpretation": {"intent": "promise", "promisedAmountNow": 19200, "firstPaymentDate": PIN, "promisedAmountLater": 19200, "promisedDate": "2026-10-09", "claimedAmount": None, "currency": "INR", "isConditional": False, "amountInferred": True, "dateInferred": True, "needsClarification": False, "confidenceLabel": "medium", "evidenceSpans": ["Aadha aaj", "baaki Friday"], "reasoningSummary": "Half today, rest Friday.", "suggestedNextAction": "confirm_commitment"}}
         async def api_route(route):
             req = route.request
             if req.method == "GET": return await route.fulfill(status=200, content_type="application/json", body=json.dumps({"configured": True, "provider": "openai", "model": "gpt-4o-mini"}))
@@ -582,7 +583,7 @@ async def main():
             return await route.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "mode": "ai", "provider": "openai", "model": "gpt-4o-mini", "answer": "Your weekly rhythm looks steady.", "answerable": True, "actions": [], "changesState": False}))
         p2 = await browser.new_page(viewport={"width": 1440, "height": 900})
         await p2.route("**/api/parse-promise", api_route); await p2.route("**/api/ask", ask_route)
-        await p2.goto(f"http://127.0.0.1:{port}/index.html"); await p2.wait_for_timeout(800)
+        await p2.goto(f"http://127.0.0.1:{port}/index.html?date={PIN}"); await p2.wait_for_timeout(800)
         await p2.evaluate("()=>{A.reset();S.installed=true;go('raahi/buyer/gupta')}"); await p2.wait_for_timeout(400)
         check("Status label says Live AI with provider/model when the endpoint reports a key", await p2.evaluate("aiLabel()") == "Live AI · openai/gpt-4o-mini")
         n_ev = await p2.evaluate("S.led.events.length")

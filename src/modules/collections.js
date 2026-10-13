@@ -36,12 +36,12 @@ const FAILS = {};
 /* ================= COMPUTED COLLECTION LISTS =================
    Scheduled automatic collections, failed automatic debits and payment reviews are rebuilt from mandates,
    ledger events and incoming payment signals, the same way for every buyer. */
-/* Incoming payment signals RAY has not confirmed yet (synthetic prototype data). Review entries are built from these. */
+/* Incoming payment signals RAY has not confirmed yet. Review entries are built from these. */
 const PAY_SIGNALS = [
   {buyerId:'verma', inv:'INV-24655', kind:'unmatched_credit', possible:{amt:26500, t:'Yesterday, 6:10 PM', from:'UPI · Razorpay Smart Collect', ref:'pay_Q8f2Kx91LmZ4'}},
   {buyerId:'lifeline', inv:'INV-24702', kind:'bank_candidates', cands:[{amt:31200,t:'Yesterday, 4:32 PM',from:'LIFELINE MART',ref:'NEFT/HDFC81732',conf:'High'},{amt:31000,t:'Yesterday, 1:14 PM',from:'LIFELINE & CO',ref:'UPI/40918276',conf:'Low'}]},
   {buyerId:'goyal', inv:'INV-24611', kind:'not_confirmed'},
-  {buyerId:'citycare', inv:'INV-24733', kind:'cheque_recorded', sp:{amt:42000, t:'3 Oct · 5:40 PM', date:'3 Oct', by:'Rakesh Sharma', from:'Cheque #004512 · recorded by Rakesh Sharma', ref:'Not yet seen in the bank'}},
+  {buyerId:'citycare', inv:'INV-24733', kind:'cheque_recorded', sp:{amt:42000, t:DS('2026-10-03')+' · 5:40 PM', date:DS('2026-10-03'), by:'Rakesh Sharma', from:'Cheque #004512 · recorded by Rakesh Sharma', ref:'Not yet seen in the bank'}},
 ];
 function prNote(sg){
   if(sg.kind==='unmatched_credit') return `We found an unmatched ${inr(sg.possible.amt)} Razorpay credit (${sg.possible.t.toLowerCase()}) that may be this payment.`;
@@ -148,7 +148,7 @@ function rsRender(){
   } else if(r.step==='wait'){
     h=`<div class="pr-sh"><h3>Waiting for ${c.name}</h3><div class="mt12">${thinking(r.pick==='UPI Autopay'?`Waiting for ${first} ji to approve in their UPI app…`:`Waiting for ${first} ji to authorise the bank mandate…`)}</div><p class="xs muted mt8">Authorisation request sent on WhatsApp via RAY · approved by ${M.owner}</p></div>`;
   } else if(r.step==='active'){
-    const nx=r.id==='gupta'?'INV-24891 · ₹38,400 · 12 Oct':UPCOMING[r.id]?`${UPCOMING[r.id].inv} · ${inr(UPCOMING[r.id].amt)} · ${UPCOMING[r.id].due}`:'From the first invoice';
+    const nx=r.id==='gupta'?`INV-24891 · ${inr(balOf('gupta','INV-24891'))} · ${RayDates.fmtShort((invOf('gupta','INV-24891')||{}).due||S.today)}`:UPCOMING[r.id]?`${UPCOMING[r.id].inv} · ${inr(UPCOMING[r.id].amt)} · ${UPCOMING[r.id].due}`:'From the first invoice';
     h=`<div class="pr-sh"><div class="mand-ok"><span class="mand-ic">${I(r.pick==='eNACH'?'bank':'refresh',20,2.2)}</span><div><div class="xs muted" style="font-weight:600">${r.pick==='eNACH'?'Bank mandate':'UPI Autopay'}</div><div class="mand-st">ACTIVE</div></div></div>
      <div class="pr-kv mt12"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Maximum</span><b class="num">${inr(r.limit)}</b></div><div><span>Next collection</span><b>${nx}</b></div></div>
      <p class="xs muted mt12">${c.name} authorised the mandate. RAY now monitors the buyer, reminds before each due date and attempts collection only within this mandate.</p>
@@ -182,9 +182,9 @@ function planSteps(id){
 function planCard(id){
   const p=PLAN[id]; if(!p) return '';
   const c=chem(id), m=collMethod(id).m, auto=m==='UPI Autopay'||m==='eNACH', s=collSt(id);
-  const done = s==='received'?`<div class="alert ok mt12" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('check',15,2.4)}</span><div class="grow small"><b style="color:var(--strong)">Payment received · ${inr(p.amt)} · ${p.inv}</b><div class="muted">${m} · ${id==='mehta'?'6 Oct, 10:42 AM':'today'} · matched automatically</div></div></div>`
+  const done = s==='received'?`<div class="alert ok mt12" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('check',15,2.4)}</span><div class="grow small"><b style="color:var(--strong)">Payment received · ${inr(p.amt)} · ${p.inv}</b><div class="muted">${m} · ${id==='mehta'?DS('2026-10-06')+', 10:42 AM':'today'} · matched automatically</div></div></div>`
     : s==='paidbank'?`<div class="alert ok mt12" style="padding:12px 14px"><span class="ic" style="width:28px;height:28px">${I('bank',15,2)}</span><div class="grow small"><b style="color:var(--strong)">Paid by NEFT before the autopay attempt</b><div class="muted">₹42,800 received 10:16 AM and matched from your bank account. RAY cancelled the autopay attempt. RAY cancelled the attempt to avoid collecting twice.</div></div></div>`:'';
-  const pre = id==='gupta'?`<div class="pre-msg mt12"><div class="xs muted" style="font-weight:600">Pre-due message · 9 Oct · drafted by RAY</div><div class="small mt4" style="color:var(--strong)">“Your ₹38,400 payment against INV-24891 is due on 12 Oct. Your registered UPI mandate will be used on the due date.”</div><div class="xs mt8" style="color:#9a5b00;font-weight:600">${I('clock',12,2)} Gupta Traders usually pays late. RAY started follow-up 7 days before the due date.</div></div>`:'';
+  const pre = id==='gupta'?`<div class="pre-msg mt12"><div class="xs muted" style="font-weight:600">Pre-due message · ${DS('2026-10-09')} · drafted by RAY</div><div class="small mt4" style="color:var(--strong)">“Your ₹38,400 payment against INV-24891 is due on ${RayDates.fmtShort((invOf('gupta','INV-24891')||{}).due||S.today)}. Your registered UPI mandate will be used on the due date.”</div><div class="xs mt8" style="color:#9a5b00;font-weight:600">${I('clock',12,2)} Gupta Traders usually pays late. RAY started follow-up 7 days before the due date.</div></div>`:'';
   return `<div class="card pad" id="plan"><div class="row between"><div class="row gap8">${stage('COLLECT')}<span class="h3">Repayment plan</span></div>${methodChip(id)}</div>
    <div class="pr-kv mt12" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div><span>Invoice</span><b>${p.inv}</b></div><div><span>Amount</span><b class="num">${inr(p.amt)}</b></div><div><span>Due</span><b>${p.d} Oct</b></div><div><span>Collection method</span><b>${mLabel(m)}</b></div></div>
    ${done}
@@ -198,7 +198,7 @@ function collBody(id,mob){
   const u=UPCOMING[id], c=chemView(chem(id)), cm=collMethod(id), s=collSt(id);
   const btn=(cls,lbl,fn)=>mob?`<button class="mbtn ${cls==='btn-p'?'p':cls==='btn-g'?'g':''}" onclick="${fn}">${lbl}</button>`:`<button class="btn ${cls}" onclick="${fn}">${lbl}</button>`;
   const state = s==='progress' ? `<div class="coll-st prog"><span class="lbl">Collection in progress</span><div class="mt8">${thinking(`Collecting ${inr(u.amt)} through ${cm.m}…`)}</div></div>`
-   : s==='received' ? `<div class="coll-st ok"><span class="lbl" style="color:var(--g)">Payment received</span><div class="mob-amt mt4" style="font-size:24px;color:var(--strong)">${inr(u.amt)}</div><div class="pr-kv mt8 ${mob?'mob':''}"><div><span>Invoice</span><b>${u.inv}</b></div><div><span>Method</span><b>${cm.m}</b></div><div><span>Status</span><b style="color:var(--g)">Matched automatically</b></div></div><div class="xs muted mt8">Collected ${id==='mehta'?'6 Oct, 10:42 AM':'on the due date'}. Added to ${c.name}’s repayment record.</div></div>`
+   : s==='received' ? `<div class="coll-st ok"><span class="lbl" style="color:var(--g)">Payment received</span><div class="mob-amt mt4" style="font-size:24px;color:var(--strong)">${inr(u.amt)}</div><div class="pr-kv mt8 ${mob?'mob':''}"><div><span>Invoice</span><b>${u.inv}</b></div><div><span>Method</span><b>${cm.m}</b></div><div><span>Status</span><b style="color:var(--g)">Matched automatically</b></div></div><div class="xs muted mt8">Collected ${id==='mehta'?DS('2026-10-06')+', 10:42 AM':'on the due date'}. Added to ${c.name}’s repayment record.</div></div>`
    : s==='paidbank' ? `<div class="coll-st ok"><span class="lbl" style="color:var(--g)">Autopay attempt cancelled</span><div class="small mt8" style="color:var(--strong)">₹42,800 was already received by NEFT at 10:16 AM and matched to INV-24860 from your bank account. RAY cancelled the attempt to avoid collecting twice.</div></div>`
    : `<div class="coll-st"><span class="lbl">Scheduled</span><div class="small mt4" style="color:var(--strong)">${u.when}</div>${btn('btn-s','Prototype: run collection on the due date',`A.collRun('${id}')`)}</div>`;
   return `<div class="pr-kv ${mob?'mob':''}"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Invoice</span><b>${u.inv}</b></div><div><span>Amount</span><b class="num">${inr(u.amt)}</b></div><div><span>Due</span><b>${u.due}</b></div></div>
@@ -211,7 +211,7 @@ function vCollect(id){ if(!UPCOMING[id]) return '<div class="empty">Not found</d
   return `<div class="crumb mt20" style="margin-bottom:0"><a onclick="goSec('raahi/actions','grp-upcoming')">${I('arrowL',14,2)} Upcoming collections</a></div><div style="max-width:900px">${pageHead('Scheduled collection','Automatic collection within the buyer’s authorised mandate.')}<div class="card pad mt16">${collBody(id,false)}</div></div>`; }
 A.collRun=(id)=>{ const u=UPCOMING[id], c=chem(id), cm=collMethod(id); S.coll[id]='progress'; prRefresh();
   setTimeout(()=>{ S.coll[id]='received'; S.adj[id]=(S.adj[id]||0)+u.amt; ledgerPay(id, u.inv, u.amt, {type:'AUTOPAY_SUCCEEDED', source:'Razorpay '+cm.m, actor:'Razorpay', ref:'auto-'+u.inv});
-    log({ic:'rupee',ti:`${inr(u.amt)} collected from ${c.name} via ${cm.m}`,de:`${u.inv} · ${id==='mehta'?'6 Oct, 10:42 AM · ':''}matched automatically · added to repayment record`,src:['rzp'],who:'Razorpay '+cm.m,chem:c.name});
+    log({ic:'rupee',ti:`${inr(u.amt)} collected from ${c.name} via ${cm.m}`,de:`${u.inv} · ${id==='mehta'?DS('2026-10-06')+', 10:42 AM · ':''}matched automatically · added to repayment record`,src:['rzp'],who:'Razorpay '+cm.m,chem:c.name});
     if(S.wa.msgs&&id==='mehta') waPush({from:'ray',html:`✅ ₹30,000 collected from <b>Mehta Enterprises</b> through UPI Autopay at 10:42 AM and matched to INV-24812.`});
     prRefresh(); toast(`${inr(u.amt)} collected · matched to ${u.inv}`); },1600); };
 
@@ -333,11 +333,11 @@ function outcomesCard(){
     return row(chem(id).name,r.band,`Recommended limit ${inr(d.snap.limit)} → ${inr(r.recommendedLimit)} · ${d.snap.terms} → ${r.recommendedTerms} days`,`${ev.map(e=>EV_LABEL[e.type]).join(' · ')}. The same policy re-ran on the new events.`,'Review',`goSec('raahi/buyer/${id}','wc-${id}')`,r.recommendedLimit<d.snap.limit?'var(--r)':'var(--g)'); });
   if(!changed.includes('gupta')){ const ev=eventsSince('gupta').filter(e=>!['CREDIT_APPROVED','CREDIT_KEPT'].includes(e.type));
     rows.push(ev.length?row('Gupta Traders',recOf('gupta').band,'New repayment events · recommendation unchanged',`${ev.map(e=>EV_LABEL[e.type]).join(' · ')}. Partial payments reduce the balance and never add risk.`,'View',"goSec('raahi/buyer/gupta','wc-gupta')")
-      :row('Gupta Traders',recOf('gupta').band,`Watching the recovery of ${inr(balOf('gupta','INV-24790'))}`,'UPI Autopay failed on 3 Oct. Each outcome (payment, failure, missed promise) is recorded as an event and re-runs the policy.','View recovery',"go('raahi/recover/gupta')")); }
+      :row('Gupta Traders',recOf('gupta').band,`Watching the recovery of ${inr(balOf('gupta','INV-24790'))}`,`UPI Autopay failed on ${DS('2026-10-03')}. Each outcome (payment, failure, missed promise) is recorded as an event and re-runs the policy.`,'View recovery',"go('raahi/recover/gupta')")); }
   const sr=recOf('sethi'), sd=decOf('sethi');
   if(!changed.includes('sethi')) rows.push(row('Sethi Mart',sr.band,sd.status==='approved'?`Future limit raised to ${inr(curLimitOf('sethi'))}`:sr.action==='increase'?`Recommended limit ${inr(curLimitOf('sethi'))} → ${inr(sr.recommendedLimit)}`:'No change recommended',`${sigOf('sethi').debit.streak} consecutive repayments collected through UPI Autopay on the due date · ${sr.network.eligible?'pays other distributors on Razorpay on time too · ':''}increase rule: up to +⅓ per review.`,sd.status==='approved'?null:'Review',"go('raahi/buyer/sethi')",'var(--g)'));
   if(typeof kirS==='function'&&kirS().outcome) rows.push(row('Gupta Kirana Store',recOf('guptak').band,kirS().outcome==='kept'?'Payment commitment kept':'Payment commitment missed',`${inr(KIR.amt-kirS().now)} ${kirS().outcome==='kept'?'paid':'not paid'} by the date the retailer proposed · recorded as a ${kirS().outcome==='kept'?'kept':'missed'} promise event.`,null,null,kirS().outcome==='kept'?'var(--g)':'var(--r)'));
-  if(mehta) rows.push(row('Mehta Enterprises',recOf('mehta').band,'On-time Autopay repayment recorded','₹30,000 collected on 6 Oct and matched automatically to INV-24812 · on-time streak extended.',null,null,'var(--g)'));
+  if(mehta) rows.push(row('Mehta Enterprises',recOf('mehta').band,'On-time Autopay repayment recorded',`₹30,000 collected on ${DS('2026-10-06')} and matched automatically to INV-24812 · on-time streak extended.`,null,null,'var(--g)'));
   return `<div class="card" id="ov-learn"><div class="sec-h"><div><div class="row gap8">${stage('LEARN')}<span class="h3">RAY learns from collection outcomes</span></div><div class="small muted mt4">Outcome-informed recommendations: every recorded payment, failure or promise updates the buyer’s signals and re-runs the policy. No model is trained.</div></div></div>${rows.join('')}</div>`;
 }
 /* ---------- Overview + Actions blocks ---------- */

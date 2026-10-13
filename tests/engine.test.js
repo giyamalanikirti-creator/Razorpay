@@ -131,9 +131,11 @@ test('13. Quiet hours queue the message for the next permitted window (IST)', ()
 });
 
 test('14. The weekly reminder limit is enforced with the next eligible time', () => {
-  const log = [{ buyerId: 'kapoor', status: 'sent', at: RD.istMs('2026-10-01', 630) }, { buyerId: 'kapoor', status: 'sent', at: RD.istMs('2026-10-03', 660) }];
+  /* two reminders inside the last 7 days, relative to the ledger's today */
+  const first = RD.addDays(TODAY, -4), second = RD.addDays(TODAY, -2);
+  const log = [{ buyerId: 'kapoor', status: 'sent', at: RD.istMs(first, 630) }, { buyerId: 'kapoor', status: 'sent', at: RD.istMs(second, 660) }];
   const g = gate({ sentLog: log });
-  assert.equal(g.code, 'frequency'); assert.equal(g.nextEligibleAt, RD.istMs('2026-10-08', 630));
+  assert.equal(g.code, 'frequency'); assert.equal(g.nextEligibleAt, RD.istMs(RD.addDays(first, 7), 630));
   assert.equal(gate({ sentLog: log, controls: { wa: true, dnc: [], maxPerWeek: 3, quietFrom: '8 PM', quietTo: '9 AM' } }).action, 'send');
 });
 

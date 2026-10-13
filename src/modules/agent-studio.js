@@ -54,7 +54,7 @@ function instRender(){
   let body='', acts=[];
   if(s.step===1){
     const opt=(k,l,d,ic)=>`<button class="radio-card ${s.ledger===k?'on':''}" style="padding:14px 16px;align-items:center" onclick="S.inst.ledger='${k}';instRender()"><span class="radio"></span>${ic}<div class="grow"><b style="color:var(--strong)">${l}</b><div class="xs muted">${d}</div></div>${s.ledger===k&&k!=='xls'?'<span class="badge b-g">'+I('check',11,2.6)+' Connected</span>':''}</button>`;
-    body=`<div class="h3" style="font-size:16px">Connect ledger</div><p class="muted mt4">Connect your receivables data so RAY can understand invoices, dues, and repayment history.</p><div class="col gap8 mt16">${opt('tally','Tally','Ledgers and vouchers',svcSm('tally'))}${opt('marg','Marg','Demo connector · 1,184 open invoices found',svcSm('marg'))}${opt('xls','Upload file','Excel or CSV receivables report',`<span class="svc mail" style="width:30px;height:30px;border-radius:8px">${I('doc',14,2)}</span>`)}</div>`;
+    body=`<div class="h3" style="font-size:16px">Connect ledger</div><p class="muted mt4">Connect your receivables data so RAY can understand invoices, dues, and repayment history.</p><div class="col gap8 mt16">${opt('tally','Tally','Ledgers and vouchers',svcSm('tally'))}${opt('marg','Marg','Marg ERP · 1,184 open invoices found',svcSm('marg'))}${opt('xls','Upload file','Excel or CSV receivables report',`<span class="svc mail" style="width:30px;height:30px;border-radius:8px">${I('doc',14,2)}</span>`)}</div>`;
     acts=[{label:'Cancel'},{label:'Continue',cls:'btn-p',disabled:!s.ledger,fn:()=>{S.inst.step=2;instRender()}}];
   } else if(s.step===2){
     const yes=s.choice!=='no';
@@ -89,5 +89,5 @@ A.instBank=()=>A.cbStart('inst','icici');
 A.installDo=()=>{ const s=S.inst;
   document.querySelector('.modal-b').innerHTML=`<div style="padding:22px 0">${thinking('Reading 1,184 open invoices · building 642 credit profiles…')}</div>`; document.querySelector('.modal-f').style.display='none';
   setTimeout(()=>{ closeModal(); S.installed=true; S.ctl.auto=s.auto; S.inst=null;
-    log({ic:'agent',ti:'RAY Credit installed from Agent Studio',de:`${s.ledger==='tally'?'Tally':s.ledger==='xls'?'Receivables upload':'Marg (demo connector)'} connected · bank ${S.bank.st==='on'?'connected':'not connected yet'} · ${s.auto==='review'?'Review first':'Routine automation'}`,src:['led'],who:'Installed by '+M.owner});
+    log({ic:'agent',ti:'RAY Credit installed from Agent Studio',de:`${s.ledger==='tally'?'Tally':s.ledger==='xls'?'Receivables upload':'Marg ERP'} connected · bank ${S.bank.st==='on'?'connected':'not connected yet'} · ${s.auto==='review'?'Review first':'Routine automation'}`,src:['led'],who:'Installed by '+M.owner});
     go('raahi/overview'); toast('RAY Credit is ready · 642 credit profiles built'); },1800); };

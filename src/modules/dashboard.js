@@ -29,7 +29,7 @@ function pgTransactions(){
   <div class="card mt12">${payTable(PAYS)}</div></div>`;
 }
 function pgSettlements(){
-  const rows=[['setl_Q8a1Lp4RkX','Today, 5:00 PM (expected)','₹1,38,920','Scheduled','b-n'],['setl_Q7zK2mQ9wE','Sat, 3 Oct','₹1,96,410','Settled','b-g'],['setl_Q7v8Jn3YtB','Fri, 2 Oct','₹1,52,775','Settled','b-g'],['setl_Q7r1Hc6PuZ','Thu, 1 Oct','₹2,08,300','Settled','b-g']];
+  const rows=[['setl_Q8a1Lp4RkX','Today, 5:00 PM (expected)','₹1,38,920','Scheduled','b-n'],['setl_Q7zK2mQ9wE',DL('2026-10-03'),'₹1,96,410','Settled','b-g'],['setl_Q7v8Jn3YtB',DL('2026-10-02'),'₹1,52,775','Settled','b-g'],['setl_Q7r1Hc6PuZ','Thu, 1 Oct','₹2,08,300','Settled','b-g']];
   return `<div class="page fadein"><div class="h1">Settlements</div><div class="sub">Funds from captured payments are settled to ICICI Bank ••4821 on a T+1 cycle.</div>
   <div class="card mt24"><table class="table"><thead><tr><th>Settlement ID</th><th>Date</th><th class="r">Amount</th><th>Status</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="color:var(--link);font-weight:500">${r[0]}</td><td>${r[1]}</td><td class="r nm num">${r[2]}</td><td><span class="badge ${r[4]}">${r[3]}</span></td></tr>`).join('')}</tbody></table></div></div>`;
 }
@@ -45,7 +45,7 @@ function pgReports(){
 }
 function pgPlaceholder(a){
   const names={banking:'Banking+',payroll:'Payroll','payment-links':'Payment Links','payment-pages':'Payment Pages','razorpay-me':'Razorpay.me Link',settings:'Account & Settings',partners:'Partners',company:'Company Registration'};
-  return `<div class="page fadein"><div class="h1">${names[a]||'Page'}</div><div class="card pad mt24" style="max-width:640px"><div class="row gap16"><span style="width:40px;height:40px;border-radius:10px;background:var(--canvas);display:grid;place-items:center;color:var(--muted)">${I('info',20)}</span><div><div class="h3">Outside the RAY prototype</div><div class="muted mt4">This part of the dashboard isn’t mocked. Use Agent Studio or Ray AI to continue the demo.</div></div></div><div class="row gap8 mt16"><button class="btn btn-p" onclick="go('studio')">Open Agent Studio</button><button class="btn btn-s" onclick="go('ray')">Open Ray AI</button></div></div></div>`;
+  return `<div class="page fadein"><div class="h1">${names[a]||'Page'}</div><div class="card pad mt24" style="max-width:640px"><div class="row gap16"><span style="width:40px;height:40px;border-radius:10px;background:var(--canvas);display:grid;place-items:center;color:var(--muted)">${I('info',20)}</span><div><div class="h3">Outside the RAY prototype</div><div class="muted mt4">This part of the dashboard isn’t mocked. Open Agent Studio or Ray AI to continue.</div></div></div><div class="row gap8 mt16"><button class="btn btn-p" onclick="go('studio')">Open Agent Studio</button><button class="btn btn-s" onclick="go('ray')">Open Ray AI</button></div></div></div>`;
 }
 
 /* ================= AGENT STUDIO ================= */

@@ -1,8 +1,8 @@
 {
  "suite": "Browser smoke and guided demos (Playwright)",
  "file": "tests/ui_smoke.py",
- "ranAt": "2026-10-13T08:25:27+00:00",
- "build": "d0eae26866",
+ "ranAt": "2026-10-13T08:56:09+00:00",
+ "build": "02b892de65",
  "total": 24,
  "passed": 24,
  "failed": 0,

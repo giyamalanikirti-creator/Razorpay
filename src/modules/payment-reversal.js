@@ -2,7 +2,7 @@
  * A recorded payment is never edited or deleted. "Reverse recorded payment" appends PAYMENT_REVERSED, which
  * restores the invoice balance and leaves the original event in the log. lib/events.js enforces the rules
  * (known payment, not already reversed, same buyer and invoice, same amount, reason required, balance cannot
- * exceed the invoice amount). This is a correction of the synthetic ledger, not a refund: no money moves.
+ * exceed the invoice amount). This is a ledger correction, not a refund: no money moves.
  *
  *   recordedPayments(id)    payments recorded in this session for a buyer, with their reversal status
  *   A.payRevStart(eventId)  confirmation: reference, amount, invoice, balance before → after, effect on recovery
@@ -37,7 +37,7 @@ A.payRevStart=(eventId)=>{ const p=reversalPreview(eventId); if(!p.ok) return to
     ${p.recAfter?`<div class="kvline mt8"><span>Recovery of ${p.rec.inv}</span><b>${esc(p.rec.label)} → ${esc(p.recAfter)}</b></div>`:''}
     <div class="field mt12"><label for="rev-reason">Why is this being corrected?</label><select class="select" id="rev-reason">${REV_REASONS.map(x=>`<option>${x}</option>`).join('')}</select></div>
     <div class="field mt8"><label for="rev-note">Note <span class="muted">(optional)</span></label><input class="input" id="rev-note" maxlength="140" placeholder="For example, entered against INV-24891 by mistake"></div>
-    <div class="ol-note mt12"><span style="color:var(--a);flex-shrink:0">${I('info',15,2)}</span><span>This corrects the prototype’s synthetic ledger. It is not a refund and moves no money. The original payment stays in the audit log; a PAYMENT_REVERSED event is added. Balances, recovery, reminders and the credit recommendation are recalculated.</span></div>
+    <div class="ol-note mt12"><span style="color:var(--a);flex-shrink:0">${I('info',15,2)}</span><span>This corrects the ledger. It is not a refund and moves no money. The original payment stays in the audit log; a PAYMENT_REVERSED event is added. Balances, recovery, reminders and the credit recommendation are recalculated.</span></div>
     <div class="xs mt8" id="rev-err" role="alert" style="color:var(--r);font-weight:600"></div>`,
    actions:[{label:'Cancel'},{label:`Reverse ${inr(p.total)}`,cls:'btn-d',id:'rev-confirm',fn:()=>{ const reason=(document.getElementById('rev-reason')||{}).value||REV_REASONS[4], note=((document.getElementById('rev-note')||{}).value||'').trim();
      const r=payReverse(eventId, reason+(note?' · '+note:''), prMob()?'RAY Credit for Mobile':'Dashboard'); if(!r.ok){ const e=document.getElementById('rev-err'); if(e) e.textContent=r.error; else toast(r.error); return; }

@@ -152,8 +152,8 @@ function runOutbox(){ const now=simNowMs(); let sent=0, blocked=0;
     else if(g.action==='block'){ o.status='blocked'; o.reason=gateNote(g); blocked++; if(S.chase[o.buyerId]&&['scheduled','queued'].includes(S.chase[o.buyerId].st)) S.chase[o.buyerId].st='draft'; logBlocked(o.buyerId,g,o.channel); } });
   return {sent, blocked}; }
 const nowLabel = () => RayDates.fmtTime(simMin());
-A.advanceToMs=(ms)=>{ const p=RayDates.istParts(ms); if(RayDates.diffDays(p.date,S.today)>0) advanceDate(p.date); _clock=Math.max(_clock,p.min-9*60); const r=runOutbox(); rr(); toast(`Demo clock moved to ${simDateLabel()}, ${nowLabel()} IST${r.sent?` · ${r.sent} message${r.sent===1?'':'s'} sent`:''}${r.blocked?` · ${r.blocked} blocked at send time`:''}`); };
-A.advanceClock=(toMin)=>{ const cur=simMin(); if(toMin<=cur){ toast('Already past that time'); return; } _clock=toMin-9*60; const r=runOutbox(); rr(); toast(`Demo clock moved to ${nowLabel()} IST${r.sent?` · ${r.sent} scheduled message${r.sent===1?'':'s'} sent`:''}${r.blocked?` · ${r.blocked} blocked at send time`:''}`); };
+A.advanceToMs=(ms)=>{ const p=RayDates.istParts(ms); if(RayDates.diffDays(p.date,S.today)>0) advanceDate(p.date); _clock=Math.max(_clock,p.min-9*60); const r=runOutbox(); rr(); toast(`Date moved to ${simDateLabel()}, ${nowLabel()} IST${r.sent?` · ${r.sent} message${r.sent===1?'':'s'} sent`:''}${r.blocked?` · ${r.blocked} blocked at send time`:''}`); };
+A.advanceClock=(toMin)=>{ const cur=simMin(); if(toMin<=cur){ toast('Already past that time'); return; } _clock=toMin-9*60; const r=runOutbox(); rr(); toast(`Date moved to ${nowLabel()} IST${r.sent?` · ${r.sent} scheduled message${r.sent===1?'':'s'} sent`:''}${r.blocked?` · ${r.blocked} blocked at send time`:''}`); };
 
 /* ---------- AI status (server tells us honestly whether a model is configured) ---------- */
 const AI = {checked:false, configured:false, provider:null, model:null, reachable:false, claude:null, claudeChecked:false, claudeOff:null};
@@ -170,8 +170,9 @@ const aiLabel = () => claudeLive()?'Live AI · anthropic/Claude (this page)':AI.
 
 /* ---------- persistence (optional, per browser) ---------- */
 const PERSIST_KEY='ray-credit-demo-v2';
-function persistSave(){ try{ if(S.persist===false) return; localStorage.setItem(PERSIST_KEY, JSON.stringify({build:BUILD_ID, clock:_clock, wat:typeof _wat!=='undefined'?_wat:2, S})); }catch(e){} }
-function persistLoad(){ try{ const raw=localStorage.getItem(PERSIST_KEY); if(!raw) return false; const j=JSON.parse(raw); if(!j||j.build!==BUILD_ID||!j.S) return false;
+function persistSave(){ try{ if(S.persist===false) return; localStorage.setItem(PERSIST_KEY, JSON.stringify({build:BUILD_ID, day:RayData.TODAY, clock:_clock, wat:typeof _wat!=='undefined'?_wat:2, S})); }catch(e){} }
+/* a session saved on an earlier day is not restored: its invoice ages and activity labels belong to that day */
+function persistLoad(){ try{ const raw=localStorage.getItem(PERSIST_KEY); if(!raw) return false; const j=JSON.parse(raw); if(!j||j.build!==BUILD_ID||j.day!==RayData.TODAY||!j.S) return false;
   const base=S0(); S=Object.assign(base, j.S); _clock=j.clock||12; if(typeof _wat!=='undefined') _wat=j.wat||2;
   /* in-flight UI states cannot survive a refresh: settle them */
   S.mob=null; S.rs=null; S.ray.busy=false; S.wa.busy=false; S.demoOpen=false; S.demoNote=null;
@@ -183,7 +184,11 @@ function persistLoad(){ try{ const raw=localStorage.getItem(PERSIST_KEY); if(!ra
 function persistClear(){ try{ localStorage.removeItem(PERSIST_KEY); }catch(e){} }
 hooks.push(()=>{ clearTimeout(window._psT); window._psT=setTimeout(persistSave,300); });
 
-function engBoot(){ if(!persistLoad()) engInit(); else engineSync(); syncChase(true); const dc=document.getElementById('datechip'); if(dc) dc.textContent=S.date; aiCheck(); }
+function engBoot(){ if(!persistLoad()) engInit(); else engineSync(); syncChase(true); clockChip(); aiCheck(); }
+/* header clock: today's date and the current time, refreshed every half minute */
+function clockChip(){ const dc=document.getElementById('datechip'), tc=document.getElementById('timechip');
+  if(dc) dc.textContent=S.date; if(tc) tc.textContent=RayDates.fmtTime(RayDates.nowMinIST()); }
+setInterval(clockChip, 30000);
 /* ledgerPay lives in payment-truth.js: exact amount ≤ balance, verified source, unique reference */
 /* 30-day collections forecast: rule-based, not a prediction model */
 function forecast30(){ const end=RayDates.addDays(S.today,30); let t=0; for(const b of RayData.ALL){ const r=recOf(b.id); if(!r||r.band!=='Reliable') continue; for(const i of invsOf(b.id)){ if(i.bal>0&&RayDates.diffDays(i.due,S.today)>=0&&RayDates.diffDays(end,i.due)>=0) t+=i.bal-(i.disputed||0); } }

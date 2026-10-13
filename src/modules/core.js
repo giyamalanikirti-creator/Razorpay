@@ -67,11 +67,11 @@ const lakh = n => '₹' + (n/100000).toFixed(n%100000===0?0:1).replace(/\.0$/,''
 const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const bandBadge = (b,upper) => `<span class="badge ${b==='Reliable'?'b-g':b==='Watch'?'b-a':b==='Unrated'?'b-n':'b-r'}">${upper?b.toUpperCase():b}</span>`;
 
-/* ================= DATA (synthetic) ================= */
+/* ================= DATA ================= */
 const M = {name:'Agarwal Distributors', city:'Ludhiana', owner:'Rajesh Agarwal', first:'Rajesh', initials:'AD', mid:'MID · Ow3r9KxL2pQ'};
-const WEEK = {lastDue:2640000, lastCollected:2296800, pct:87, matched:18}; // last week's collections: synthetic history (paid invoices are not in the open-invoice dataset)
+const WEEK = {lastDue:2640000, lastCollected:2296800, pct:87, matched:18}; // last week's collections: repayment history (paid invoices are not in the open-invoice dataset)
 
-/* Buyer records come from lib/dataset.js (synthetic). CHEM keeps the 16 scenario buyers for display. */
+/* Buyer records come from lib/dataset.js. CHEM keeps the 16 scenario buyers for display. */
 const _view = f => ({id:f.id, name:f.name, area:f.area, band:f.expectedBand||'Reliable', out:f.invoices.reduce((a,i)=>a+i.bal,0), limit:f.limit, delay:f.delay, trend:f.trend, next:f.next, since:f.sinceLabel, usual:f.usual, synthetic:!!f.synthetic, isNew:!!f.isNew});
 const CHEM = RayData.FEATURED.map(_view);
 const GENV = RayData.GENERATED.map(_view);
@@ -242,30 +242,37 @@ async function planDraftAI(){
   S.planAI=null; rr(); }
 
 /* ================= STATE ================= */
+/* D(iso) moves a scenario date onto today's calendar; DL / DS format one. The scenario was written against
+   RayData.ANCHOR and everything is shifted by RayData.SHIFT days, so the workspace always reads as of today. */
+const D = RayData.D, DL = iso => RayDates.fmtDay(D(iso)), DS = iso => RayDates.fmtShort(D(iso));
+/* a seeded "earlier today" timestamp: the business-sensible time, or, if the workspace is opened before it,
+   a few minutes ago, so nothing in the activity trail is stamped in the future */
+function seedT(hhmm, backMin){ const now=RayDates.nowMinIST(); const want=RayDates.parseClock(hhmm);
+  return RayDates.fmtTime(want!=null&&now>=want+3?want:Math.max(0,now-backMin)); }
 const S0 = () => ({
-  date:'Mon, 5 Oct', time:'9:12 AM', today:RayData.TODAY,
+  date:RayDates.fmtDay(RayData.TODAY), time:RayDates.fmtTime(RayDates.nowMinIST()), today:RayData.TODAY,
   led:RayData.baseLedger(), dec:{}, interp:{}, promises:[], termsOf:{}, refRaise:{}, refTermsSet:{}, creditOps:[], opKeys:{}, _limv:0, persist:true,
-  outbox:[{id:'ob-seed-1', buyerId:'singh', channel:'whatsapp', kind:'reminder', status:'sent', at:RayDates.istMs('2026-10-01',10*60+30), via:'Dashboard'},{id:'ob-seed-2', buyerId:'singh', channel:'whatsapp', kind:'reminder', status:'sent', at:RayDates.istMs('2026-10-03',11*60), via:'RAY on WhatsApp'}],
+  outbox:[{id:'ob-seed-1', buyerId:'singh', channel:'whatsapp', kind:'reminder', status:'sent', at:RayDates.istMs(D('2026-10-01'),10*60+30), via:'Dashboard'},{id:'ob-seed-2', buyerId:'singh', channel:'whatsapp', kind:'reminder', status:'sent', at:RayDates.istMs(D('2026-10-03'),11*60), via:'RAY on WhatsApp'}],
   gupta:{band:'Watch', out:78400, oldest:38400, rec:'open', limitRec:60000, terms:14, limit:100000, curTerms:30, promise:null, alert:false, kept:false, paidVia:null},
   mand:{}, coll:{arora:'scheduled', mehta:'scheduled'}, rec:{gupta:{st:null, paid:0}, singhms:{st:null}}, learnG:false, sethiSeen:false,
   req:{}, pr:{}, inbox:false, mob:null, rayFrom:'home', rayFromRoute:'home',
   verified:{}, adj:{}, limits:{}, later:{}, chaseTo:{}, aa:null, step:-1, installed:false, inst:null,
-  bank:{st:'off', ever:false, sync:0, rows:BANK_ROWS(), learned:37, sugg:61, unid:22, filter:'All', expiry:false, till:'5 Oct 2027', last:'10:42 AM', next:'11:42 AM', sel:{hdfc:true,sbi:false}, aliases:[['guptatraders@okhdfc','Gupta Traders'],['ARORA RETAIL','Arora Retail'],['SETHI MART','Sethi Mart'],['kapoorstores@ybl','Kapoor Stores']], fetch:[['10:42 AM','3 new credits · 3 matched'],['9:42 AM','7 new credits · 6 matched · 1 suggested'],['8:42 AM','No new credits'],['7:42 AM','2 new credits · 2 matched']]},
+  bank:{st:'off', ever:false, sync:0, rows:BANK_ROWS(), learned:37, sugg:61, unid:22, filter:'All', expiry:false, till:`${RayDates.fmtShort(RayDates.addDays(RayData.TODAY,357))} ${RayData.TODAY.slice(0,4)*1+1}`, last:'10:42 AM', next:'11:42 AM', sel:{hdfc:true,sbi:false}, aliases:[['guptatraders@okhdfc','Gupta Traders'],['ARORA RETAIL','Arora Retail'],['SETHI MART','Sethi Mart'],['kapoorstores@ybl','Kapoor Stores']], fetch:[['10:42 AM','3 new credits · 3 matched'],['9:42 AM','7 new credits · 6 matched · 1 suggested'],['8:42 AM','No new credits'],['7:42 AM','2 new credits · 2 matched']]},
   chase:{}, planMore:{}, planScan:0, planAI:null, planAINote:'',
   pol:{v:1, watchLead:7, reliableLead:3, hist:[{v:1, at:'At setup', change:'Watch follow-ups 7 days before due · Reliable reminders 3 days before due', by:'RAY default policy'}]}, polDismissed:{},
   check:{step:'input', q:''}, newLife:false,
   ctl:{auto:'review', max:'2 per week', qf:'8 PM', qt:'9 AM', wa:true, sm:true, voice:false, dnc:[], net:true}, netView:'net',
   paused:false, stale:false, vermaMatched:false, jainReviewed:false,
   act:[
-   {d:'Today', t:'9:00 AM', ic:'chat', ti:'Morning brief sent on WhatsApp', de:'Gupta Traders decision · failed collection · Verma Retail reminder paused · this week’s collections', src:['conv'], who:'RAY on WhatsApp'},
-   {d:'Today', t:'9:02 AM', ic:'spark', ti:'Recommended actions prepared', de:'Credit decisions, collections and payment reviews · 1 reminder paused for payment verification', src:['led','rzp'], who:'RAY', st:'Awaiting approval'},
-   {d:'Today', t:'8:45 AM', ic:'refresh', ti:'Ledger synced from Marg ERP', de:`${RayData.stats().openInvoices.toLocaleString('en-IN')} open invoices · ${RayData.stats().buyers} buyers (synthetic)`, src:['led'], who:'Marg ERP connector (demo)'},
-   {d:'Yesterday', t:'7:30 PM', ic:'truck', ti:'Cheque collection recorded for City Mart', de:'₹42,000 · cheque #004512 · recorded by Rakesh Sharma on 3 Oct · not yet seen in the bank', src:['led'], who:'Salesperson app', chem:'City Mart'},
+   {d:'Today', t:seedT('9:00 AM',22), ic:'chat', ti:'Morning brief sent on WhatsApp', de:'Gupta Traders decision · failed collection · Verma Retail reminder paused · this week’s collections', src:['conv'], who:'RAY on WhatsApp'},
+   {d:'Today', t:seedT('9:02 AM',20), ic:'spark', ti:'Recommended actions prepared', de:'Credit decisions, collections and payment reviews · 1 reminder paused for payment verification', src:['led','rzp'], who:'RAY', st:'Awaiting approval'},
+   {d:'Today', t:seedT('8:45 AM',37), ic:'refresh', ti:'Ledger synced from Marg ERP', de:`${RayData.stats().openInvoices.toLocaleString('en-IN')} open invoices · ${RayData.stats().buyers} buyers`, src:['led'], who:'Marg ERP connector'},
+   {d:'Yesterday', t:'7:30 PM', ic:'truck', ti:'Cheque collection recorded for City Mart', de:`₹42,000 · cheque #004512 · recorded by Rakesh Sharma on ${DS('2026-10-03')} · not yet seen in the bank`, src:['led'], who:'Salesperson app', chem:'City Mart'},
    {d:'Yesterday', t:'6:10 PM', ic:'rupee', ti:'₹26,500 received from Verma Retail', de:'UPI · Razorpay Smart Collect · arrived without an invoice reference', src:['rzp'], who:'Razorpay', kind:'unmatched', buyer:'verma'},
-   {d:'Sat, 3 Oct', t:'10:02 AM', ic:'alert', ti:'UPI Autopay attempt failed · Gupta Traders', de:'₹20,000 · INV-24790 · insufficient balance · not marked as defaulted · smart recovery started', src:['rzp'], who:'Razorpay UPI Autopay', chem:'Gupta Traders'},
-   {d:'Thu, 1 Oct', t:'7:00 PM', ic:'alert', ti:'Bansal General Store moved Watch → Risky', de:'Avg delay 41 days vs usual 22 · 2 broken promises', src:['led','rzp'], who:'RAY'},
-   {d:'Thu, 1 Oct', t:'12:40 PM', ic:'check', ti:'Credit limit for Arora Retail raised to ₹1,20,000', de:'RAY recommendation · updated in Marg ERP', src:['led'], who:'Approved by Rajesh Agarwal · Dashboard'},
-   {d:'Mon, 28 Sep', t:'9:05 AM', ic:'send', ti:'14 WhatsApp reminders sent', de:'Approved as a batch · 11 paid within 48 hours', src:['conv'], who:'Approved by Rajesh Agarwal · RAY on WhatsApp'},
+   {d:DL('2026-10-03'), t:'10:02 AM', ic:'alert', ti:'UPI Autopay attempt failed · Gupta Traders', de:'₹20,000 · INV-24790 · insufficient balance · not marked as defaulted · smart recovery started', src:['rzp'], who:'Razorpay UPI Autopay', chem:'Gupta Traders'},
+   {d:DL('2026-10-01'), t:'7:00 PM', ic:'alert', ti:'Bansal General Store moved Watch → Risky', de:'Avg delay 41 days vs usual 22 · 2 broken promises', src:['led','rzp'], who:'RAY'},
+   {d:DL('2026-10-01'), t:'12:40 PM', ic:'check', ti:'Credit limit for Arora Retail raised to ₹1,20,000', de:'RAY recommendation · updated in Marg ERP', src:['led'], who:'Approved by Rajesh Agarwal · Dashboard'},
+   {d:DL('2026-09-28'), t:'9:05 AM', ic:'send', ti:'14 WhatsApp reminders sent', de:'Approved as a batch · 11 paid within 48 hours', src:['conv'], who:'Approved by Rajesh Agarwal · RAY on WhatsApp'},
   ],
   ray:{msgs:[], chip:null, busy:false},
   wa:{msgs:null, busy:false, sent:false, guptaAsked:false, voice:false, unread:1},
@@ -275,8 +282,8 @@ const S0 = () => ({
 });
 let S = S0();
 const log = (e) => { S.act.unshift(Object.assign({d:S.today===RayData.TODAY?'Today':S.date, t:nowT()}, e)); };
-let _clock = 12;
-function nowT(){ _clock+=1; const m=_clock; const h=9+Math.floor(m/60); return `${h>12?h-12:h}:${String(m%60).padStart(2,'0')} ${h>=12?'PM':'AM'}` }
+let _clock = RayDates.nowMinIST();
+function nowT(){ _clock+=1; return RayDates.fmtTime(_clock); }
 
 /* ================= UI HELPERS ================= */
 function toast(msg, action){
@@ -357,7 +364,7 @@ function shellInit(){
   gs.addEventListener('input',()=>{
     const q=gs.value.trim().toLowerCase(); if(!q){res.classList.remove('open');return}
     const pages=[['RAY Credit','raahi/overview','Agent Studio'],['Agent Studio','studio','Payments'],['Ray AI','ray','Ray'],['Actions','raahi/actions','RAY'],['Credit Portfolio','raahi/portfolio','RAY'],['Transactions','transactions','Payments'],['Reports','reports','Payments']];
-    const hits=[...CHEM.concat(GENV).filter(c=>c.name.toLowerCase().includes(q)).slice(0,5).map(c=>[c.name,'raahi/buyer/'+c.id,c.synthetic?'Buyer · synthetic record':'Buyer · RAY']),...pages.filter(p=>p[0].toLowerCase().includes(q))].slice(0,6);
+    const hits=[...CHEM.concat(GENV).filter(c=>c.name.toLowerCase().includes(q)).slice(0,5).map(c=>[c.name,'raahi/buyer/'+c.id,c.synthetic?'Generated record':'Buyer · RAY']),...pages.filter(p=>p[0].toLowerCase().includes(q))].slice(0,6);
     res.innerHTML=hits.length?hits.map(h=>`<button onclick="go('${h[1]}');document.getElementById('gsq').value='';document.getElementById('gsr').classList.remove('open')">${I(h[1].includes('buyer')?'user':'search',16)}<span>${h[0]}</span><small>${h[2]}</small></button>`).join(''):`<div style="padding:10px 12px;color:var(--muted)">No results for “${esc(q)}”</div>`;
     res.classList.add('open');
   });

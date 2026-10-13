@@ -14,7 +14,7 @@ function prRefresh(){ rr(); if(S.mob) mobRender(); }
 A.prMark=(id)=>{ const c=chem(id), p=PAYREV[id];
   prOpen(`<div class="pr-sh"><h3>Mark this invoice as paid?</h3><div class="pr-kv"><div><span>Buyer</span><b>${c.name}</b></div><div><span>Invoice</span><b>${p.inv}</b></div><div><span>Amount</span><b class="num">${inr(p.amt)}</b></div></div>
    <p class="small muted mt12">Use this when you have independently confirmed that the payment was received.</p>
-   <div class="field mt12"><label>Payment received on <span class="muted">(optional)</span></label><input class="input" id="pr-date" type="date" value="2026-10-05"></div>
+   <div class="field mt12"><label>Payment received on <span class="muted">(optional)</span></label><input class="input" id="pr-date" type="date" value="${S.today}"></div>
    <div class="field mt8"><label>Add note <span class="muted">(optional)</span></label><input class="input" id="pr-note" placeholder="For example, cash collected by salesperson"></div>
    <div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="A.prMarkDo('${id}')">Mark as received</button></div></div>`); };
 A.prMarkDo=(id)=>{ const c=chem(id), p=PAYREV[id], n=(document.getElementById('pr-note')||{}).value||'';
@@ -38,17 +38,18 @@ A.prMatchRzp=(id)=>{ const c=chem(id), p=PAYREV[id], pos=p&&p.possible; if(!pos)
   const st=prS(id); st.st='rzp'; if(id==='verma') S.vermaMatched=true;
   log({ic:'match',ti:`Payment matched to ${p.inv}`,de:`${c.name} · ${inr(pos.amt)} · Razorpay Smart Collect · ${pos.ref} · balance ${inr(r.event.meta.balanceBefore)} → ${inr(r.event.meta.balanceAfter)}${r.event.meta.balanceAfter===0?' · reminders cancelled':''}`,src:['rzp'],who:'Confirmed by '+prWho(),chem:c.name}); prRefresh(); toast(r.event.meta.balanceAfter===0?'Payment matched · reminder cancelled':`Matched · ${inr(r.event.meta.balanceAfter)} still due`); };
 A.prLater=(id)=>{ const p=PAYREV[id];
-  const opts=[['Tomorrow','6 Oct'],['In 3 days','8 Oct'],['On due date of next invoice','12 Oct'],['Choose date','']];
-  prOpen(`<div class="pr-sh"><h3>Remind you when?</h3><div class="col gap8 mt12">${opts.map((o,i)=>`<div role="button" class="radio-card pr-opt ${i===1?'on':''}" data-d="${o[1]}" style="padding:11px 14px" onclick="document.querySelectorAll('.pr-opt').forEach(x=>x.classList.remove('on'));this.classList.add('on')"><span class="radio"></span><span class="grow">${o[0]}</span><span class="xs muted">${o[1]||`<input class="input" id="pr-cd" type="date" value="2026-10-09" style="height:30px;width:140px" onclick="event.stopPropagation();document.querySelectorAll('.pr-opt').forEach(x=>x.classList.remove('on'));this.closest('.pr-opt').classList.add('on')">`}</span></div>`).join('')}</div>
+  const nx=nextOpenInv(id), T=S.today;
+  const opts=[['Tomorrow',RayDates.fmtShort(RayDates.addDays(T,1))],['In 3 days',RayDates.fmtShort(RayDates.addDays(T,3))],['On due date of next invoice',nx?RayDates.fmtShort(nx.due):RayDates.fmtShort(RayDates.addDays(T,7))],['Choose date','']];
+  prOpen(`<div class="pr-sh"><h3>Remind you when?</h3><div class="col gap8 mt12">${opts.map((o,i)=>`<div role="button" class="radio-card pr-opt ${i===1?'on':''}" data-d="${o[1]}" style="padding:11px 14px" onclick="document.querySelectorAll('.pr-opt').forEach(x=>x.classList.remove('on'));this.classList.add('on')"><span class="radio"></span><span class="grow">${o[0]}</span><span class="xs muted">${o[1]||`<input class="input" id="pr-cd" type="date" value="${RayDates.addDays(S.today,4)}" style="height:30px;width:140px" onclick="event.stopPropagation();document.querySelectorAll('.pr-opt').forEach(x=>x.classList.remove('on'));this.closest('.pr-opt').classList.add('on')">`}</span></div>`).join('')}</div>
    <p class="small mt12" style="color:var(--strong)">${I('lock',12)} RAY will not contact the buyer yet.</p><p class="xs muted mt4">This is a reminder for you. Nothing is sent to ${chem(id).name}.</p>
    <div class="pr-btns mt16"><button class="btn btn-s" onclick="prClose()">Cancel</button><button class="btn btn-p" onclick="A.prLaterDo('${id}')">Set reminder</button></div></div>`); };
-A.prLaterDo=(id)=>{ const o=document.querySelector('.pr-opt.on'); let d=o?o.dataset.d:'8 Oct'; if(!d){ const v=(document.getElementById('pr-cd')||{}).value||'2026-10-09'; const dt=new Date(v); d=dt.getDate()+' '+dt.toLocaleString('en-GB',{month:'short'}); }
+A.prLaterDo=(id)=>{ const o=document.querySelector('.pr-opt.on'); let d=o?o.dataset.d:RayDates.fmtShort(RayDates.addDays(S.today,3)); if(!d){ const v=(document.getElementById('pr-cd')||{}).value||RayDates.addDays(S.today,4); const dt=new Date(v); d=dt.getDate()+' '+dt.toLocaleString('en-GB',{month:'short'}); }
   const st=prS(id); st.st='scheduled'; st.when=d; if(S.chase[id]&&S.chase[id].st==='draft') S.chase[id].st='skipped';
   log({ic:'cal',ti:`Follow-up scheduled for ${d}`,de:`${chem(id).name} · ${PAYREV[id].inv} · internal reminder · buyer not contacted`,src:[],who:'Set by '+prWho(),chem:chem(id).name}); prClose(); prRefresh(); toast(`Reminder scheduled for ${d}`); };
 function prPossible(id){ const p=PAYREV[id], st=prS(id);
   if(id==='verma'&&!S.vermaMatched) return {amt:p.amt, src:'Razorpay credit'};
   if(S.bank.st==='on'&&p.cands.length&&p.cands[0].conf==='High') return {amt:p.cands[0].amt, src:'bank credit'};
-  if(p.sp) return {amt:p.sp.amt, msg:`Rakesh Sharma recorded a ${inr(p.sp.amt)} cheque collection from ${chem(id).name} on 3 Oct.`};
+  if(p.sp) return {amt:p.sp.amt, msg:`Rakesh Sharma recorded a ${inr(p.sp.amt)} cheque collection from ${chem(id).name} on ${DS('2026-10-03')}.`};
   return null; }
 A.prSend=(id,edit)=>{ const c=chem(id), p=PAYREV[id];
   prOpen(`<div class="pr-sh"><h3>Send reminder</h3><div class="small muted mt4">To: <b style="color:var(--strong)">${c.name}</b> · WhatsApp via RAY</div>

@@ -6,8 +6,8 @@
 const KIR = { id:'guptak', inv:'INV-2048', amt:40000, issued:'2 Sep 2026', due:'2 Oct 2026', dueTxt:'3 days overdue', link:'rzp.io/i/AGD-2048', ph:'+91 98••••5521' };
 const KIR_ROUTE = 'pay/INV-2048';
 
-/* ---------- dates: demo "today" is Mon, 5 Oct 2026; never propose a date that has passed ---------- */
-const K_TODAY = new Date(2026,9,5);
+/* ---------- dates: the retailer's calendar is today's; never propose a date that has passed ---------- */
+const K_TODAY = (()=>{ const [y,m,d]=(RayData.TODAY).split('-').map(Number); return new Date(y,m-1,d); })();
 const K_WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], K_MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const kAdd = n => { const d=new Date(K_TODAY); d.setDate(d.getDate()+n); return d; };
 const kIso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -20,7 +20,7 @@ const K_AUTO_DAYS = 14, K_MAX_DAYS = 45;
 const kAutoMax = () => kIso(kAdd(K_AUTO_DAYS)), kMax = () => kIso(kAdd(K_MAX_DAYS)), kMin = () => kIso(kAdd(1));
 const kNeedsApproval = s => s > kAutoMax();
 
-/* ---------- shared state (lazily created so demo reset works) ---------- */
+/* ---------- shared state (lazily created so a reset works) ---------- */
 function kirS(){ if(!S.kir) S.kir={sent:false, sentAt:null, msg:null, editing:false, view:'home', now:15000, date:kNextFourth(), opt:'sugg', paying:false,
   kind:null, pay:'none', commit:'none', outcome:null, dispute:null, notif:false, submittedAt:null}; return S.kir; }
 const kBal = () => KIR.amt - kirS().now;
@@ -94,7 +94,7 @@ function vKirInvoice(){
   const rec=`<div class="card pad mt16 rec"><div class="row between"><div class="row gap8">${stage('COLLECT')}<span class="h3">RAY recommendation</span></div><span class="ai-tag">${clover(14)} RAY</span></div>
     <div class="say mt12">Send a payment link that lets Gupta Kirana Store pay part now and propose a date for the rest.</div>
     <div class="col gap6 mt12 small">${['Usually settles around the 4th of the month (6 of the last 8 invoices)','3 days overdue on ₹40,000, with no broken promises in 90 days','A plan option is more likely to recover part of the amount now than a full-amount reminder'].map(x=>`<div class="row gap8" style="align-items:flex-start"><span style="color:var(--link);flex-shrink:0;margin-top:2px">${I('check',13,2.4)}</span>${x}</div>`).join('')}</div>
-    <div class="xs muted mt8">Illustrative signals from synthetic demo data.</div>
+    <div class="xs muted mt8">Illustrative signals from this buyer’s repayment record.</div>
     <div class="row gap8 mt16 wrap"><button class="btn btn-p" onclick="A.kirSend()">${k.sent?'Send payment link again':'Send payment link'}</button><button class="btn btn-s" onclick="A.kirPreview()">Preview kirana experience</button>${k.sent?`<span class="row gap6 small" style="color:var(--g)">${I('check',14,2.4)} Link sent ${k.sentAt||''} · simulated delivery</span>`:''}</div></div>`;
   let cm='';
   if(plan){ const pend=k.commit==='pending';
@@ -150,7 +150,7 @@ function kirPage(){
   else if(v==='plan'){ const sugg=kNextFourth(), d14=kIso(kAdd(K_AUTO_DAYS)), d21=kIso(kAdd(21));
     const opt=(o,date,l,s)=>{ const need=kNeedsApproval(date); return `<button class="kp-date ${k.opt===o?'on':''}" onclick="A.kirPick('${o}','${date}')"><span class="radio"></span><div class="grow"><b>${kFmt(date)}</b><span>${l}</span></div><span class="kp-dt ${need?'ap':'ok'}">${need?'Needs supplier approval':'Confirmed instantly'}</span></button>`; };
     body=`${back()}<div class="kp-h">Schedule your payment</div><div class="kp-p">Choose a payment plan that works for your cash flow.</div>
-     <div class="kp-ai"><span class="ai-tag" style="font-size:11px">${clover(11)} Suggested by RAY</span><div class="mt4">Based on your previous payment pattern, you typically settle dues around the 4th of the month.</div><div class="kp-sg mt8"><div><span>Pay now</span><b>₹15,000</b></div><div><span>Pay on ${kShort(sugg)}</span><b>₹25,000</b></div></div><div class="xs muted mt8">Illustrative suggestion from synthetic demo data.</div></div>
+     <div class="kp-ai"><span class="ai-tag" style="font-size:11px">${clover(11)} Suggested by RAY</span><div class="mt4">Based on your previous payment pattern, you typically settle dues around the 4th of the month.</div><div class="kp-sg mt8"><div><span>Pay now</span><b>₹15,000</b></div><div><span>Pay on ${kShort(sugg)}</span><b>₹25,000</b></div></div><div class="xs muted mt8">Illustrative suggestion from this buyer’s payment pattern.</div></div>
      <div class="kp-card"><label class="kp-lbl">Amount to pay now</label><div class="kp-in"><span>₹</span><input inputmode="numeric" value="${k.now}" oninput="A.kirAmt(this)"></div><div class="kp-err" id="k-err" style="display:none">Enter between ₹1,000 and ₹39,000</div>
       <div class="row between small mt8"><span class="muted">Balance for later</span><b class="num" id="k-bal" style="color:var(--strong)">${inr(kBal())}</b></div></div>
      <div class="kp-card"><label class="kp-lbl">When will you pay the balance?</label><div class="col gap6 mt8">${opt('sugg',sugg,'Around your usual 4th of the month · suggested')}${opt('d14',d14,'Within Agarwal Distributors’ plan rules')}${opt('d21',d21,'Three weeks from today')}
@@ -182,6 +182,6 @@ function kirActionRow(i){ const k=kirS(), c=chemView(chem(KIR.id));
   return aRow(i,{id:'act-kir',name:c.name,band:c.band,area:KIR.inv,amt:inr(KIR.amt),kind:k.kind==='plan'?'Payment plan':'Missed payment',kc:k.kind?'k-credit':'k-held',reason,chan:'Payment link',chanIc:'link',
     right:k.kind==='plan'&&k.commit==='pending'?`<button class="btn btn-p btn-sm" onclick="go('raahi/invoice/${KIR.inv}')">Review commitment</button>`:`<button class="btn ${k.sent?'btn-s':'btn-p'} btn-sm" onclick="go('raahi/invoice/${KIR.inv}')">${k.sent?'Open invoice':'Send payment link'}</button>`}); }
 
-/* demo helper: submit the suggested plan instantly (used by the guided story) */
+/* helper: submit the suggested plan instantly (used by the guided story) */
 function kirSubmitNow(){ const k=kirS(); if(k.kind) return; if(!k.sent) kirDoSend(true); k.kind='plan'; k.pay='initiated'; k.commit=kNeedsApproval(k.date)?'pending':'auto'; k.notif=true; k.view='done'; k.submittedAt=nowT();
   log({ic:'cal',ti:'New payment commitment from Gupta Kirana Store',de:`${inr(k.now)} payable now (simulated payment initiated) · ${inr(kBal())} proposed for ${kFmt(k.date)} · ${k.commit==='pending'?'needs your approval':'confirmed within your plan rules'}`,src:['rzp'],who:'Gupta Kirana Store · Razorpay payment link',chem:'Gupta Kirana Store'}); }

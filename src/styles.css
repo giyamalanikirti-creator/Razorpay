@@ -1197,7 +1197,7 @@ body.paymode .pay-root{display:block}
 .rd-sep b{color:var(--strong)}
 .eval-t th{font-size:11.5px;white-space:normal}
 @media (max-width:900px){.pilot-facts,.rd-g{grid-template-columns:minmax(0,1fr)}.rd-sep{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.dc-k{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;opacity:.7}
+.dc-k{font-size:11.5px;opacity:.72;font-variant-numeric:tabular-nums}
 @media (max-width:640px){.dc-k{display:none}}
 /* ---------- responsive layer (tablet and phone): same design, collapsible navigation, no page-level side scroll ---------- */
 .menu-btn{display:none;margin-right:6px}

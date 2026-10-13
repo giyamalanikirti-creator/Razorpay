@@ -11,7 +11,8 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
-PAGE = (ROOT / "index.html").as_uri()
+PIN = "2026-10-05"
+PAGE = (ROOT / "index.html").as_uri() + f"?date={PIN}"
 SHOTS = ROOT / "tests" / "results" / "screens"; SHOTS.mkdir(parents=True, exist_ok=True)
 VIEWPORTS = [(1440, 900), (1280, 800), (768, 1024), (390, 844)]
 ROUTES = ["raahi/overview", "raahi/request/gupta", "raahi/buyer/gupta", "raahi/recover/gupta", "raahi/actions", "raahi/activity", "raahi/how", "raahi/checks", "raahi/payment/verma"]

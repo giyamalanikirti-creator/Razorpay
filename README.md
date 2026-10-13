@@ -12,9 +12,9 @@ This repository contains a clickable product prototype of RAY Credit as an agent
 - **RAY on WhatsApp:** alerts, questions and forwarded buyer credit requests
 - **RAY Credit for Mobile:** one decision at a time inside the Razorpay app
 
-> Concept prototype built on synthetic data (Agarwal Distributors, Ludhiana). It is not a live Razorpay product and does not connect to any real account, bank or WhatsApp number.
+> Prototype built on a seeded sample portfolio (Agarwal Distributors, Ludhiana). It is not a live Razorpay product and connects to no real account, bank or WhatsApp number. Dates are live: the scenario is shifted onto today's calendar, so an invoice that is two days overdue stays two days overdue whenever you open it.
 
-**What actually works:** a deterministic, explainable credit policy engine that evaluates all 642 synthetic buyers; an event-driven repayment ledger that re-runs the policy when payments, failures, promises or disputes are recorded; merchant controls enforced at send time; per-buyer network consent; a daily chase plan rebuilt from every buyer with dues (amount due × repayment risk × urgency); failed collections, payment reviews and scheduled autopays computed from ledger events and mandates; one rule-based answer engine for Ray AI, RAY on WhatsApp and mobile that reads the current ledger (optional live AI, server-side, only for free-form questions and only when a key is configured; off on the public deployment); one validated command path for approvals with exact values, double-click protection and full-state undo; recovery status derived from the ledger so every surface agrees; a learning loop that suggests follow-up policy changes from outcomes for the owner to approve, version and undo; a Checks page that shows only tests that ran: live journey and policy checks in the browser, plus the recorded unit and Playwright runs for this build; and a secure `/api/parse-promise` endpoint for self-hosted deployments with an API key. Everything else (ERP, bank feed, WhatsApp, mandates, the cross-distributor network) is simulated and labelled. Full details: [`docs/TECHNICAL.md`](docs/TECHNICAL.md).
+**What actually works:** a deterministic, explainable credit policy engine that evaluates all 642 buyers; an event-driven repayment ledger that re-runs the policy when payments, failures, promises or disputes are recorded; merchant controls enforced at send time; per-buyer network consent; a daily chase plan rebuilt from every buyer with dues (amount due × repayment risk × urgency); failed collections, payment reviews and scheduled autopays computed from ledger events and mandates; one rule-based answer engine for Ray AI, RAY on WhatsApp and mobile that reads the current ledger (optional live AI, server-side, only for free-form questions and only when a key is configured; off on the public deployment); one validated command path for approvals with exact values, double-click protection and full-state undo; recovery status derived from the ledger so every surface agrees; a learning loop that suggests follow-up policy changes from outcomes for the owner to approve, version and undo; a Checks page that shows only tests that ran: live journey and policy checks in the browser, plus the recorded unit and Playwright runs for this build; and a secure `/api/parse-promise` endpoint for self-hosted deployments with an API key. Everything else (ERP, bank feed, WhatsApp, mandates, the cross-distributor network) is simulated and labelled. Full details: [`docs/TECHNICAL.md`](docs/TECHNICAL.md).
 
 ## Why the network matters
 
@@ -79,9 +79,9 @@ No install needed. Open `index.html` in a browser, or visit the deployed link. O
 
 | Key | Action |
 |---|---|
-| `Shift` + `D` | Open the guided demo story |
-| `→` or `N` | Next demo step |
-| `←` | Previous demo step |
+| `Shift` + `D` | Open the guided walkthrough |
+| `→` or `N` | Next step |
+| `←` | Previous step |
 | `Esc` | Close the story panel |
 
 The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **RAY Credit for Mobile**.
@@ -99,7 +99,7 @@ The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **R
 │   ├── events.js               # applyRepaymentEvent(): event model and invoice ledger
 │   ├── guards.js               # sendGate(): DNC, weekly limit, quiet hours, channels, stale data
 │   ├── promise-rules.js        # schema, prompt, validation, labelled rule-based fallback
-│   ├── dataset.js              # seeded synthetic portfolio: 642 buyers, 1,184 open invoices
+│   ├── dataset.js              # seeded sample portfolio: 642 buyers, 1,184 open invoices (dates shifted onto today)
 │   └── dates.js                # IST calendar helpers
 ├── src/
 │   ├── template.html · styles.css · assets/
@@ -108,13 +108,13 @@ The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **R
 │   ├── engine · journeys · interpreter · reversal · network · api · ask-api · live-provider .test.js   # node --test
 │   ├── e2e_journeys.py         # Playwright: journeys with real clicks, reversal, mocked live-AI UI, repeatability
 │   ├── responsive.py           # Playwright: 1440, 1280, 768 and 390 px layout checks
-│   ├── ui_smoke.py             # Playwright: smoke, every route, both guided demos
+│   ├── ui_smoke.py             # Playwright: smoke, every route, both guided walkthroughs
 │   └── results/                # last recorded run of every suite (embedded in the Checks page)
 │   └── eval/                   # 54 labelled Hinglish and Devanagari messages + RESULTS.md
 ├── scripts/
 │   ├── build.py                # bundles lib/ + src/ into index.html
 │   ├── eval_interpreter.js     # interpreter evaluation
-│   └── smoke_test.py           # runs every demo step
+│   └── smoke_test.py           # runs every walkthrough step
 └── docs/TECHNICAL.md           # architecture, policy rules, mock manifest, tests, limitations
 ```
 
@@ -126,7 +126,7 @@ Plain JavaScript with string templates and a hash router. No framework and no ru
 python3 scripts/build.py        # writes index.html
 npm test                        # unit, journey and API tests (Node 18+)
 npm run test:e2e                # browser journeys (pip install playwright)
-npm run test:ui                 # browser smoke + guided demos
+npm run test:ui                 # browser smoke + guided walkthroughs
 npm run test:responsive         # layout at 1440, 1280, 768 and 390 px
 npm run test:all                # all suites, results embedded into the Checks page
 npm run eval                    # interpreter evaluation; live model only with an API key

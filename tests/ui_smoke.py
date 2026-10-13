@@ -8,7 +8,8 @@ import asyncio, sys
 from pathlib import Path
 from playwright.async_api import async_playwright
 
-PAGE = (Path(__file__).resolve().parent.parent / "index.html").as_uri()
+PIN = "2026-10-05"   # the date the scenario was authored against; the app runs on the real date without it
+PAGE = (Path(__file__).resolve().parent.parent / "index.html").as_uri() + f"?date={PIN}"
 results = []
 
 def check(name, cond, detail=""):

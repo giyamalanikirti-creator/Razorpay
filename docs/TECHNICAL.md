@@ -5,7 +5,7 @@ RAY Credit is a concept prototype for Razorpay Agent Studio (Razorpay x ISB AI P
 ## 1. Architecture
 
 ```
-DATA SOURCES (synthetic / mocked)
+DATA SOURCES (sample data / mocked)
   Marg-style ledger · Razorpay payment events · Connected Banking+ feed · WhatsApp replies · consented network signals
         │
 DATA PROCESSING                     lib/events.js, lib/dataset.js, src/modules/engine.js
@@ -44,7 +44,7 @@ The front end is still one self-contained `index.html` (vanilla JS, string templ
 | Daily chase plan | `src/modules/core.js` (`planItem`, `syncChase`) | Working logic, rebuilt on every ledger change |
 | Computed collection lists | `src/modules/collections.js` (`syncLists`) | Working logic over ledger events, mandates and payment signals |
 | Checks, learning loop, How it works | `src/modules/workspace.js` (`runChecks`, `policyProposal`, `vHow`) | Working logic; outcome history is synthetic |
-| Synthetic portfolio | `lib/dataset.js` | Synthetic data, seeded |
+| Sample portfolio | `lib/dataset.js` | Seeded sample data, dates shifted onto today |
 | Engine bridge (single source of truth) | `src/modules/engine.js` | Working logic |
 | Explanations, outcomes, interpreter UI, disclosures | `src/modules/explain.js` | Working logic |
 
@@ -65,7 +65,7 @@ The front end is still one self-contained `index.html` (vanilla JS, string templ
 | Bank feed via RazorpayX Connected Banking+ | | ✓ | |
 | WhatsApp delivery and buyer replies | | ✓ | |
 | UPI Autopay / eNACH mandates and debits | | ✓ | |
-| Razorpay network repayment signals | | ✓ synthetic, aggregated | production network |
+| Razorpay network repayment signals | | ✓ sample data, aggregated | production network |
 | Credit approvals written to the ledger | | ✓ mock ledger in browser state | |
 | RAY Payment Passport | | | ✓ |
 | Regulated financing via a lending partner | | | ✓ (separate from trade-credit decisions) |
@@ -156,6 +156,12 @@ Featured scenarios produced by these rules (not special-cased; tests check the p
 
 Two showcase numbers changed because the rules now compute them: Bansal General Store ₹80,000 → ₹60,000 (Risky = 50% of ₹1,20,000), Mehta Enterprises' request is offered on 21-day terms (one step shorter) instead of 14.
 
+### Live dates
+
+The scenario was authored against an anchor of **Mon 5 Oct 2026**. `lib/dataset.js` computes `TODAY` from the real IST clock, `SHIFT = diffDays(TODAY, ANCHOR)`, and exports `D(iso) = addDays(iso, SHIFT)`. Every authored date — invoice issued and due dates, the seeded `AUTOPAY_FAILED` event, seeded outbox entries and activity rows — passes through `D()`, so relative timing is preserved exactly (an invoice two days overdue at the anchor is two days overdue today) while the workspace always reads as of today. `TREND_MONTHS` derives the six-month repayment-trend labels from the current month. The header chip shows today's date and the current IST time, refreshed every 30 seconds; the session clock (`nowT()`) starts at the real time of day. Relationship start dates (`since`) are historical and are not shifted.
+
+Pin the date for deterministic tests: `RAY_TODAY=YYYY-MM-DD` (Node) or `?date=YYYY-MM-DD` (browser). All four browser suites load the page with `?date=2026-10-05`, so their assertions stay anchored while the deployed app runs on the real date. Reader checks on the Checks page resolve against the Monday of the current week, so weekday phrases ("Monday", "Friday") and relative ones ("kal", "parso") behave as written.
+
 ### Credit-release arithmetic
 
 `lib/credit-math.js` `releasePlan({outstanding, requested, limit, collected?})` is the only place that computes how much of a requested order can go on credit: headroom = max(0, limit − outstanding); collect before the full order = outstanding + requested − limit (null when the order exceeds the limit itself); `after(c)` gives the balance and releasable amount after a collection. Outstanding always comes from the ledger (`outOf`). Every surface prints the sentence built from this plan (`releaseLine`, `releaseBreakdown`, `nextOrderLine` in `credit-requests.js`). Gupta: ₹78,400 + ₹50,000 − ₹60,000 = ₹68,400; after ₹38,400, ₹20,000 can be released.
@@ -203,7 +209,7 @@ event → applyRepaymentEvent() → ledger
 * **Possible-payment override.** A reminder paused for an unreviewed possible payment can be sent only with a reason and an explicit confirmation (`A.overrideStart`), logged with approver, invoice, unresolved evidence and result. The override clears only that pause: Do not contact, paused automation, a stale ledger, a paid invoice, an unverified buyer claim, channel and weekly limits and quiet hours still apply, and the payment review stays open.
 * **One evidence source for buyer facts.** `partialEvidence(id)` (part-paid promise history + partial payments verified in this demo) feeds the credit assessment, the recovery rationale and answers. With no evidence, recovery says "Allowing partial payment gives the buyer a way to start clearing the outstanding amount." Days to pay (invoice → payment) is labelled separately from days overdue, and a part-paid invoice shows what is already recorded before saying what is still being searched for.
 * **Payment reversal** (`payReverse`) is idempotent (op key per payment), validated before anything is written, and applies to every part of a split payment or none; see section 7.
-* Events and decisions live in app state and, by default, in this browser's `localStorage` (toggle in "What is real"). **Reset demo** asks for confirmation, then clears both and restores the Monday 9 AM baseline.
+* Events and decisions live in app state and, by default, in this browser's `localStorage` (toggle in "What is real"). **Reset workspace** asks for confirmation, then clears both and restores today's baseline.
 
 ## 9. Testing approach and results
 
@@ -256,7 +262,7 @@ Set them in Vercel → Project → Settings → Environment Variables (Productio
 
 ## 13. Known limitations
 
-* All data is synthetic. Integrations (ERP, bank feed, WhatsApp, mandates, network) are simulated in the browser; "approvals written to the ledger" update browser state only.
+* All portfolio data is sample data. Integrations (ERP, bank feed, WhatsApp, mandates, network) are simulated in the browser; "approvals written to the ledger" update browser state only.
 * The policy weights are illustrative and were calibrated so the scenarios are plausible; they have not been validated on real repayment data.
 * Signals for the 626 generated buyers are deliberately steady background; only the 16 scenario buyers carry recent changes and detailed history.
 * The 30-day collections forecast is a rule (Reliable buyers' invoices due in 30 days plus approved commitments), not a prediction model.

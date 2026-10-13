@@ -17,7 +17,7 @@ function paySources(){
     {key:'unid', label:'Unmatched Razorpay credits', ok:true, fresh:`checked ${nowLabel()}`},
     {key:'bank', label:'Your bank account (Connected Banking+)', ok:bankOn, fresh:bankOn?`last fetch ${S.bank.last||'today'}`:bankPaused?'paused by you':'not connected', fix:bankOn?null:'A payment by NEFT, a UPI app or cheque into your bank would not show here.'},
     {key:'sp', label:'Salesperson collections (app, simulated)', ok:true, fresh:'synced today'},
-    {key:'led', label:'Your ledger (Marg, demo connector)', ok:!S.stale, fresh:S.stale?'last synced 31 hours ago':'synced 8:45 AM', fix:S.stale?'Payments recorded in Marg since then are not visible.':null},
+    {key:'led', label:'Your ledger (Marg ERP)', ok:!S.stale, fresh:S.stale?'last synced 31 hours ago':'synced 8:45 AM', fix:S.stale?'Payments recorded in Marg since then are not visible.':null},
   ]; }
 /* result for one invoice (or the whole buyer when inv is null) */
 function payCheck(id, inv){
@@ -66,11 +66,11 @@ const recoveriesDone = () => Object.keys(FAILS).filter(id=>{ const r=recoveryOf(
 const recoveringAmt = () => recoveriesActive().reduce((a,id)=>a+recoveryOf(id).balance,0);
 
 /* ---------- one evidence source for "has this buyer paid in parts?" (credit assessment, recovery, mobile, answers) ----------
-   history: part-paid promises in the buyer's record (merchant-confirmed promise history, synthetic, last 90 days)
-   session: partial payments verified in this demo (ledger events, reversed ones excluded) */
+   history: part-paid promises in the buyer's record (merchant-confirmed promise history, last 90 days)
+   session: partial payments verified in this session (ledger events, reversed ones excluded) */
 function partialEvidence(id){ const s=sigOf(id); if(!s) return {hist:0, session:0, any:false, summary:'None on record'};
   const hist=(s.promises&&s.promises.partial)||0, session=evOf(id).filter(e=>e.type==='PAYMENT_PARTIALLY_RECEIVED'&&!RayEvents.isReversed(S.led,e.id)).length;
-  const parts=[]; if(hist) parts.push(`${hist} missed promise${hist===1?' was':'s were'} part-paid in the last 90 days (promise history, synthetic)`); if(session) parts.push(`${session} partial payment${session===1?'':'s'} verified in this demo`);
+  const parts=[]; if(hist) parts.push(`${hist} missed promise${hist===1?' was':'s were'} part-paid in the last 90 days (promise history)`); if(session) parts.push(`${session} partial payment${session===1?'':'s'} verified in this session`);
   return {hist, session, any:hist+session>0, summary:parts.length?parts.join(' · '):'None on record'}; }
 const PARTIAL_RATIONALE = 'Allowing partial payment gives the buyer a way to start clearing the outstanding amount.';
 

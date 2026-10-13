@@ -193,12 +193,12 @@ function mobSheetHtml(t){
   else if(k==='keep'){ const bid=id||S.mob.id||'gupta', rq=creq(bid); h=`<b class="mc-t">Keep current terms?</b><div class="small mt8">${chem(bid).name} stays at ${inr(curLimitOf(bid))} on ${curTermsOf(bid)}-day terms.${rq?` The ${inr(rq.amt)} request is not extended.`:''} RAY will not message the buyer.</div><button class="mbtn p mt12" onclick="A.mobSheet(null);A.reqDecide('${bid}','kept')">Keep current terms</button>`; }
   else if(k==='contact') h=`<b class="mc-t">Contact ${chem(S.mob.id||'gupta').name}</b><div class="col gap8 mt12"><button class="mbtn" onclick="A.mobSheet(null);toast('Calling +91 98••••4410')">${I('phone',16,2)} Call +91 98••••4410</button><button class="mbtn" onclick="A.mobSheet(null);toast('Opening your WhatsApp chat')">${I('chat',16,2)} Message on WhatsApp</button></div><div class="xs muted mt8">You talk to the buyer. RAY does not share its recommendation with them.</div>`;
   else if(k==='match') h=`<b class="mc-t">Confirm this payment?</b><div class="mgrid mt8" style="grid-template-columns:1fr 1fr"><div><span>Amount</span><b>${inr((PAYREV.verma||{}).amt||0)}</b></div><div><span>Received</span><b>Yesterday 6:10 PM</b></div></div><div class="small mt8">RAY suggests <b>Verma Retail · INV-24655</b>. Exact amount, payer seen before.</div><button class="mbtn p mt12" onclick="A.mobMatch()">Confirm match</button><button class="mbtn g mt8" onclick="A.mobSheet(null)">Not this buyer</button>`;
-  else if(k==='install') h=`<b class="mc-t">Install RAY Credit</b><div class="col gap6 mt12 small">${['Connect ledger · Marg (demo connector)','Connect bank account · ICICI ••4821, Connected Banking+','Choose mode · Review first'].map((x,i)=>`<div class="row gap8"><span class="mb mb-n">${i+1}</span>${x}</div>`).join('')}</div><div class="xs muted mt8">Sensitive decisions always require approval.</div><button class="mbtn p mt12" onclick="A.mobInstall()">Install RAY Credit</button>`;
+  else if(k==='install') h=`<b class="mc-t">Install RAY Credit</b><div class="col gap6 mt12 small">${['Connect ledger · Marg ERP','Connect bank account · ICICI ••4821, Connected Banking+','Choose mode · Review first'].map((x,i)=>`<div class="row gap8"><span class="mb mb-n">${i+1}</span>${x}</div>`).join('')}</div><div class="xs muted mt8">Sensitive decisions always require approval.</div><button class="mbtn p mt12" onclick="A.mobInstall()">Install RAY Credit</button>`;
   if(k==='pr') h=S.mob.prHtml||'';
   return `<div class="msheet-bg" onclick="if(event.target===this)A.mobSheet(null)"><div class="msheet"><span class="msheet-grip"></span>${h}</div></div>`;
 }
 function mobPay(id){ return `${subHdr('Review payment','actions')}<div class="mob-body"><div class="mc" style="margin-top:0">${prBody(id,true)}</div></div>`; }
-A.mobInstall=()=>{ ensureBank(); S.installed=true; log({ic:'agent',ti:'RAY Credit installed from the Razorpay app',de:'Marg (demo connector) · bank connected · Review first',src:['led'],who:'Installed by '+M.owner+' · RAY Credit for Mobile'}); S.mob.sheet=null; S.mob.tab='products'; A.mobGo('rc'); rr(); toast('RAY Credit is ready'); };
+A.mobInstall=()=>{ ensureBank(); S.installed=true; log({ic:'agent',ti:'RAY Credit installed from the Razorpay app',de:'Marg ERP · bank connected · Review first',src:['led'],who:'Installed by '+M.owner+' · RAY Credit for Mobile'}); S.mob.sheet=null; S.mob.tab='products'; A.mobGo('rc'); rr(); toast('RAY Credit is ready'); };
 A.mobFollow=(id)=>{ const c=chaseOf(id), ch=chem(id), it=S.chase[id]; if(!it||it.st!=='draft'){ S.mob.sheet=null; mobRender(); return toast('Already handled'); }
   const r=sendMessage(id,{kind:'followup', inv:chaseInv(id), msg:it.msg, via:'RAY Credit for Mobile'});
   if(!r.ok&&!r.queued){ S.mob.sheet=null; mobRender(); return; }
@@ -208,7 +208,7 @@ A.mobFollow=(id)=>{ const c=chaseOf(id), ch=chem(id), it=S.chase[id]; if(!it||it
   S.mob.sheet=null; rr(); mobRender(); toast(`Follow-up ${r.queued?'queued (quiet hours)':'sent (simulated)'} to ${ch.name}`); if(id==='gupta'&&r.ok&&typeof guptaReplySoon==='function') guptaReplySoon(); };
 A.mobMatch=()=>{ S.mob.sheet=null; A.prMatchRzp('verma'); mobRender(); };
 
-/* ---------- prototype surface switcher (demo navigation only) ---------- */
+/* ---------- prototype surface switcher (navigation only) ---------- */
 /* bottom bar: three surfaces, then reference pages, then presenter tools. Each button does one obvious thing:
    Desktop always lands on a desktop screen (the last one you used, never Checks or How it works). */
 const SURF_PAGES = ['raahi/checks','raahi/how'];
@@ -219,10 +219,10 @@ function surfRender(){
   const wa=!!document.getElementById('wa-root').innerHTML, mob=!!S.mob, rt=route(), page=SURF_PAGES.includes(rt)?rt:null;
   const cur=mob?'mob':wa?'wa':page?page:'desk';
   const b=(k,ic,label,fn,title,id)=>`<button class="${cur===k?'on':''}" ${id?`id="${id}"`:''} aria-pressed="${cur===k}" title="${title}" onclick="${fn}">${I(ic,13,2.2)}<span>${label}</span></button>`;
-  r.innerHTML=`<div class="surf" role="toolbar" aria-label="Prototype navigation"><span class="surf-l" onclick="A.about()" title="What is real, synthetic, simulated or proposed" aria-label="What is real in this prototype"><span class="surf-lt">Concept prototype · what’s real</span> ${I('info',11,2.2)}</span>
+  r.innerHTML=`<div class="surf" role="toolbar" aria-label="Prototype navigation"><span class="surf-l" onclick="A.about()" title="What runs here, what is sample data and what is simulated" aria-label="About this prototype"><span class="surf-lt">Prototype · sample data</span> ${I('info',11,2.2)}</span>
    <span class="surf-g">${b('desk','grid','Desktop',"A.surf('desk')",'Razorpay dashboard on desktop','surf-desk')}${b('wa','chat','WhatsApp',"A.surf('wa')",'RAY on WhatsApp','surf-wa')}${b('mob','phone','Mobile',"A.surf('mob')",'RAY Credit for Mobile','surf-mob')}</span>
    <span class="surf-g">${b('raahi/how','doc','How it works',"A.surf('how')",'What RAY reads, decides and what is real','surf-how')}${b('raahi/checks','shield','Checks',"A.surf('checks')",'Tests run live and recorded','surf-checks')}</span>
-   <span class="surf-g">${`<button class="surf-x ${S.demoOpen?'on':''}" id="surf-walk" aria-pressed="${!!S.demoOpen}" onclick="S.demoList='core';S.demoOpen=!S.demoOpen;demoRender();surfRender()" title="Guided walkthrough (Shift+D)">${I('play',12,2.4)}<span>Walkthrough</span></button>`}<button class="surf-x" id="surf-reset" onclick="A.resetAsk()" title="Reset the demo" aria-label="Reset the demo">${I('refresh',12,2.4)}</button></span></div>`;
+   <span class="surf-g">${`<button class="surf-x ${S.demoOpen?'on':''}" id="surf-walk" aria-pressed="${!!S.demoOpen}" onclick="S.demoList='core';S.demoOpen=!S.demoOpen;demoRender();surfRender()" title="Guided walkthrough (Shift+D)">${I('play',12,2.4)}<span>Walkthrough</span></button>`}<button class="surf-x" id="surf-reset" onclick="A.resetAsk()" title="Reset this workspace" aria-label="Reset this workspace">${I('refresh',12,2.4)}</button></span></div>`;
 }
 /* one switch for every bar button: close whatever overlay is open, then show the chosen place */
 A.surf=(k)=>{ S.demoOpen=false; if(typeof demoRender==='function') demoRender();
