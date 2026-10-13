@@ -193,7 +193,7 @@ function engBoot(){
      deep link) is left alone so the Agent Studio story and the home page remain reachable. */
   if(!location.hash || location.hash === '#') {
     S.installed = true;
-    location.hash = 'ray-credit/overview';
+    location.hash = 'studio/ray-credit';
   }
 }
 /* header clock: today's date and the current time, refreshed every half minute */

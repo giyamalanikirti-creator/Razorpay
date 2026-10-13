@@ -3047,7 +3047,7 @@ function popMenu(anchor, items, head='', right){
  * lib/promise-rules.js                    interpreter checks + labelled rule-based fallback
  * Every screen (desktop, Ray AI, WhatsApp, mobile) reads recommendations through recOf(id).
  */
-const BUILD_ID = '847513e2b7';
+const BUILD_ID = '52ad3717b3';
 const POL = RayPolicy.POLICY;
 const BUY = {}; RayData.ALL.forEach(b=>BUY[b.id]=b); BUY.newlife=RayData.NEW_BUYER;
 const GEN = RayData.GENERATED;
@@ -3235,7 +3235,7 @@ function engBoot(){
      deep link) is left alone so the Agent Studio story and the home page remain reachable. */
   if(!location.hash || location.hash === '#') {
     S.installed = true;
-    location.hash = 'ray-credit/overview';
+    location.hash = 'studio/ray-credit';
   }
 }
 /* header clock: today's date and the current time, refreshed every half minute */
