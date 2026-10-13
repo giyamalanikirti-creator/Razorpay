@@ -3047,7 +3047,7 @@ function popMenu(anchor, items, head='', right){
  * lib/promise-rules.js                    interpreter checks + labelled rule-based fallback
  * Every screen (desktop, Ray AI, WhatsApp, mobile) reads recommendations through recOf(id).
  */
-const BUILD_ID = 'd47091b008';
+const BUILD_ID = '062c906216';
 const POL = RayPolicy.POLICY;
 const BUY = {}; RayData.ALL.forEach(b=>BUY[b.id]=b); BUY.newlife=RayData.NEW_BUYER;
 const GEN = RayData.GENERATED;
@@ -4752,7 +4752,7 @@ A.reviewJain=()=>modal({title:'Review Jain Traders’ promise',body:`<div class=
 
 /* ---- simulations ---- */
 A.toggleStale=()=>{S.stale=!S.stale; if(S.stale) log({ic:'refresh',ti:'Marg ERP sync delayed',de:'Last synced 31 hours ago · new reminders and approvals paused until refreshed',src:['led'],who:'RAY'}); rr();};
-A.reset=()=>{ if(typeof SETUP_PENDING!=='undefined') Object.keys(SETUP_PENDING).forEach(cancelPendingSetup); if(typeof NET_PREVIEW!=='undefined') Object.keys(NET_PREVIEW).forEach(k=>delete NET_PREVIEW[k]); S=S0();_clock=12;if(typeof _wat!=='undefined')_wat=2;persistClear();engInit();A.closeWA();A.aaClose();if(S.mob!==undefined&&typeof A.closeMobile==='function')A.closeMobile();closeModal();if(typeof demoRender==='function')demoRender();document.getElementById('datechip').textContent=S.date;go('home');toast('Workspace reset')};
+A.reset=()=>{ if(typeof SETUP_PENDING!=='undefined') Object.keys(SETUP_PENDING).forEach(cancelPendingSetup); if(typeof NET_PREVIEW!=='undefined') Object.keys(NET_PREVIEW).forEach(k=>delete NET_PREVIEW[k]); S=S0();_clock=12;if(typeof _wat!=='undefined')_wat=2;persistClear();engInit();A.closeWA();A.aaClose();if(S.mob!==undefined&&typeof A.closeMobile==='function')A.closeMobile();closeModal();if(typeof demoRender==='function')demoRender();document.getElementById('datechip').textContent=S.date;go('studio/ray-credit');toast('Workspace reset')};
 
 /* ================= BANK ACCOUNT via RAZORPAYX CONNECTED BANKING (reconciliation) ================= */
 const BANK_NAME = 'ICICI Bank ••4821', BANK_FULL = 'ICICI Bank · Current A/c ••4821';
