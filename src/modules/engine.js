@@ -188,11 +188,10 @@ function engBoot(){
   if(!persistLoad()) engInit(); else engineSync();
   syncChase(true); clockChip(); aiCheck();
   /* judges following the submission link should land directly on the RAY Credit workspace, not on the
-     Razorpay dashboard home. If no hash was provided and the agent has not been actively uninstalled,
-     mark it installed and route to the workspace. The home and Agent Studio pages remain reachable from
-     the sidebar and breadcrumb. A ?date= query parameter is preserved by setting the hash and leaving
-     the current URL otherwise alone. */
-  if((!location.hash || location.hash === '#' || location.hash === '#home') && S.installed !== false) {
+     Razorpay dashboard home. If no hash was provided at all (the base URL), install the agent and route
+     to the workspace. Any explicit hash (someone bookmarked #home, clicked a sidebar link, or opened a
+     deep link) is left alone so the Agent Studio story and the home page remain reachable. */
+  if(!location.hash || location.hash === '#') {
     S.installed = true;
     location.hash = 'ray-credit/overview';
   }
