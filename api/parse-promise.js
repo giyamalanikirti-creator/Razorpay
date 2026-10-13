@@ -151,10 +151,38 @@ function schemaErrors(o) {
   return errs;
 }
 
+/* one fixed message through the live provider: proof that the integration works end to end */
+const SELFTEST_INPUT = { message: 'Aadha abhi bhej raha hoon, baaki Monday pakka.', outstanding: 20000, invoiceId: 'INV-SELFTEST', buyerName: 'Test Stores', messageDate: '2026-10-13', currentDate: '2026-10-13' };
+async function selftest(cfg, env, fetchImpl, res) {
+  if (!cfg.key) return send(res, 503, { ok: false, code: 'AI_NOT_CONFIGURED', provider: cfg.provider, model: cfg.model });
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), +(env.AI_TIMEOUT_MS || 12000));
+  const started = Date.now();
+  try {
+    const call = cfg.provider === 'anthropic' ? callAnthropic : cfg.provider === 'gemini' ? callGemini : callOpenAI;
+    const raw = await call(cfg, SELFTEST_INPUT, ctl.signal, fetchImpl);
+    const v = rules.validateInterpretation(raw, SELFTEST_INPUT);
+    const i = v.interpretation;
+    return send(res, 200, { ok: true, provider: cfg.provider, model: cfg.model, ms: Date.now() - started,
+      schemaErrors: schemaErrors(raw).length, intent: i.intent, promisedAmountNow: i.promisedAmountNow, promisedAmountLater: i.promisedAmountLater,
+      promisedDate: i.promisedDate, canConfirm: v.canConfirm, paymentVerified: v.paymentVerified });
+  } catch (e) {
+    return send(res, 502, { ok: false, provider: cfg.provider, model: cfg.model, ms: Date.now() - started,
+      code: e.code || (e.name === 'AbortError' ? 'TIMEOUT' : 'AI_FAILED'), status: e.status || null, message: String(e.message || '').slice(0, 200) });
+  } finally { clearTimeout(timer); }
+}
+
 async function handler(req, res, deps = {}) {
   const env = deps.env || process.env; const fetchImpl = deps.fetch || globalThis.fetch;
   const cfg = providerConfig(env);
-  if (req.method === 'GET') return send(res, 200, { configured: !!cfg.key, provider: cfg.provider, model: cfg.model });
+  if (req.method === 'GET') {
+    /* ?selftest=1 proves the configured provider actually answers, with one fixed sample message and no buyer
+       data. It reports the provider's own error verbatim when the call fails, so a wrong model name or an
+       unsupported request shape is visible instead of silently degrading to the fallback. */
+    const url = String((req.url || '')).split('?')[1] || '';
+    if (/(^|&)selftest=1(&|$)/.test(url)) return selftest(cfg, env, fetchImpl, res);
+    return send(res, 200, { configured: !!cfg.key, provider: cfg.provider, model: cfg.model });
+  }
   if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, code: 'METHOD_NOT_ALLOWED' }); }
   const ip = String((req.headers && (req.headers['x-forwarded-for'] || req.headers['x-real-ip'])) || 'local').split(',')[0].trim();
   if (rateLimited(ip)) return send(res, 429, { ok: false, code: 'RATE_LIMITED', message: 'Too many requests. Try again in a minute.' });

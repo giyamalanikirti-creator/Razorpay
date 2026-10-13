@@ -114,3 +114,21 @@ test('Gemini: upstream failures fall back honestly, never as a fake answer', asy
   const r500 = await call({ body }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(good, 500) });
   assert.equal(r500.body.ok, false); assert.ok(['UPSTREAM_ERROR', 'AI_FAILED'].includes(r500.body.code), r500.body.code);
 });
+
+test('GET ?selftest=1 exercises the provider and reports the real result', async () => {
+  const r = await call({ method: 'GET', url: '/api/parse-promise?selftest=1' }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(good) });
+  assert.equal(r.statusCode, 200); assert.equal(r.body.ok, true); assert.equal(r.body.provider, 'gemini');
+  assert.equal(r.body.intent, 'promise'); assert.equal(r.body.paymentVerified, false);
+  assert.ok(typeof r.body.ms === 'number');
+  assert.ok(!JSON.stringify(r.body).includes('"k"'), 'the key is never echoed');
+});
+test('GET ?selftest=1 surfaces a provider failure instead of hiding it', async () => {
+  const r = await call({ method: 'GET', url: '/api/parse-promise?selftest=1' }, { env: { GEMINI_API_KEY: 'k' }, fetch: gemini(good, 404) });
+  assert.equal(r.statusCode, 502); assert.equal(r.body.ok, false); assert.equal(r.body.status, 404);
+  const none = await call({ method: 'GET', url: '/api/parse-promise?selftest=1' }, { env: {} });
+  assert.equal(none.statusCode, 503); assert.equal(none.body.code, 'AI_NOT_CONFIGURED');
+});
+test('A plain GET is unchanged by the selftest branch', async () => {
+  const r = await call({ method: 'GET', url: '/api/parse-promise' }, { env: { GEMINI_API_KEY: 'k' } });
+  assert.deepEqual(r.body, { configured: true, provider: 'gemini', model: 'gemini-3.5-flash-lite' });
+});
