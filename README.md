@@ -14,7 +14,7 @@ This repository contains a clickable product prototype of RAY Credit as an agent
 
 > Prototype built on a seeded sample portfolio (Agarwal Distributors, Ludhiana). It is not a live Razorpay product and connects to no real account, bank or WhatsApp number. Dates are live: the scenario is shifted onto today's calendar, so an invoice that is two days overdue stays two days overdue whenever you open it.
 
-**What actually works:** a deterministic, explainable credit policy engine that evaluates all 642 buyers; an event-driven repayment ledger that re-runs the policy when payments, failures, promises or disputes are recorded; merchant controls enforced at send time; per-buyer network consent; a daily chase plan rebuilt from every buyer with dues (amount due × repayment risk × urgency); failed collections, payment reviews and scheduled autopays computed from ledger events and mandates; one rule-based answer engine for Ray AI, RAY on WhatsApp and mobile that reads the current ledger (optional live AI, server-side, only for free-form questions and only when a key is configured (OpenAI, Anthropic or Gemini); off on the public deployment); one validated command path for approvals with exact values, double-click protection and full-state undo; recovery status derived from the ledger so every surface agrees; a learning loop that suggests follow-up policy changes from outcomes for the owner to approve, version and undo; a Checks page that shows only tests that ran: live journey and policy checks in the browser, plus the recorded unit and Playwright runs for this build; and a secure `/api/parse-promise` endpoint for self-hosted deployments with an API key. Everything else (ERP, bank feed, WhatsApp, mandates, the cross-distributor network) is simulated and labelled. Full details: [`docs/TECHNICAL.md`](docs/TECHNICAL.md).
+**What actually works:** a deterministic, explainable credit policy engine that evaluates all 642 buyers; an event-driven repayment ledger that re-runs the policy when payments, failures, promises or disputes are recorded; merchant controls enforced at send time; per-buyer network consent; a daily chase plan rebuilt from every buyer with dues (amount due × repayment risk × urgency); failed collections, payment reviews and scheduled autopays computed from ledger events and mandates; one rule-based answer engine for Ray AI, RAY on WhatsApp and mobile that reads the current ledger (live AI, server-side, with Gemini configured on the public deployment; OpenAI and Anthropic also supported; a labelled rule-based fallback runs when the provider is unavailable); one validated command path for approvals with exact values, double-click protection and full-state undo; recovery status derived from the ledger so every surface agrees; a learning loop that suggests follow-up policy changes from outcomes for the owner to approve, version and undo; a Checks page that shows only tests that ran: live journey and policy checks in the browser, plus the recorded unit and Playwright runs for this build; and a secure `/api/parse-promise` endpoint for self-hosted deployments with an API key. Everything else (ERP, bank feed, WhatsApp, mandates, the cross-distributor network) is simulated and labelled. Full details: [`docs/TECHNICAL.md`](docs/TECHNICAL.md).
 
 ## Why the network matters
 
@@ -70,9 +70,11 @@ Questions on every surface are answered first by rules, from the current ledger:
 
 ## Running it
 
-No install needed. Open `index.html` in a browser, or visit the deployed link. On Vercel with `OPENAI_API_KEY` set, the interpreter runs on the live model.
+No install needed. Open `index.html` in a browser, or visit the deployed link. Opening the deployed URL lands on the Agent Studio page for RAY Credit with the **Install Agent** CTA — click it to install (Marg ERP → bank connection → ready) and enter the workspace. Deep links such as `#ray-credit/overview` still work.
 
-**Walkthrough** (the **Walkthrough** button in the bottom bar, or `Shift` + `D`), the main story in 8 steps: the buyer asks for more credit → RAY explains the repayment evidence and a read-only network comparison (₹75,000 · 21 days on your data vs ₹60,000 · 14 days with eligible network evidence) → you approve or reject → a failed ₹20,000 collection gets an approved partial-payment link → a simulated ₹5,000 payment leaves ₹15,000 → the rest completes recovery → ledger, mobile, WhatsApp and Activity agree → what changed in RAY's inputs. Every outcome is an explicit, labelled button; navigating never acts. Each step has Previous, Next and Exit, and the reset icon restarts it. **Explore all features** (25 steps) is still there. Navigating a step never approves, sends or records money on its own; simulated outcomes are explicit buttons. **Concept prototype · what’s real** opens the disclosure (logic running here, synthetic data, simulated integrations, optional live AI, proposed). The reset icon asks before resetting. The eight-week pilot plan and its success measures are on **How it works**. Script and fix list: [`docs/QA-REPORT.md`](docs/QA-REPORT.md).
+Live AI is on, with Gemini (`gemini-3.5-flash-lite`) configured on the deployment; setting `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` switches providers. Verify it with `GET /api/parse-promise?selftest=1` — one fixed Hinglish message goes through the configured provider and the response is either the parse or the real upstream error.
+
+**Walkthrough** (the **Walkthrough** button in the bottom bar, or `Shift` + `D`), the main story in 8 steps: the buyer asks for more credit → RAY explains the repayment evidence and a read-only network comparison (₹75,000 · 21 days on your data vs ₹60,000 · 14 days with eligible network evidence) → you approve or reject → a failed ₹20,000 collection gets an approved partial-payment link → a simulated ₹5,000 payment leaves ₹15,000 → the rest completes recovery → ledger, mobile, WhatsApp and Activity agree → what changed in RAY's inputs. Every outcome is an explicit, labelled button; navigating never acts. Each step has Previous, Next and Exit, and the reset icon restarts it. **Explore all features** (25 steps) is still there. Navigating a step never approves, sends or records money on its own; simulated outcomes are explicit buttons. **Prototype · sample data** opens the disclosure (logic running here, sample portfolio, simulated integrations, live AI, proposed). The reset icon asks before resetting. The eight-week pilot plan and its success measures are on **How it works**. Script and fix list: [`docs/QA-REPORT.md`](docs/QA-REPORT.md).
 
 
 **Presenter controls**
@@ -93,7 +95,7 @@ The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **R
 ├── index.html                  # built, self-contained prototype (what gets deployed)
 ├── api/
 │   ├── parse-promise.js        # Vercel function: LLM interpretation + deterministic checks
-│   └── ask.js                  # Vercel function: optional live AI for free-form questions (explains only)
+│   └── ask.js                  # Vercel function: live AI for free-form questions (explains only)
 ├── lib/                        # pure logic shared by the browser, the API and the tests
 │   ├── policy.js               # deriveBuyerSignals() + evaluateCredit(): the credit policy engine
 │   ├── events.js               # applyRepaymentEvent(): event model and invoice ledger
@@ -110,7 +112,7 @@ The pill at the bottom switches between **Desktop**, **RAY on WhatsApp** and **R
 │   ├── responsive.py           # Playwright: 1440, 1280, 768 and 390 px layout checks
 │   ├── ui_smoke.py             # Playwright: smoke, every route, both guided walkthroughs
 │   └── results/                # last recorded run of every suite (embedded in the Checks page)
-│   └── eval/                   # 54 labelled Hinglish and Devanagari messages + RESULTS.md
+│   └── eval/                   # 57 labelled Hinglish and Devanagari messages + RESULTS.md
 ├── scripts/
 │   ├── build.py                # bundles lib/ + src/ into index.html
 │   ├── eval_interpreter.js     # interpreter evaluation
