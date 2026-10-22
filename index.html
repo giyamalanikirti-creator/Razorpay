@@ -3047,7 +3047,7 @@ function popMenu(anchor, items, head='', right){
  * lib/promise-rules.js                    interpreter checks + labelled rule-based fallback
  * Every screen (desktop, Ray AI, WhatsApp, mobile) reads recommendations through recOf(id).
  */
-const BUILD_ID = '062c906216';
+const BUILD_ID = '60d4418da4';
 const POL = RayPolicy.POLICY;
 const BUY = {}; RayData.ALL.forEach(b=>BUY[b.id]=b); BUY.newlife=RayData.NEW_BUYER;
 const GEN = RayData.GENERATED;
@@ -4996,7 +4996,7 @@ const RAY_CHIPS={
   Transactions:['Aaj kitne payments aaye?','Show failed payments today'],
   Settlements:['Next settlement kab hai?','Why was Tuesday’s settlement higher?'],
   'Growing my business':['How can I collect faster from buyers?'],
-  Collections:['Gupta Traders ko ₹50,000 aur credit de doon?','Kaun buyers slip kar rahe hain?','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','New Life Stores ka credit check karo, GSTIN 03AANFN7781K1Z3','City Mart bol raha hai cheque de diya.','Is hafte kaun paisa rok ke baitha hai?','Is hafte kitna aaya?'],
+  Collections:['Gupta Traders ko ₹75,000 aur credit de doon?','Kaun buyers slip kar rahe hain?','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','New Life Stores ka credit check karo, GSTIN 03AANFN7781K1Z3','City Mart bol raha hai cheque de diya.','Is hafte kaun paisa rok ke baitha hai?','Is hafte kitna aaya?'],
 };
 function spark(){const pts=[96,95.4,96.8,96.1,97,95.8,96.5,96.9,96.2,97.1,96.4,96.2];const x=i=>i*(220/11),y=v=>34-(v-95)*12;return `<svg viewBox="0 0 220 40" width="100%" height="40"><path d="${pts.map((v,i)=>`${i?'L':'M'}${x(i)},${y(v)}`).join('')}" fill="none" stroke="#1364f1" stroke-width="1.6"/></svg>`}
 function pgRay(){
@@ -5167,7 +5167,7 @@ function rayAnswer(x){
   case 'failed': return `<p>4 payments failed today, all UPI timeouts between 8 and 9 AM. Customers retried 3 of them successfully.</p><button class="btn btn-s btn-sm" onclick="go('transactions')">View payments</button>`;
   case 'txn': return `<p><b>₹1,42,380</b> collected today from 37 captured payments, 12% above your usual ${RayDates.WDL[RayDates.dow(S.today)]}. 4 failed, mostly UPI timeouts.</p><button class="btn btn-s btn-sm" onclick="go('transactions')">See today’s payments</button>`;
   case 'grow': return `<p>Start earlier with buyers whose repayment is slipping. RAY’s policy drafts a follow-up ${S.pol.watchLead} days before the due date for Watch buyers, checks payments first, and never sends without your approval. ${pfStats().slipping.length} buyers are on the early-warning list today.</p><button class="btn btn-p btn-sm" onclick="go('ray-credit/actions')">Open Actions</button>`;
-  default: return `<p>I can help with payments, settlements, credit and collections. Try asking about a buyer, for example “Gupta Traders ko ₹50,000 aur credit de doon?”</p>`;
+  default: return `<p>I can help with payments, settlements, credit and collections. Try asking about a buyer, for example “Gupta Traders ko ₹75,000 aur credit de doon?”</p>`;
   }
 }
 A.rayConfirm=(id,v)=>{const x=S.ray.msgs.find(m=>m.id===id); x.confirm=v; render()};
@@ -5183,10 +5183,10 @@ function waInit(){
   const tail=[]; if(S.inbox){ tail.push(inboxMsg()); S.wa.pendingInbox=false; }
   S.wa.msgs=[{from:'ray',t:'9:00 AM',html:`<span class="wa-hdr">RAY · Morning priorities</span>\nGood morning, ${M.first}. ${items.length} things need your attention.`},...items,...tail];
 }
-function inboxMsg(){ const g=S.gupta, v=reqV(creq('gupta')); return {from:'ray',t:'9:06 AM',html:`<span class="wa-hdr">From your connected WhatsApp Business inbox</span>\n<b>Gupta Traders is asking for ₹50,000 more credit.</b>\nI reviewed their current exposure and repayment behaviour.\n\nRecommendation: <b>${v.verdict==='DO NOT EXTEND YET'?'Do not extend additional credit yet':v.verdict==='EXTEND'?'Extend':'Review terms'}</b>\n\nWhy\n· ${inr(g.out)} currently outstanding\n${guptaWhyLines(3).map(x=>'· '+x).join('\n')}\n\nRecommended limit: ${inr(g.limitRec)} · ${g.terms} days.${v.nextShort?'\n'+v.nextShort:''}\n<i>I have not replied to Gupta Traders.</i>`,btns:[{l:'Review credit decision',a:'waMobile'}]}; }
+function inboxMsg(){ const g=S.gupta, v=reqV(creq('gupta')); return {from:'ray',t:'9:06 AM',html:`<span class="wa-hdr">From your connected WhatsApp Business inbox</span>\n<b>Gupta Traders is asking for ₹75,000 more credit.</b>\nI reviewed their current exposure and repayment behaviour.\n\nRecommendation: <b>Approve the ${inr(g.limitRec)} recommended limit on ${g.terms}-day terms</b> (down from ${inr(g.limit)} on 30 days).\n\nWhy\n· ${inr(g.out)} currently outstanding\n${guptaWhyLines(3).map(x=>'· '+x).join('\n')}\n\nRecommended limit: ${inr(g.limitRec)} · ${g.terms} days.${v.nextShort?'\n'+v.nextShort:''}\n<i>I have not replied to Gupta Traders.</i>`,btns:[{l:'Review credit decision',a:'waMobile'}]}; }
 function waInboxAlert(){ waPush(inboxMsg()); }
-A.waForward=()=>{ if(S.wa.busy) return; S.wa.msgs.push({from:'me',fwd:true,who:'Gupta Traders',html:'Bhai ₹50,000 aur credit de do. Monday pura clear kar dunga.',t:waTime()}); waRender();
-  waReply(()=>{ const g=S.gupta, v=reqV(creq('gupta')); waPush({from:'ray',html:`I found <b>Gupta Traders</b>. They’re currently on <b>${g.band}</b>.\n\nRequested: ₹50,000\nOutstanding: ${inr(g.out)}\nCurrent limit: ${inr(g.limit)}\nRecommended limit: ${inr(g.limitRec)} · ${g.terms} days\n\n<b>${v.verdict==='DO NOT EXTEND YET'?'I would not extend additional credit right now.':'This fits within the recommended limit.'}</b>\n\nWhy\n${guptaWhyLines(4).map(x=>'· '+x).join('\n')}\n\n${v.next?v.next+'\n':''}<i>I have not replied to the buyer.</i>`,btns:[{l:'Review in Razorpay',a:'waMobile'}]}); },1600); };
+A.waForward=()=>{ if(S.wa.busy) return; S.wa.msgs.push({from:'me',fwd:true,who:'Gupta Traders',html:'Bhai ₹75,000 aur credit de do. Monday pura clear kar dunga.',t:waTime()}); waRender();
+  waReply(()=>{ const g=S.gupta, v=reqV(creq('gupta')); waPush({from:'ray',html:`I found <b>Gupta Traders</b>. They’re currently on <b>${g.band}</b>.\n\nRequested: ₹75,000\nOutstanding: ${inr(g.out)}\nCurrent limit: ${inr(g.limit)}\nRecommended limit: ${inr(g.limitRec)} · ${g.terms} days\n\n<b>Approve the ${inr(g.limitRec)} recommended limit on ${g.terms}-day terms, down from ${inr(g.limit)} on 30 days.</b>\n\nWhy\n${guptaWhyLines(4).map(x=>'· '+x).join('\n')}\n\n${v.next?v.next+'\n':''}<i>I have not replied to the buyer.</i>`,btns:[{l:'Review in Razorpay',a:'waMobile'}]}); },1600); };
 /* the missed-promise line, from the promise and the ledger (never a fixed amount) */
 function missedLine(id){ const p=(S.promises||[]).slice().reverse().find(x=>x.buyerId===id&&x.status==='missed'); if(!p) return `${inr(outOf(id))} outstanding.`;
   const d=p.later&&p.later.date||p.first&&p.first.date; return `Missed the ${d?RayDates.fmtDay(d):''} promise. ${inr(balOf(id,p.inv))} is still due on ${p.inv}.`; }
@@ -5208,7 +5208,7 @@ function waRender(first){
     <div class="wa-status"><span>9:41</span><span class="row gap4" style="font-size:12px">▂▄▆ ${I('pulse',14,2)}</span></div>
     <div class="wa-head"><span style="color:#027eb5">${I('left',24,2.2)}</span><span class="wa-av">RAY</span><div class="grow"><div class="wa-name">Razorpay RAY <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#1d9bf0" d="M12 1l2.6 2.1 3.3-.4 1.1 3.1 3 1.6-.7 3.3 1.7 2.9-2.4 2.3-.2 3.4-3.3.6-1.9 2.8-3.2-1.2-3.2 1.2-1.9-2.8-3.3-.6-.2-3.4L.8 14.6l1.7-2.9-.7-3.3 3-1.6 1.1-3.1 3.3.4z"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="wa-biz">Business Account</div></div><span style="color:#027eb5">${I('video',22,1.8)}</span><span style="color:#027eb5;margin-left:14px">${I('phone',20,1.8)}</span></div>
     <div class="wa-chat" id="wachat"><div class="wa-day"><span>Today</span></div><div class="wa-sys"><span>This is an official business account of Razorpay.</span></div>${msgs}${S.wa.busy?'<div class="wa-typing"><i></i><i></i><i></i></div>':''}</div>
-    <div class="wa-try">${['↪ Forward Gupta’s message','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','Gupta ko 50,000 aur credit de doon?','Kaun buyers slip kar rahe hain?','City Mart bol raha hai cheque de diya','🎙 Voice note'].map(t=>`<button onclick="A.waTry(this.textContent)">${t}</button>`).join('')}</div>
+    <div class="wa-try">${['↪ Forward Gupta’s message','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','Gupta ko 75,000 aur credit de doon?','Kaun buyers slip kar rahe hain?','City Mart bol raha hai cheque de diya','🎙 Voice note'].map(t=>`<button onclick="A.waTry(this.textContent)">${t}</button>`).join('')}</div>
     <div class="wa-input"><span style="color:#027eb5">${I('plus',24,2)}</span><div class="box"><input id="wain" placeholder="Message" onkeydown="if(event.key==='Enter'){A.waSend(this.value);this.value=''}">${I('emoji',20)}</div><span style="color:#027eb5">${I('cam',22)}</span><button class="mic" onclick="const v=document.getElementById('wain').value;if(v){A.waSend(v)}else A.waTry('🎙 Voice note')">${I('mic',20,2)}</button></div>
    </div></div></div>`;
   const c=document.getElementById('wachat'); c.scrollTop=c.scrollHeight;
@@ -5471,7 +5471,7 @@ function ansHtml(a){ return `${a.lead?`<p><b>${esc(a.lead)}</b></p>`:''}${(a.lin
 
 /* ================= INCOMING CREDIT REQUESTS (WhatsApp Business inbox or forwarded to RAY) ================= */
 const CREQ = [
- {id:'gupta', msg:'Bhai ₹50,000 aur credit de do. Payment Monday clear kar dunga.', amt:50000, terms:'Existing dues by Monday', at:'8:52 AM'},
+ {id:'gupta', msg:'Bhai ₹75,000 aur credit de do. Payment Monday clear kar dunga.', amt:75000, terms:'Existing dues by Monday', at:'8:52 AM'},
  {id:'arora', msg:'₹80,000 ka stock chahiye, 21 days credit pe.', amt:80000, terms:'21 days credit', reqTerms:21, at:'Yesterday, 6:40 PM'},
  {id:'mehta', msg:'₹30,000 aur bhej do, month end tak clear kar dunga.', amt:30000, terms:'Month end', at:'Yesterday, 4:15 PM'},
 ];
@@ -5569,7 +5569,10 @@ function vRequest(id){
   const r=creq(id); if(!r) return '<div class="empty">Request not found</div>';
   const c=chemView(chem(id)), d=S.req[id], g=S.gupta, v=reqV(r), rec=v.rec;
   const after=`If extended, exposure would be ${inr(v.exposureAfter)} against ${v.exposureAfter>rec.recommendedLimit?'RAY’s recommended':'a'} ${inr(rec.recommendedLimit)} limit.`;
-  const say=v.verdict==='DO NOT EXTEND YET'?'Do not extend additional credit yet.':v.verdict==='EXTEND'?`Extend the ${inr(r.amt)} order on ${rec.recommendedTerms}-day terms.`:`Supply ${inr(r.amt)}, but on ${rec.recommendedTerms}-day terms instead of ${curTermsOf(id)}.`;
+  /* for Gupta, the aligned recommendation IS the reduced ₹60k limit at 14-day terms (down from ₹100k on 30-day); the
+     separate release breakdown below explains that the ₹75k order itself cannot fit under this limit. For other buyers
+     the three-verdict wording still fits. */
+  const say=id==='gupta'?`Approve the ${inr(rec.recommendedLimit)} recommended limit on ${rec.recommendedTerms}-day terms, down from ${inr(curLimitOf(id))} on ${curTermsOf(id)}-day terms.`:v.verdict==='EXTEND'?`Extend the ${inr(r.amt)} order on ${rec.recommendedTerms}-day terms.`:v.verdict==='DO NOT EXTEND YET'?'Do not extend additional credit yet.':`Supply ${inr(r.amt)}, but on ${rec.recommendedTerms}-day terms instead of ${curTermsOf(id)}.`;
   const btns = d ? `<div class="alert ok mt16"><span class="ic">${I('check',17,2.4)}</span><div class="grow"><h4>${reqDone(d,id)}</h4><div class="small muted">Logged in Activity. RAY has not messaged the buyer. You decide what to tell them.</div></div><button class="btn btn-g btn-sm" id="req-undo-${id}" onclick="A.reqUndo('${id}')">Undo</button></div>`
    : id==='gupta' ? `<div class="row gap8 mt16 wrap"><button class="btn btn-p" onclick="A.approveGupta()" ${blocked()?'disabled':''}>Approve ${inr(g.limitRec)} limit · ${g.terms}-day terms</button><button class="btn btn-s" onclick="A.reqDecide('gupta','follow')">Start collection follow-up</button><button class="btn btn-s" onclick="A.reqDecide('gupta','kept')">Keep current terms</button><button class="btn btn-g" onclick="A.reqDecide('gupta','extended')">Extend anyway</button></div><div class="xs muted mt8">After you approve limit and terms, RAY asks how Gupta Traders should repay.</div>`
    : v.verdict==='EXTEND' ? `<div class="row gap8 mt16 wrap"><button class="btn btn-p" onclick="A.reqDecide('${id}','extended')" ${blocked()?'disabled':''}>Extend ${inr(r.amt)} credit</button><button class="btn btn-g" onclick="A.reqDecide('${id}','later')">Review later</button></div>`
@@ -6908,7 +6911,7 @@ function mobColl(id){ return `${subHdr('Scheduled collection','rc')}<div class="
 function mobRequest(id){
   const r=creq(id), c=chemView(chem(id)), g=S.gupta, d=S.req[id], on=netOn();
   const sig=reqSignals(r);
-  const v=reqV(r), rr_=v.rec; const rec=v.verdict==='DO NOT EXTEND YET'?['Do not extend additional credit yet.',`Recommended limit ${inr(rr_.recommendedLimit)} · ${rr_.recommendedTerms} days.`]:v.verdict==='EXTEND'?[`Extend the ${inr(r.amt)} order.`,`Suggested total limit ${inr(rr_.recommendedLimit)} on ${rr_.recommendedTerms}-day terms.`]:[`Supply ${inr(r.amt)} on shorter terms.`,`${rr_.recommendedTerms} days instead of ${curTermsOf(id)}.`];
+  const v=reqV(r), rr_=v.rec; const rec=id==='gupta'?[`Approve the ${inr(rr_.recommendedLimit)} recommended limit on ${rr_.recommendedTerms}-day terms.`,`Down from ${inr(curLimitOf(id))} on ${curTermsOf(id)}-day terms.`]:v.verdict==='DO NOT EXTEND YET'?['Do not extend additional credit yet.',`Recommended limit ${inr(rr_.recommendedLimit)} · ${rr_.recommendedTerms} days.`]:v.verdict==='EXTEND'?[`Extend the ${inr(r.amt)} order.`,`Suggested total limit ${inr(rr_.recommendedLimit)} on ${rr_.recommendedTerms}-day terms.`]:[`Supply ${inr(r.amt)} on shorter terms.`,`${rr_.recommendedTerms} days instead of ${curTermsOf(id)}.`];
   const acts = d?`<div class="mc ok"><b style="color:var(--g)">${reqDone(d,id)}</b><div class="xs muted mt4">Logged in Activity. RAY has not messaged the buyer.</div></div><button class="mbtn" id="mreq-undo-${id}" onclick="A.reqUndo('${id}')">Undo</button>`
    : id==='gupta'?`<button class="mbtn p" onclick="A.approveGupta()">Approve ${inr(g.limitRec)} limit · ${g.terms} days</button><button class="mbtn" onclick="A.mobSheet('follow')">Start collection follow-up</button><button class="mbtn" onclick="A.mobSheet('keep')">Keep current terms</button><button class="mbtn g" onclick="A.mobSheet('contact')">Contact buyer</button>`
    : v.verdict==='EXTEND'?`<button class="mbtn p" onclick="A.reqDecide('${id}','extended')">Extend ${inr(r.amt)} credit</button><button class="mbtn g" onclick="A.mobSheet('contact')">Contact buyer</button>`
@@ -6968,7 +6971,7 @@ function mobBank(){
 }
 A.mobBankConfirm=(id)=>{ const r=S.bank.rows.find(x=>x.id===id); bankMatch(r,r.to,r.inv,true); mobRender(); };
 /* ---------- RAY conversational view ---------- */
-const MOB_Q=['Gupta Traders ko ₹50,000 aur credit de doon?','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','Kaun buyers slip kar rahe hain?'];
+const MOB_Q=['Gupta Traders ko ₹75,000 aur credit de doon?','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','Kaun buyers slip kar rahe hain?'];
 function mobAnswer(q){ return ruleAnswer(q,'mob'); }
 A.mobAsk=(q)=>{ const m=S.mob; m.chat.push({me:true,t:q}); const rb=mobAnswer(q);
   const put=(c,a)=>{ c.t=ansText(a); c.acts=(a.actions||[]).filter(x=>x.mob); c.choices=a.choices||[]; c.intent=a.intent; c.label=a.label+(a.note?' · '+a.note:''); c.flags=a.flags||[]; };
@@ -7103,8 +7106,8 @@ function journeyChecks(){
       A.netPreview('gupta','own'); A.netPreview('gupta','net'); A.netPreview('gupta','own'); const b=snap(); delete NET_PREVIEW.gupta;
       return ok(a===b&&recOf('gupta').recommendedLimit===60000, `before ${a} · after ${b}`); });
     fresh();
-    run('J19','Releasing Gupta’s ₹50,000 order needs ₹68,400 collected; ₹38,400 frees only ₹20,000',()=>{ const v=reqV(creq('gupta')), p=v.plan, a=p.after(balOf('gupta','INV-24891'));
-      return ok(p.ok&&p.outstanding===78400&&p.limit===60000&&p.collectForFull===68400&&a.releasable===20000&&/collect ₹68,400 first/.test(v.next), `${inr(p.outstanding)} + ${inr(p.requested)} − ${inr(p.limit)} = ${inr(p.collectForFull)} · after ₹38,400: ${inr(a.releasable)} releasable`); });
+    run('J19','Gupta’s ₹75,000 request exceeds the ₹60,000 recommended limit itself; at most ₹60,000 of it can go on credit',()=>{ const v=reqV(creq('gupta')), p=v.plan;
+      return ok(p.ok&&p.outstanding===78400&&p.requested===75000&&p.limit===60000&&p.fullFits===false&&p.collectForFull===null&&p.maxReleasable===60000&&p.upfrontIfAllCleared===15000, `${inr(p.outstanding)} owed · ${inr(p.requested)} requested · ${inr(p.limit)} limit · maxReleasable ${inr(p.maxReleasable)} · upfrontIfAllCleared ${inr(p.upfrontIfAllCleared)}`); });
     run('J20','Matching Verma’s ₹26,500 clears every unmatched warning and applies once',()=>{ A.prMatchRzp('verma'); A.prMatchRzp('verma'); A.matchVerma();
       const n=S.led.events.filter(e=>e.buyerId==='verma'&&RayEvents.MONEY_IN.includes(e.type)).length, html=prBody('verma',false);
       return ok(n===1&&balOf('verma','INV-24655')===0&&!prPending('verma')&&!/may be this payment/.test(html)&&/Matched: ₹26,500/.test(html), `${n} payment event · balance ${inr(balOf('verma','INV-24655'))} · warning ${/may be this payment/.test(html)?'still shown':'gone'}`); });
@@ -7204,7 +7207,7 @@ const STEPS = [
  ['Install: connect ledger and bank', ()=>{ S.installed=false; if(route()!=='studio/ray-credit') go('studio/ray-credit'); setTimeout(()=>{ S.inst=null; inst(2,'marg'); },120); }, KEEP.modal],
  ['Overview', ()=>{ ensureBank(); installed(); go('ray-credit/overview'); }],
  ['The Razorpay network: recommendations it changed', ()=>{ installed(); goSec('ray-credit/overview','ov-net'); }],
- ['Gupta Traders asks for ₹50,000 more', ()=>{ installed(); go('ray-credit/request/gupta'); }],
+ ['Gupta Traders asks for ₹75,000 more', ()=>{ installed(); go('ray-credit/request/gupta'); }],
  ['How Gupta pays everyone, not just you', ()=>{ installed(); goSec('ray-credit/request/gupta','req-signals'); }],
  ['Network changed this: compare with your data only', ()=>{ installed(); goSec('ray-credit/request/gupta','ncmp-gupta'); }],
  ['Approve limit and terms', ()=>{ installed(); goSec('ray-credit/request/gupta','req-rec'); if(S.gupta.rec==='open') setTimeout(()=>A.approveGupta(),350); }, KEEP.modal],

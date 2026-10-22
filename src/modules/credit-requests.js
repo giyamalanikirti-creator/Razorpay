@@ -1,6 +1,6 @@
 /* ================= INCOMING CREDIT REQUESTS (WhatsApp Business inbox or forwarded to RAY) ================= */
 const CREQ = [
- {id:'gupta', msg:'Bhai ₹50,000 aur credit de do. Payment Monday clear kar dunga.', amt:50000, terms:'Existing dues by Monday', at:'8:52 AM'},
+ {id:'gupta', msg:'Bhai ₹75,000 aur credit de do. Payment Monday clear kar dunga.', amt:75000, terms:'Existing dues by Monday', at:'8:52 AM'},
  {id:'arora', msg:'₹80,000 ka stock chahiye, 21 days credit pe.', amt:80000, terms:'21 days credit', reqTerms:21, at:'Yesterday, 6:40 PM'},
  {id:'mehta', msg:'₹30,000 aur bhej do, month end tak clear kar dunga.', amt:30000, terms:'Month end', at:'Yesterday, 4:15 PM'},
 ];
@@ -98,7 +98,10 @@ function vRequest(id){
   const r=creq(id); if(!r) return '<div class="empty">Request not found</div>';
   const c=chemView(chem(id)), d=S.req[id], g=S.gupta, v=reqV(r), rec=v.rec;
   const after=`If extended, exposure would be ${inr(v.exposureAfter)} against ${v.exposureAfter>rec.recommendedLimit?'RAY’s recommended':'a'} ${inr(rec.recommendedLimit)} limit.`;
-  const say=v.verdict==='DO NOT EXTEND YET'?'Do not extend additional credit yet.':v.verdict==='EXTEND'?`Extend the ${inr(r.amt)} order on ${rec.recommendedTerms}-day terms.`:`Supply ${inr(r.amt)}, but on ${rec.recommendedTerms}-day terms instead of ${curTermsOf(id)}.`;
+  /* for Gupta, the aligned recommendation IS the reduced ₹60k limit at 14-day terms (down from ₹100k on 30-day); the
+     separate release breakdown below explains that the ₹75k order itself cannot fit under this limit. For other buyers
+     the three-verdict wording still fits. */
+  const say=id==='gupta'?`Approve the ${inr(rec.recommendedLimit)} recommended limit on ${rec.recommendedTerms}-day terms, down from ${inr(curLimitOf(id))} on ${curTermsOf(id)}-day terms.`:v.verdict==='EXTEND'?`Extend the ${inr(r.amt)} order on ${rec.recommendedTerms}-day terms.`:v.verdict==='DO NOT EXTEND YET'?'Do not extend additional credit yet.':`Supply ${inr(r.amt)}, but on ${rec.recommendedTerms}-day terms instead of ${curTermsOf(id)}.`;
   const btns = d ? `<div class="alert ok mt16"><span class="ic">${I('check',17,2.4)}</span><div class="grow"><h4>${reqDone(d,id)}</h4><div class="small muted">Logged in Activity. RAY has not messaged the buyer. You decide what to tell them.</div></div><button class="btn btn-g btn-sm" id="req-undo-${id}" onclick="A.reqUndo('${id}')">Undo</button></div>`
    : id==='gupta' ? `<div class="row gap8 mt16 wrap"><button class="btn btn-p" onclick="A.approveGupta()" ${blocked()?'disabled':''}>Approve ${inr(g.limitRec)} limit · ${g.terms}-day terms</button><button class="btn btn-s" onclick="A.reqDecide('gupta','follow')">Start collection follow-up</button><button class="btn btn-s" onclick="A.reqDecide('gupta','kept')">Keep current terms</button><button class="btn btn-g" onclick="A.reqDecide('gupta','extended')">Extend anyway</button></div><div class="xs muted mt8">After you approve limit and terms, RAY asks how Gupta Traders should repay.</div>`
    : v.verdict==='EXTEND' ? `<div class="row gap8 mt16 wrap"><button class="btn btn-p" onclick="A.reqDecide('${id}','extended')" ${blocked()?'disabled':''}>Extend ${inr(r.amt)} credit</button><button class="btn btn-g" onclick="A.reqDecide('${id}','later')">Review later</button></div>`

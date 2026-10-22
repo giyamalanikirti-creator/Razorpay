@@ -58,7 +58,7 @@ const STEPS = [
  ['Install: connect ledger and bank', ()=>{ S.installed=false; if(route()!=='studio/ray-credit') go('studio/ray-credit'); setTimeout(()=>{ S.inst=null; inst(2,'marg'); },120); }, KEEP.modal],
  ['Overview', ()=>{ ensureBank(); installed(); go('ray-credit/overview'); }],
  ['The Razorpay network: recommendations it changed', ()=>{ installed(); goSec('ray-credit/overview','ov-net'); }],
- ['Gupta Traders asks for ₹50,000 more', ()=>{ installed(); go('ray-credit/request/gupta'); }],
+ ['Gupta Traders asks for ₹75,000 more', ()=>{ installed(); go('ray-credit/request/gupta'); }],
  ['How Gupta pays everyone, not just you', ()=>{ installed(); goSec('ray-credit/request/gupta','req-signals'); }],
  ['Network changed this: compare with your data only', ()=>{ installed(); goSec('ray-credit/request/gupta','ncmp-gupta'); }],
  ['Approve limit and terms', ()=>{ installed(); goSec('ray-credit/request/gupta','req-rec'); if(S.gupta.rec==='open') setTimeout(()=>A.approveGupta(),350); }, KEEP.modal],

@@ -110,7 +110,7 @@ function mobColl(id){ return `${subHdr('Scheduled collection','rc')}<div class="
 function mobRequest(id){
   const r=creq(id), c=chemView(chem(id)), g=S.gupta, d=S.req[id], on=netOn();
   const sig=reqSignals(r);
-  const v=reqV(r), rr_=v.rec; const rec=v.verdict==='DO NOT EXTEND YET'?['Do not extend additional credit yet.',`Recommended limit ${inr(rr_.recommendedLimit)} · ${rr_.recommendedTerms} days.`]:v.verdict==='EXTEND'?[`Extend the ${inr(r.amt)} order.`,`Suggested total limit ${inr(rr_.recommendedLimit)} on ${rr_.recommendedTerms}-day terms.`]:[`Supply ${inr(r.amt)} on shorter terms.`,`${rr_.recommendedTerms} days instead of ${curTermsOf(id)}.`];
+  const v=reqV(r), rr_=v.rec; const rec=id==='gupta'?[`Approve the ${inr(rr_.recommendedLimit)} recommended limit on ${rr_.recommendedTerms}-day terms.`,`Down from ${inr(curLimitOf(id))} on ${curTermsOf(id)}-day terms.`]:v.verdict==='DO NOT EXTEND YET'?['Do not extend additional credit yet.',`Recommended limit ${inr(rr_.recommendedLimit)} · ${rr_.recommendedTerms} days.`]:v.verdict==='EXTEND'?[`Extend the ${inr(r.amt)} order.`,`Suggested total limit ${inr(rr_.recommendedLimit)} on ${rr_.recommendedTerms}-day terms.`]:[`Supply ${inr(r.amt)} on shorter terms.`,`${rr_.recommendedTerms} days instead of ${curTermsOf(id)}.`];
   const acts = d?`<div class="mc ok"><b style="color:var(--g)">${reqDone(d,id)}</b><div class="xs muted mt4">Logged in Activity. RAY has not messaged the buyer.</div></div><button class="mbtn" id="mreq-undo-${id}" onclick="A.reqUndo('${id}')">Undo</button>`
    : id==='gupta'?`<button class="mbtn p" onclick="A.approveGupta()">Approve ${inr(g.limitRec)} limit · ${g.terms} days</button><button class="mbtn" onclick="A.mobSheet('follow')">Start collection follow-up</button><button class="mbtn" onclick="A.mobSheet('keep')">Keep current terms</button><button class="mbtn g" onclick="A.mobSheet('contact')">Contact buyer</button>`
    : v.verdict==='EXTEND'?`<button class="mbtn p" onclick="A.reqDecide('${id}','extended')">Extend ${inr(r.amt)} credit</button><button class="mbtn g" onclick="A.mobSheet('contact')">Contact buyer</button>`
@@ -170,7 +170,7 @@ function mobBank(){
 }
 A.mobBankConfirm=(id)=>{ const r=S.bank.rows.find(x=>x.id===id); bankMatch(r,r.to,r.inv,true); mobRender(); };
 /* ---------- RAY conversational view ---------- */
-const MOB_Q=['Gupta Traders ko ₹50,000 aur credit de doon?','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','Kaun buyers slip kar rahe hain?'];
+const MOB_Q=['Gupta Traders ko ₹75,000 aur credit de doon?','Gupta Traders ka payment kya hua?','Mehta Enterprises ka paisa aaya?','Kaun buyers slip kar rahe hain?'];
 function mobAnswer(q){ return ruleAnswer(q,'mob'); }
 A.mobAsk=(q)=>{ const m=S.mob; m.chat.push({me:true,t:q}); const rb=mobAnswer(q);
   const put=(c,a)=>{ c.t=ansText(a); c.acts=(a.actions||[]).filter(x=>x.mob); c.choices=a.choices||[]; c.intent=a.intent; c.label=a.label+(a.note?' · '+a.note:''); c.flags=a.flags||[]; };
